@@ -10,13 +10,15 @@ services:
     dockerfilePath: apps/api/Dockerfile
     dockerContext: .
     region: virginia # closest to Neon (us-east-1)
-    # Stateful app (WebSockets + BullMQ worker + cron) → must stay always-on.
-    # "starter" never sleeps. Use "free" only with the keep-alive workflow.
-    plan: starter
+    # "free" sleeps after 15 min idle → the keep-alive.yml workflow pings
+    # /api/health every 10 min so the WebSocket/worker/cron keep running.
+    # Bump to "starter" (always-on, no keep-alive needed) once there is traffic.
+    plan: free
     healthCheckPath: /api/health
     autoDeploy: true
-    # Apply pending Prisma migrations before each deploy goes live.
-    preDeployCommand: npx prisma migrate deploy
+    # Free plan has no preDeployCommand, so run migrations at container start
+    # (idempotent). On a paid plan you can drop this and use preDeployCommand.
+    dockerCommand: sh -c "npx prisma migrate deploy && node dist/main"
     envVars:
       - key: NODE_ENV
         value: production
