@@ -96,6 +96,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # ESLint on the API is type-aware (imports @prisma/client), so the
+      # generated client must exist before linting.
+      - name: Generate Prisma Client
+        run: pnpm --filter @motoworkshop/api db:generate
+
       - name: Lint API
         run: pnpm --filter @motoworkshop/api lint
 
