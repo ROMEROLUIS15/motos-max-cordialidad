@@ -1,6 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { createElement as h } from 'react';
-import { PdfGeneratorPort, QuotePdfData, QuotePdfLine } from '../../application/ports/pdf-generator.port';
+import { createElement } from 'react';
+import {
+  PdfGeneratorPort,
+  QuotePdfData,
+  QuotePdfLine,
+} from '../../application/ports/pdf-generator.port';
+
+// @react-pdf/renderer's primitives don't satisfy React.createElement's strict
+// component overloads; use a loose signature for building the document tree.
+const h = createElement as (
+  type: unknown,
+  props?: Record<string, unknown> | null,
+  ...children: unknown[]
+) => ReturnType<typeof createElement>;
 
 const money = (n: number) =>
   n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
@@ -18,8 +30,9 @@ const dynamicImport = new Function('m', 'return import(m)') as (m: string) => Pr
 @Injectable()
 export class ReactPdfAdapter implements PdfGeneratorPort {
   async generateQuotePdf(data: QuotePdfData): Promise<Buffer> {
-    const { Document, Page, Text, View, StyleSheet, renderToBuffer } =
-      (await dynamicImport('@react-pdf/renderer')) as typeof import('@react-pdf/renderer');
+    const { Document, Page, Text, View, StyleSheet, renderToBuffer } = (await dynamicImport(
+      '@react-pdf/renderer',
+    )) as typeof import('@react-pdf/renderer');
 
     const s = StyleSheet.create({
       page: { padding: 32, fontSize: 10, color: '#1f2937' },
@@ -59,14 +72,28 @@ export class ReactPdfAdapter implements PdfGeneratorPort {
         h(View, { key: 'hdr' }, [
           h(Text, { key: 'name', style: s.h1 }, data.tenant.name),
           h(Text, { key: 'tax', style: s.muted }, `NIT: ${data.tenant.taxId}`),
-          data.tenant.address ? h(Text, { key: 'addr', style: s.muted }, data.tenant.address) : null,
+          data.tenant.address
+            ? h(Text, { key: 'addr', style: s.muted }, data.tenant.address)
+            : null,
           data.tenant.phone ? h(Text, { key: 'ph', style: s.muted }, data.tenant.phone) : null,
         ]),
         h(View, { key: 'meta', style: s.section }, [
           h(Text, { key: 'qn', style: s.sectionTitle }, `Cotización ${data.quoteNumber}`),
-          h(Text, { key: 'cust' }, `Cliente: ${data.customer.fullName} (${data.customer.documentNumber})`),
-          h(Text, { key: 'veh' }, `Vehículo: ${data.vehicle.plate} — ${data.vehicle.brand} ${data.vehicle.model}`),
-          h(Text, { key: 'valid', style: s.muted }, `Válida hasta: ${data.validUntil.toLocaleDateString('es-CO')}`),
+          h(
+            Text,
+            { key: 'cust' },
+            `Cliente: ${data.customer.fullName} (${data.customer.documentNumber})`,
+          ),
+          h(
+            Text,
+            { key: 'veh' },
+            `Vehículo: ${data.vehicle.plate} — ${data.vehicle.brand} ${data.vehicle.model}`,
+          ),
+          h(
+            Text,
+            { key: 'valid', style: s.muted },
+            `Válida hasta: ${data.validUntil.toLocaleDateString('es-CO')}`,
+          ),
         ]),
         h(View, { key: 'svc', style: s.section }, [
           h(Text, { key: 'st', style: s.sectionTitle }, 'Servicios'),

@@ -4,9 +4,6 @@ import { withSentryConfig } from '@sentry/nextjs';
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@motoworkshop/types'],
-  experimental: {
-    instrumentationHook: true,
-  },
 };
 
 // withSentryConfig wires the client config into the browser bundle. Source map
