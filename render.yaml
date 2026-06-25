@@ -1,0 +1,57 @@
+# Render Blueprint — backend API (NestJS).
+# Create via Render Dashboard → "New +" → "Blueprint" → connect this repo.
+# Secrets (sync: false) are entered in the Render dashboard, not committed here.
+services:
+  - type: web
+    name: motoworkshop-api
+    runtime: docker
+    repo: https://github.com/ROMEROLUIS15/motos-max-cordialidad
+    branch: main
+    dockerfilePath: apps/api/Dockerfile
+    dockerContext: .
+    region: virginia # closest to Neon (us-east-1)
+    # Stateful app (WebSockets + BullMQ worker + cron) → must stay always-on.
+    # "starter" never sleeps. Use "free" only with the keep-alive workflow.
+    plan: starter
+    healthCheckPath: /api/health
+    autoDeploy: true
+    # Apply pending Prisma migrations before each deploy goes live.
+    preDeployCommand: npx prisma migrate deploy
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      # --- Secrets: set these in the Render dashboard ---
+      - key: DATABASE_URL # Neon connection string
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: REDIS_URL # Render Key Value or Upstash (optional; WhatsApp queue)
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
