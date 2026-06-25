@@ -1,5 +1,7 @@
 'use client';
 
+export const runtime = 'edge';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { apiGet, apiSend, apiUpload } from '@/lib/api';
@@ -25,7 +27,8 @@ import {
   type PaymentMethod,
 } from '@/types/commerce';
 
-const money = (n: number) => n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+const money = (n: number) =>
+  n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
 
 export default function WorkOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -67,7 +70,11 @@ export default function WorkOrderDetailPage() {
   if (!detail) {
     return (
       <div className="p-6">
-        {error ? <p className="text-red-600">{error}</p> : <p className="text-gray-500">Cargando...</p>}
+        {error ? (
+          <p className="text-red-600">{error}</p>
+        ) : (
+          <p className="text-gray-500">Cargando...</p>
+        )}
       </div>
     );
   }
@@ -84,7 +91,9 @@ export default function WorkOrderDetailPage() {
             <h1 className="text-2xl font-bold text-gray-900">{wo.orderNumber}</h1>
             <p className="text-sm text-gray-500 mt-1">{wo.serviceType}</p>
           </div>
-          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${STATUS_BADGE[wo.status]}`}>
+          <span
+            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${STATUS_BADGE[wo.status]}`}
+          >
             {STATUS_LABELS[wo.status]}
           </span>
         </div>
@@ -103,7 +112,9 @@ export default function WorkOrderDetailPage() {
           </div>
           <div>
             <dt className="text-gray-500">Entrega prometida</dt>
-            <dd className="text-gray-900">{new Date(wo.promisedDeliveryAt).toLocaleString('es-CO')}</dd>
+            <dd className="text-gray-900">
+              {new Date(wo.promisedDeliveryAt).toLocaleString('es-CO')}
+            </dd>
           </div>
           <div>
             <dt className="text-gray-500">Odómetro final</dt>
@@ -119,11 +130,20 @@ export default function WorkOrderDetailPage() {
         {transitions.length > 0 && (
           <div className="mt-5 flex flex-wrap gap-2">
             {transitions.map((next) => (
-              <TransitionButton key={next} next={next} busy={busy} onClick={(note, finalOdometer) =>
-                run(() =>
-                  apiSend(`/api/work-orders/${id}/status`, 'POST', { newStatus: next, note, finalOdometer }),
-                )
-              } />
+              <TransitionButton
+                key={next}
+                next={next}
+                busy={busy}
+                onClick={(note, finalOdometer) =>
+                  run(() =>
+                    apiSend(`/api/work-orders/${id}/status`, 'POST', {
+                      newStatus: next,
+                      note,
+                      finalOdometer,
+                    }),
+                  )
+                }
+              />
             ))}
           </div>
         )}
@@ -154,10 +174,13 @@ export default function WorkOrderDetailPage() {
         </div>
         <h3 className="text-sm font-semibold text-gray-700 mt-5 mb-2">Historial de estado</h3>
         <ol className="space-y-1 text-sm">
-          {detail.statusHistory.length === 0 && <li className="text-gray-400">Sin cambios registrados</li>}
+          {detail.statusHistory.length === 0 && (
+            <li className="text-gray-400">Sin cambios registrados</li>
+          )}
           {detail.statusHistory.map((h, i) => (
             <li key={i} className="text-gray-600">
-              {new Date(h.changedAt).toLocaleString('es-CO')} — {h.previousStatus ? `${STATUS_LABELS[h.previousStatus]} → ` : ''}
+              {new Date(h.changedAt).toLocaleString('es-CO')} —{' '}
+              {h.previousStatus ? `${STATUS_LABELS[h.previousStatus]} → ` : ''}
               {STATUS_LABELS[h.newStatus]}
               {h.note ? ` (${h.note})` : ''}
             </li>
@@ -182,7 +205,9 @@ function TransitionButton({
       disabled={busy}
       onClick={() => {
         const finalOdometer =
-          next === 'COMPLETED' ? Number(window.prompt('Odómetro final (opcional):') ?? '') || undefined : undefined;
+          next === 'COMPLETED'
+            ? Number(window.prompt('Odómetro final (opcional):') ?? '') || undefined
+            : undefined;
         onClick(undefined, finalOdometer);
       }}
       className="px-3 py-1.5 text-sm rounded-md border border-blue-600 text-blue-700 hover:bg-blue-50 disabled:opacity-40"
@@ -271,7 +296,9 @@ function ServiceLinesSection({
               <td className="py-2 text-right">
                 <button
                   disabled={busy}
-                  onClick={() => run(() => apiSend(`/api/work-orders/${workOrderId}/lines/${l.id}`, 'DELETE'))}
+                  onClick={() =>
+                    run(() => apiSend(`/api/work-orders/${workOrderId}/lines/${l.id}`, 'DELETE'))
+                  }
                   className="text-red-600 hover:underline text-xs"
                 >
                   Eliminar
@@ -346,11 +373,15 @@ function PartsSection({
             <tr key={p.id}>
               <td className="py-2 text-gray-800">{p.partId}</td>
               <td className="py-2 text-right text-gray-600">x{p.quantity}</td>
-              <td className="py-2 text-right text-gray-800">{money(p.quantity * p.unitPriceAtSale)}</td>
+              <td className="py-2 text-right text-gray-800">
+                {money(p.quantity * p.unitPriceAtSale)}
+              </td>
               <td className="py-2 text-right">
                 <button
                   disabled={busy}
-                  onClick={() => run(() => apiSend(`/api/work-orders/${workOrderId}/parts/${p.id}`, 'DELETE'))}
+                  onClick={() =>
+                    run(() => apiSend(`/api/work-orders/${workOrderId}/parts/${p.id}`, 'DELETE'))
+                  }
                   className="text-red-600 hover:underline text-xs"
                 >
                   Eliminar
@@ -424,10 +455,18 @@ function EvidencesSection({
                 {items.map((e) => (
                   <div key={e.id} className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={e.url} alt={e.filename} className="h-24 w-24 object-cover rounded border" />
+                    <img
+                      src={e.url}
+                      alt={e.filename}
+                      className="h-24 w-24 object-cover rounded border"
+                    />
                     <button
                       disabled={busy}
-                      onClick={() => run(() => apiSend(`/api/work-orders/${workOrderId}/evidences/${e.id}`, 'DELETE'))}
+                      onClick={() =>
+                        run(() =>
+                          apiSend(`/api/work-orders/${workOrderId}/evidences/${e.id}`, 'DELETE'),
+                        )
+                      }
                       className="absolute top-1 right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5"
                     >
                       ×
@@ -451,7 +490,12 @@ function EvidencesSection({
             </option>
           ))}
         </select>
-        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="text-sm" />
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="text-sm"
+        />
         <button
           disabled={busy}
           onClick={() => {
@@ -471,7 +515,13 @@ function EvidencesSection({
   );
 }
 
-function QuotesSection({ workOrderId, woStatus }: { workOrderId: string; woStatus: WorkOrderStatus }) {
+function QuotesSection({
+  workOrderId,
+  woStatus,
+}: {
+  workOrderId: string;
+  woStatus: WorkOrderStatus;
+}) {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -531,28 +581,49 @@ function QuotesSection({ workOrderId, woStatus }: { workOrderId: string; woStatu
               <tr key={q.id}>
                 <td className="py-2 font-medium text-gray-800">{q.quoteNumber}</td>
                 <td className="py-2">
-                  <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${QUOTE_STATUS_BADGE[q.status]}`}>
+                  <span
+                    className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${QUOTE_STATUS_BADGE[q.status]}`}
+                  >
                     {QUOTE_STATUS_LABELS[q.status]}
                   </span>
                 </td>
                 <td className="py-2 text-right text-gray-800">
-                  {q.total.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
+                  {q.total.toLocaleString('es-CO', {
+                    style: 'currency',
+                    currency: 'COP',
+                    maximumFractionDigits: 0,
+                  })}
                 </td>
                 <td className="py-2 text-right space-x-2">
-                  <button onClick={() => void openPdf(q.id)} className="text-blue-600 hover:underline text-xs">
+                  <button
+                    onClick={() => void openPdf(q.id)}
+                    className="text-blue-600 hover:underline text-xs"
+                  >
                     PDF
                   </button>
                   {q.status === 'DRAFT' && (
-                    <button disabled={busy} onClick={() => act(() => apiSend(`/api/quotes/${q.id}/send`, 'POST'))} className="text-blue-600 hover:underline text-xs">
+                    <button
+                      disabled={busy}
+                      onClick={() => act(() => apiSend(`/api/quotes/${q.id}/send`, 'POST'))}
+                      className="text-blue-600 hover:underline text-xs"
+                    >
                       Enviar
                     </button>
                   )}
                   {q.status === 'SENT' && (
                     <>
-                      <button disabled={busy} onClick={() => act(() => apiSend(`/api/quotes/${q.id}/approve`, 'POST'))} className="text-green-600 hover:underline text-xs">
+                      <button
+                        disabled={busy}
+                        onClick={() => act(() => apiSend(`/api/quotes/${q.id}/approve`, 'POST'))}
+                        className="text-green-600 hover:underline text-xs"
+                      >
                         Aprobar
                       </button>
-                      <button disabled={busy} onClick={() => act(() => apiSend(`/api/quotes/${q.id}/reject`, 'POST'))} className="text-red-600 hover:underline text-xs">
+                      <button
+                        disabled={busy}
+                        onClick={() => act(() => apiSend(`/api/quotes/${q.id}/reject`, 'POST'))}
+                        className="text-red-600 hover:underline text-xs"
+                      >
                         Rechazar
                       </button>
                     </>
@@ -604,14 +675,21 @@ function PaymentsSection({ workOrderId }: { workOrderId: string }) {
     }
   };
 
-  const pct = summary && summary.orderTotal > 0 ? Math.min(100, (summary.totalPaid / summary.orderTotal) * 100) : 0;
-  const fmt = (n: number) => n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+  const pct =
+    summary && summary.orderTotal > 0
+      ? Math.min(100, (summary.totalPaid / summary.orderTotal) * 100)
+      : 0;
+  const fmt = (n: number) =>
+    n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
 
   return (
     <div className="bg-white rounded-lg shadow p-5">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold text-gray-900">Pagos</h2>
-        <button onClick={() => setShowForm((s) => !s)} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm">
+        <button
+          onClick={() => setShowForm((s) => !s)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm"
+        >
           Registrar pago
         </button>
       </div>
@@ -631,16 +709,35 @@ function PaymentsSection({ workOrderId }: { workOrderId: string }) {
 
       {showForm && (
         <div className="flex flex-wrap gap-2 mb-4">
-          <input type="number" placeholder="Monto" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-32 border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
-          <select value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)} className="border border-gray-300 rounded-md px-2 py-1.5 text-sm">
+          <input
+            type="number"
+            placeholder="Monto"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="w-32 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+          />
+          <select
+            value={method}
+            onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+            className="border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+          >
             {PAYMENT_METHODS.map((m) => (
               <option key={m} value={m}>
                 {PAYMENT_METHOD_LABELS[m]}
               </option>
             ))}
           </select>
-          <input placeholder="Referencia" value={reference} onChange={(e) => setReference(e.target.value)} className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm" />
-          <button disabled={busy || !amount} onClick={() => void register()} className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md text-sm disabled:opacity-40">
+          <input
+            placeholder="Referencia"
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
+            className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+          />
+          <button
+            disabled={busy || !amount}
+            onClick={() => void register()}
+            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md text-sm disabled:opacity-40"
+          >
             Guardar
           </button>
         </div>
@@ -655,7 +752,9 @@ function PaymentsSection({ workOrderId }: { workOrderId: string }) {
           )}
           {summary?.payments.map((p) => (
             <tr key={p.id}>
-              <td className="py-2 text-gray-600">{new Date(p.paidAt).toLocaleDateString('es-CO')}</td>
+              <td className="py-2 text-gray-600">
+                {new Date(p.paidAt).toLocaleDateString('es-CO')}
+              </td>
               <td className="py-2 text-gray-600">{PAYMENT_METHOD_LABELS[p.paymentMethod]}</td>
               <td className="py-2 text-gray-500">{p.reference}</td>
               <td className="py-2 text-right font-medium text-gray-800">{fmt(p.amount)}</td>

@@ -1,5 +1,7 @@
 'use client';
 
+export const runtime = 'edge';
+
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -7,17 +9,37 @@ import { fetchApi } from '@/lib/api';
 
 interface VehicleHistory {
   vehicle: {
-    id: string; plate: string; brand: string; model: string; year: number;
-    color: string; engineNumber: string; currentOdometer: number | null;
-    fuelType: string | null; observations: string | null;
+    id: string;
+    plate: string;
+    brand: string;
+    model: string;
+    year: number;
+    color: string;
+    engineNumber: string;
+    currentOdometer: number | null;
+    fuelType: string | null;
+    observations: string | null;
   };
   workOrders: Array<{
-    id: string; orderNumber: string; status: string; createdAt: string;
-    promisedDeliveryAt: string; serviceType: string;
-    parts: Array<{ quantity: number; unitPriceAtSale: string; part: { name: string; sku: string } }>;
+    id: string;
+    orderNumber: string;
+    status: string;
+    createdAt: string;
+    promisedDeliveryAt: string;
+    serviceType: string;
+    parts: Array<{
+      quantity: number;
+      unitPriceAtSale: string;
+      part: { name: string; sku: string };
+    }>;
     photoEvidences: Array<{ id: string; phase: string; filename: string }>;
   }>;
-  ownershipHistory: Array<{ id: string; previousOwner: string; newOwner: string; transferredAt: string }>;
+  ownershipHistory: Array<{
+    id: string;
+    previousOwner: string;
+    newOwner: string;
+    transferredAt: string;
+  }>;
 }
 
 const statusColors: Record<string, string> = {
@@ -53,22 +75,53 @@ export default function VehicleDetailPage() {
   return (
     <div className="p-6 max-w-4xl">
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-700 text-sm">← Volver</button>
+        <button onClick={() => router.back()} className="text-gray-500 hover:text-gray-700 text-sm">
+          ← Volver
+        </button>
         <h1 className="text-2xl font-bold text-gray-900">{vehicle.plate}</h1>
-        <span className="text-gray-500 text-lg">{vehicle.brand} {vehicle.model} {vehicle.year}</span>
+        <span className="text-gray-500 text-lg">
+          {vehicle.brand} {vehicle.model} {vehicle.year}
+        </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-4">
           <h2 className="font-semibold text-gray-800 mb-3">Datos básicos</h2>
           <dl className="space-y-2 text-sm">
-            <div className="flex gap-2"><dt className="text-gray-500 w-32">Placa:</dt><dd className="font-medium">{vehicle.plate}</dd></div>
-            <div className="flex gap-2"><dt className="text-gray-500 w-32">Marca/Modelo:</dt><dd>{vehicle.brand} {vehicle.model}</dd></div>
-            <div className="flex gap-2"><dt className="text-gray-500 w-32">Año:</dt><dd>{vehicle.year}</dd></div>
-            <div className="flex gap-2"><dt className="text-gray-500 w-32">Color:</dt><dd>{vehicle.color}</dd></div>
-            <div className="flex gap-2"><dt className="text-gray-500 w-32">Motor:</dt><dd>{vehicle.engineNumber}</dd></div>
-            {vehicle.currentOdometer && <div className="flex gap-2"><dt className="text-gray-500 w-32">Odómetro:</dt><dd>{vehicle.currentOdometer.toLocaleString()} km</dd></div>}
-            {vehicle.fuelType && <div className="flex gap-2"><dt className="text-gray-500 w-32">Combustible:</dt><dd>{vehicle.fuelType}</dd></div>}
+            <div className="flex gap-2">
+              <dt className="text-gray-500 w-32">Placa:</dt>
+              <dd className="font-medium">{vehicle.plate}</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="text-gray-500 w-32">Marca/Modelo:</dt>
+              <dd>
+                {vehicle.brand} {vehicle.model}
+              </dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="text-gray-500 w-32">Año:</dt>
+              <dd>{vehicle.year}</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="text-gray-500 w-32">Color:</dt>
+              <dd>{vehicle.color}</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="text-gray-500 w-32">Motor:</dt>
+              <dd>{vehicle.engineNumber}</dd>
+            </div>
+            {vehicle.currentOdometer && (
+              <div className="flex gap-2">
+                <dt className="text-gray-500 w-32">Odómetro:</dt>
+                <dd>{vehicle.currentOdometer.toLocaleString()} km</dd>
+              </div>
+            )}
+            {vehicle.fuelType && (
+              <div className="flex gap-2">
+                <dt className="text-gray-500 w-32">Combustible:</dt>
+                <dd>{vehicle.fuelType}</dd>
+              </div>
+            )}
           </dl>
         </div>
         <div className="bg-white rounded-lg shadow p-4">
@@ -88,7 +141,9 @@ export default function VehicleDetailPage() {
       </div>
 
       <div className="bg-white rounded-lg shadow p-4">
-        <h2 className="font-semibold text-gray-800 mb-4">Historial de servicios ({workOrders.length})</h2>
+        <h2 className="font-semibold text-gray-800 mb-4">
+          Historial de servicios ({workOrders.length})
+        </h2>
         {workOrders.length === 0 ? (
           <p className="text-sm text-gray-500">Sin órdenes de trabajo</p>
         ) : (
@@ -96,10 +151,15 @@ export default function VehicleDetailPage() {
             {workOrders.map((wo) => (
               <div key={wo.id} className="border border-gray-200 rounded-md p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <Link href={`/work-orders/${wo.id}`} className="font-medium text-blue-600 hover:underline">
+                  <Link
+                    href={`/work-orders/${wo.id}`}
+                    className="font-medium text-blue-600 hover:underline"
+                  >
                     {wo.orderNumber}
                   </Link>
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[wo.status] ?? 'bg-gray-100'}`}>
+                  <span
+                    className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[wo.status] ?? 'bg-gray-100'}`}
+                  >
                     {wo.status}
                   </span>
                 </div>
@@ -112,7 +172,9 @@ export default function VehicleDetailPage() {
                   </div>
                 )}
                 {wo.photoEvidences.length > 0 && (
-                  <div className="mt-1 text-xs text-gray-400">{wo.photoEvidences.length} foto(s) adjunta(s)</div>
+                  <div className="mt-1 text-xs text-gray-400">
+                    {wo.photoEvidences.length} foto(s) adjunta(s)
+                  </div>
                 )}
               </div>
             ))}
