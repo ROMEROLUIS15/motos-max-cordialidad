@@ -1,7 +1,15 @@
-node_modules
-.next
-dist
-coverage
+# Exclude at every level (a bare `dist` only matches the context root).
+**/node_modules
+**/dist
+**/.next
+**/.vercel
+**/.open-next
+**/.turbo
+**/coverage
+**/*.tsbuildinfo
+**/*.log
+**/.env.local
+**/.env.*.local
 .git
-.env.local
-*.log
+.github
+.kiro
