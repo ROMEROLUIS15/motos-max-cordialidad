@@ -9,3 +9,6 @@ if (dsn) {
     environment: process.env.NODE_ENV,
   });
 }
+
+// Instruments client-side navigations (App Router).
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

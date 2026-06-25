@@ -1,5 +1,10 @@
+import * as Sentry from '@sentry/nextjs';
+
 export async function register() {
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     await import('../sentry.server.config');
   }
 }
+
+// Captures errors from nested React Server Components (Next.js 14+/Sentry v8+).
+export const onRequestError = Sentry.captureRequestError;
