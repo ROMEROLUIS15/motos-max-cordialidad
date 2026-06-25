@@ -16,9 +16,9 @@ services:
     plan: free
     healthCheckPath: /api/health
     autoDeploy: true
-    # Free plan has no preDeployCommand, so run migrations at container start
-    # (idempotent). On a paid plan you can drop this and use preDeployCommand.
-    dockerCommand: sh -c "npx prisma migrate deploy && node dist/main"
+    # Migrations + start are baked into the image CMD (see apps/api/Dockerfile),
+    # so no dockerCommand override here — Render's parser mangled the quotes.
+    # On a paid plan you could instead use: preDeployCommand: npx prisma migrate deploy
     envVars:
       - key: NODE_ENV
         value: production

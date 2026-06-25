@@ -31,4 +31,6 @@ COPY --from=builder /app/packages ./packages
 WORKDIR /app/apps/api
 # Render injects PORT; the app reads process.env.PORT.
 EXPOSE 3001
-CMD ["node", "dist/main"]
+# exec-form: Docker runs `sh -c "..."` natively (no platform re-parsing).
+# Apply pending migrations (idempotent) before starting the server.
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
