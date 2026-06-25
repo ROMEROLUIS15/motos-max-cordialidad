@@ -1,10 +1,10 @@
 name: Deploy to Cloudflare Pages
 
+# Manual until Cloudflare secrets (CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID,
+# NEXT_PUBLIC_API_URL) are configured. To enable auto-deploy, restore:
+# `on: { push: { branches: [main] }, pull_request: { branches: [main] } }`.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 env:
   NODE_VERSION: '20'

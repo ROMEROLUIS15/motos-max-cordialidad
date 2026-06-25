@@ -1,8 +1,9 @@
 name: Deploy
 
+# Manual until production secrets are configured. To enable auto-deploy on
+# merge to main, restore: `on: { push: { branches: [main] } }`.
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 env:
   NODE_VERSION: '20'
