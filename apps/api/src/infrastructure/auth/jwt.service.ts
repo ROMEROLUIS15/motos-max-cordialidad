@@ -1,0 +1,32 @@
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import * as jwt from 'jsonwebtoken';
+import { JwtPort, JWTPayload } from '../../application/ports/jwt.port';
+
+@Injectable()
+export class JwtService implements JwtPort {
+  private readonly secret: string;
+  private readonly expiresIn: string;
+
+  constructor() {
+    this.secret = process.env['JWT_SECRET'] ?? 'dev-secret-change-in-production';
+    this.expiresIn = process.env['JWT_EXPIRES_IN'] ?? '15m';
+  }
+
+  sign(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
+    return jwt.sign(payload, this.secret, { expiresIn: this.expiresIn } as jwt.SignOptions);
+  }
+
+  verify(token: string): JWTPayload {
+    try {
+      return jwt.verify(token, this.secret) as JWTPayload;
+    } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new UnauthorizedException('Token has expired');
+      }
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new UnauthorizedException('Invalid token');
+      }
+      throw new UnauthorizedException('Token verification failed');
+    }
+  }
+}

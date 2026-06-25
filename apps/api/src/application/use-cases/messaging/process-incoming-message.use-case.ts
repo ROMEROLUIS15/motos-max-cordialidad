@@ -1,0 +1,139 @@
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import {
+  WhatsAppRepository,
+  WHATSAPP_REPOSITORY,
+  WhatsAppSessionRecord,
+} from '../../../domain/repositories/whatsapp.repository';
+import { NotificationPort, NOTIFICATION_PORT } from '../../ports/notification.port';
+import { RouterAgent } from '../../../infrastructure/ai/router-agent';
+import { WhatsAppCloudAdapter } from '../../../infrastructure/messaging/whatsapp-cloud.adapter';
+import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma.service';
+
+const UNANSWERED_MINUTES = 5;
+
+export interface ProcessIncomingMessageInput {
+  tenantId: string;
+  from: string; // phone number
+  content: string;
+  waMessageId?: string;
+}
+
+@Injectable()
+export class ProcessIncomingMessageUseCase {
+  private readonly logger = new Logger(ProcessIncomingMessageUseCase.name);
+
+  constructor(
+    @Inject(WHATSAPP_REPOSITORY) private readonly whatsappRepo: WhatsAppRepository,
+    @Inject(NOTIFICATION_PORT) private readonly notification: NotificationPort,
+    private readonly routerAgent: RouterAgent,
+    private readonly whatsapp: WhatsAppCloudAdapter,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  async execute(input: ProcessIncomingMessageInput): Promise<void> {
+    const customer = await this.prisma.customer.findFirst({
+      where: {
+        tenantId: input.tenantId,
+        OR: [{ phone: input.from }, { whatsappPhone: input.from }],
+      },
+      select: { id: true },
+    });
+
+    let session = await this.whatsappRepo.findSessionByPhone(input.from, input.tenantId);
+    if (!session) {
+      session = {
+        id: randomUUID(),
+        tenantId: input.tenantId,
+        customerId: customer?.id ?? null,
+        phoneNumber: input.from,
+        isAnonymous: !customer,
+        lastMessageAt: new Date(),
+        createdAt: new Date(),
+      };
+      await this.whatsappRepo.createSession(session);
+      if (!customer) {
+        await this.notification.notifyAdmins(input.tenantId, {
+          type: 'WHATSAPP_UNKNOWN_NUMBER',
+          phone: input.from,
+        });
+      }
+    }
+
+    await this.whatsappRepo.createMessage({
+      id: randomUUID(),
+      sessionId: session.id,
+      direction: 'INBOUND',
+      content: input.content,
+      status: 'DELIVERED',
+      waMessageId: input.waMessageId ?? null,
+      sentBy: null,
+      isAi: false,
+      createdAt: new Date(),
+    });
+    await this.whatsappRepo.touchSession(session.id, new Date());
+
+    if (await this.shouldActivateAgent(input.tenantId, session)) {
+      await this.runAgent(input, session, customer?.id ?? null, null);
+    }
+  }
+
+  private async shouldActivateAgent(tenantId: string, session: WhatsAppSessionRecord): Promise<boolean> {
+    const recentlyAnswered = await this.whatsappRepo.lastInboundRespondedWithin(
+      session.id,
+      UNANSWERED_MINUTES,
+    );
+    if (recentlyAnswered) return false;
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { businessHours: true },
+    });
+    return this.isWithinBusinessHours(tenant?.businessHours);
+  }
+
+  private isWithinBusinessHours(businessHours: unknown): boolean {
+    // No configured hours → assume always available (Fase 1 default).
+    if (!businessHours || typeof businessHours !== 'object') return true;
+    const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const now = new Date();
+    const cfg = (businessHours as Record<string, { open: string; close: string }>)[days[now.getDay()]];
+    if (!cfg) return false;
+    const current = now.getHours() * 60 + now.getMinutes();
+    const [oh, om] = cfg.open.split(':').map(Number);
+    const [ch, cm] = cfg.close.split(':').map(Number);
+    return current >= oh * 60 + om && current <= ch * 60 + cm;
+  }
+
+  private async runAgent(
+    input: ProcessIncomingMessageInput,
+    session: WhatsAppSessionRecord,
+    customerId: string | null,
+    branchId: string | null,
+  ): Promise<void> {
+    try {
+      const result = await this.routerAgent.process({
+        tenantId: input.tenantId,
+        branchId,
+        customerId,
+        isRegistered: customerId !== null,
+        message: input.content,
+        history: [],
+      });
+
+      await this.whatsapp.sendToPhone(input.tenantId, input.from, customerId, result.response, null);
+
+      if (result.escalated) {
+        await this.notification.notifyAdmins(input.tenantId, {
+          type: 'WHATSAPP_ESCALATED',
+          sessionId: session.id,
+        });
+      }
+    } catch (error) {
+      this.logger.error(`RouterAgent failed for session ${session.id}`, error as Error);
+      await this.notification.notifyAdmins(input.tenantId, {
+        type: 'WHATSAPP_AGENT_ERROR',
+        sessionId: session.id,
+      });
+    }
+  }
+}

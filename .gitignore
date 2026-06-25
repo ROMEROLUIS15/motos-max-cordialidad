@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.turbo/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.staging
+*.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Prisma
+prisma/migrations/*.lock
+
+# TypeScript incremental
+*.tsbuildinfo
+
+# pnpm
+.pnpm-store/

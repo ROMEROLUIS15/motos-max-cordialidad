@@ -1,0 +1,7 @@
+export enum StockEntryType {
+  ENTRADA = 'ENTRADA',
+  SALIDA = 'SALIDA',
+  AJUSTE = 'AJUSTE',
+  TRANSFER_IN = 'TRANSFER_IN',
+  TRANSFER_OUT = 'TRANSFER_OUT',
+}

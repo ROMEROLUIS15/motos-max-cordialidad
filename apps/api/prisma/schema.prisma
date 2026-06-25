@@ -1,0 +1,646 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+// ─── TENANT & BRANCH ───────────────────────────────────────────────────────────
+
+model Tenant {
+  id                     String   @id @default(uuid())
+  name                   String   @db.VarChar(255)
+  taxId                  String   @unique @db.VarChar(50)
+  logoUrl                String?  @db.Text
+  address                String?  @db.Text
+  phone                  String?  @db.VarChar(50)
+  email                  String?  @db.VarChar(255)
+  vatPercentage          Decimal  @default(19.00) @db.Decimal(5, 2)
+  accountingPeriodStart  Int      @default(1) @db.SmallInt
+  whatsappPhone          String?  @db.VarChar(50)
+  whatsappToken          String?  @db.Text
+  businessHours          Json?
+  termsAndConditions     String?  @db.Text
+  createdAt              DateTime @default(now()) @db.Timestamptz()
+  updatedAt              DateTime @updatedAt @db.Timestamptz()
+
+  branches        Branch[]
+  roles           Role[]
+  users           User[]
+  customers       Customer[]
+  vehicles        Vehicle[]
+  parts           Part[]
+  quotes          Quote[]
+  payments        Payment[]
+  whatsappSessions WhatsAppSession[]
+  notifications   Notification[]
+  stockEntries    StockEntry[]
+  workOrders      WorkOrder[]
+  vehicleReceptions VehicleReception[]
+
+  @@map("tenants")
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String   @db.VarChar(255)
+  address   String   @db.Text
+  phone     String?  @db.VarChar(50)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz()
+  updatedAt DateTime @updatedAt @db.Timestamptz()
+
+  tenant            Tenant             @relation(fields: [tenantId], references: [id])
+  users             User[]
+  partBranchStocks  PartBranchStock[]
+  stockEntries      StockEntry[]
+  workOrders        WorkOrder[]
+  vehicleReceptions VehicleReception[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId], name: "idx_branches_tenant")
+  @@map("branches")
+}
+
+// ─── ROLES & PERMISSIONS ──────────────────────────────────────────────────────
+
+model Role {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String   @db.VarChar(100)
+  isSystem  Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz()
+
+  tenant      Tenant           @relation(fields: [tenantId], references: [id])
+  permissions RolePermission[]
+  users       User[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId], name: "idx_roles_tenant")
+  @@map("roles")
+}
+
+model RolePermission {
+  id     String @id @default(uuid())
+  roleId String
+  module String @db.VarChar(100)
+  action String @db.VarChar(20)
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, module, action])
+  @@index([roleId], name: "idx_role_permissions_role")
+  @@map("role_permissions")
+}
+
+// ─── USERS & AUTH ─────────────────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(uuid())
+  tenantId     String
+  branchId     String?
+  roleId       String
+  email        String    @db.VarChar(255)
+  passwordHash String    @db.VarChar(255)
+  fullName     String    @db.VarChar(255)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime? @db.Timestamptz()
+  createdAt    DateTime  @default(now()) @db.Timestamptz()
+  updatedAt    DateTime  @updatedAt @db.Timestamptz()
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id])
+  branch        Branch?         @relation(fields: [branchId], references: [id])
+  role          Role            @relation(fields: [roleId], references: [id])
+  refreshTokens RefreshToken[]
+  notifications Notification[]
+
+  receptions      VehicleReception[]
+  workOrders      WorkOrder[]         @relation("TechnicianWorkOrders")
+  statusHistories WorkOrderStatusHistory[]
+  workOrderLines  WorkOrderLine[]
+  photoEvidences  PhotoEvidence[]
+  payments        Payment[]
+  messages        Message[]
+  ownershipTransfersBy VehicleOwnershipHistory[] @relation("TransferredBy")
+
+  @@unique([tenantId, email])
+  @@index([tenantId], name: "idx_users_tenant")
+  @@index([roleId], name: "idx_users_role")
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique @db.VarChar(255)
+  expiresAt DateTime  @db.Timestamptz()
+  revokedAt DateTime? @db.Timestamptz()
+  createdAt DateTime  @default(now()) @db.Timestamptz()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], name: "idx_refresh_tokens_user")
+  @@map("refresh_tokens")
+}
+
+model AuthFailureLog {
+  id        String   @id @default(uuid())
+  tenantId  String?
+  email     String?  @db.VarChar(255)
+  ipAddress String   @db.VarChar(50)
+  reason    String?  @db.VarChar(100)
+  createdAt DateTime @default(now()) @db.Timestamptz()
+
+  @@index([ipAddress], name: "idx_auth_failures_ip")
+  @@index([email], name: "idx_auth_failures_email")
+  @@map("auth_failure_logs")
+}
+
+// ─── CUSTOMERS & VEHICLES ─────────────────────────────────────────────────────
+
+model Customer {
+  id             String    @id @default(uuid())
+  tenantId       String
+  fullName       String    @db.VarChar(255)
+  documentType   String    @db.VarChar(20)
+  documentNumber String    @db.VarChar(50)
+  phone          String    @db.VarChar(50)
+  whatsappPhone  String?   @db.VarChar(50)
+  email          String?   @db.VarChar(255)
+  address        String?   @db.Text
+  city           String    @db.VarChar(100)
+  birthDate      DateTime? @db.Date
+  observations   String?   @db.Text
+  isActive       Boolean   @default(true)
+  firstVisitAt   DateTime? @db.Timestamptz()
+  lastVisitAt    DateTime? @db.Timestamptz()
+  visitCount     Int       @default(0)
+  deletedAt      DateTime? @db.Timestamptz()
+  createdAt      DateTime  @default(now()) @db.Timestamptz()
+  updatedAt      DateTime  @updatedAt @db.Timestamptz()
+
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  vehicles         Vehicle[]
+  workOrders       WorkOrder[]
+  whatsappSessions WhatsAppSession[]
+  vehicleReceptions VehicleReception[]
+  ownedVehicles    VehicleOwnershipHistory[] @relation("PreviousOwner")
+  newVehicles      VehicleOwnershipHistory[] @relation("NewOwner")
+
+  @@unique([tenantId, documentNumber])
+  @@index([tenantId, deletedAt], name: "idx_customers_tenant")
+  @@index([tenantId, documentNumber], name: "idx_customers_document")
+  @@index([tenantId, phone], name: "idx_customers_phone")
+  @@index([tenantId, whatsappPhone], name: "idx_customers_whatsapp")
+  @@map("customers")
+}
+
+model Vehicle {
+  id              String    @id @default(uuid())
+  tenantId        String
+  plate           String    @db.VarChar(20)
+  brand           String    @db.VarChar(100)
+  model           String    @db.VarChar(100)
+  year            Int       @db.SmallInt
+  color           String    @db.VarChar(50)
+  engineNumber    String    @db.VarChar(100)
+  chassisNumber   String?   @db.VarChar(100)
+  displacement    Int?
+  fuelType        String?   @db.VarChar(30)
+  currentOdometer Int?
+  observations    String?   @db.Text
+  currentOwnerId  String
+  deletedAt       DateTime? @db.Timestamptz()
+  createdAt       DateTime  @default(now()) @db.Timestamptz()
+  updatedAt       DateTime  @updatedAt @db.Timestamptz()
+
+  tenant          Tenant                    @relation(fields: [tenantId], references: [id])
+  currentOwner    Customer                  @relation(fields: [currentOwnerId], references: [id])
+  ownershipHistory VehicleOwnershipHistory[]
+  receptions      VehicleReception[]
+  workOrders      WorkOrder[]
+
+  @@unique([tenantId, plate])
+  @@index([tenantId, deletedAt], name: "idx_vehicles_tenant")
+  @@index([currentOwnerId], name: "idx_vehicles_owner")
+  @@index([tenantId, plate], name: "idx_vehicles_plate")
+  @@map("vehicles")
+}
+
+model VehicleOwnershipHistory {
+  id            String   @id @default(uuid())
+  vehicleId     String
+  previousOwner String
+  newOwner      String
+  transferredAt DateTime @db.Timestamptz()
+  transferredBy String
+  createdAt     DateTime @default(now()) @db.Timestamptz()
+
+  vehicle           Vehicle  @relation(fields: [vehicleId], references: [id])
+  previousOwnerRel  Customer @relation("PreviousOwner", fields: [previousOwner], references: [id])
+  newOwnerRel       Customer @relation("NewOwner", fields: [newOwner], references: [id])
+  transferredByUser User     @relation("TransferredBy", fields: [transferredBy], references: [id])
+
+  @@index([vehicleId], name: "idx_ownership_vehicle")
+  @@map("vehicle_ownership_history")
+}
+
+// ─── VEHICLE RECEPTIONS ───────────────────────────────────────────────────────
+
+model VehicleReception {
+  id                  String   @id @default(uuid())
+  tenantId            String
+  branchId            String
+  vehicleId           String
+  customerId          String
+  receivedAt          DateTime @default(now()) @db.Timestamptz()
+  receivedBy          String
+  odometerReading     Int
+  fuelLevel           String   @db.VarChar(20)
+  observations        String?  @db.Text
+  visibleDamageNotes  String?  @db.Text
+  createdAt           DateTime @default(now()) @db.Timestamptz()
+
+  tenant     Tenant           @relation(fields: [tenantId], references: [id])
+  branch     Branch           @relation(fields: [branchId], references: [id])
+  vehicle    Vehicle          @relation(fields: [vehicleId], references: [id])
+  customer   Customer         @relation(fields: [customerId], references: [id])
+  receivedByUser User         @relation(fields: [receivedBy], references: [id])
+  photos     ReceptionPhoto[]
+  workOrders WorkOrder[]
+
+  @@index([tenantId], name: "idx_receptions_tenant")
+  @@index([vehicleId], name: "idx_receptions_vehicle")
+  @@map("vehicle_receptions")
+}
+
+model ReceptionPhoto {
+  id          String   @id @default(uuid())
+  receptionId String
+  r2Key       String   @db.Text
+  filename    String   @db.VarChar(255)
+  sizeBytes   Int
+  createdAt   DateTime @default(now()) @db.Timestamptz()
+
+  reception VehicleReception @relation(fields: [receptionId], references: [id])
+
+  @@index([receptionId], name: "idx_reception_photos_reception")
+  @@map("reception_photos")
+}
+
+// ─── WORK ORDERS ──────────────────────────────────────────────────────────────
+
+model WorkOrder {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  branchId           String
+  orderNumber        String    @db.VarChar(20)
+  receptionId        String
+  vehicleId          String
+  customerId         String
+  technicianId       String
+  serviceType        String    @db.VarChar(30)
+  problemDescription String    @db.Text
+  status             String    @default("PENDING") @db.VarChar(20)
+  promisedDeliveryAt DateTime  @db.Timestamptz()
+  finalOdometer      Int?
+  deletedAt          DateTime? @db.Timestamptz()
+  createdAt          DateTime  @default(now()) @db.Timestamptz()
+  updatedAt          DateTime  @updatedAt @db.Timestamptz()
+
+  tenant         Tenant                   @relation(fields: [tenantId], references: [id])
+  branch         Branch                   @relation(fields: [branchId], references: [id])
+  reception      VehicleReception         @relation(fields: [receptionId], references: [id])
+  vehicle        Vehicle                  @relation(fields: [vehicleId], references: [id])
+  customer       Customer                 @relation(fields: [customerId], references: [id])
+  technician     User                     @relation("TechnicianWorkOrders", fields: [technicianId], references: [id])
+  lines          WorkOrderLine[]
+  parts          WorkOrderPart[]
+  statusHistory  WorkOrderStatusHistory[]
+  photoEvidences PhotoEvidence[]
+  quotes         Quote[]
+  payments       Payment[]
+
+  @@unique([tenantId, orderNumber])
+  @@index([tenantId, deletedAt], name: "idx_work_orders_tenant")
+  @@index([branchId, status], name: "idx_work_orders_branch")
+  @@index([customerId], name: "idx_work_orders_customer")
+  @@index([vehicleId], name: "idx_work_orders_vehicle")
+  @@index([technicianId], name: "idx_work_orders_technician")
+  @@index([tenantId, status, deletedAt], name: "idx_work_orders_status")
+  @@index([promisedDeliveryAt, status], name: "idx_work_orders_delivery")
+  @@index([branchId, status, deletedAt, createdAt(sort: Desc)], name: "idx_wo_branch_status")
+  @@map("work_orders")
+}
+
+model WorkOrderStatusHistory {
+  id          String   @id @default(uuid())
+  workOrderId String
+  fromStatus  String?  @db.VarChar(20)
+  toStatus    String   @db.VarChar(20)
+  changedBy   String
+  note        String?  @db.Text
+  changedAt   DateTime @default(now()) @db.Timestamptz()
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
+  user      User      @relation(fields: [changedBy], references: [id])
+
+  @@index([workOrderId], name: "idx_wo_status_history_order")
+  @@map("work_order_status_history")
+}
+
+model WorkOrderLine {
+  id              String   @id @default(uuid())
+  workOrderId     String
+  description     String   @db.Text
+  estimatedHours  Decimal? @db.Decimal(6, 2)
+  unitPrice       Decimal  @db.Decimal(12, 2)
+  technicianId    String?
+  serviceCatalogId String?
+  createdAt       DateTime @default(now()) @db.Timestamptz()
+
+  workOrder  WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  technician User?     @relation(fields: [technicianId], references: [id])
+
+  @@index([workOrderId], name: "idx_wo_lines_order")
+  @@map("work_order_lines")
+}
+
+model WorkOrderPart {
+  id              String   @id @default(uuid())
+  workOrderId     String
+  partId          String
+  quantity        Decimal  @db.Decimal(10, 3)
+  unitPriceAtSale Decimal  @db.Decimal(12, 2)
+  createdAt       DateTime @default(now()) @db.Timestamptz()
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  part      Part      @relation(fields: [partId], references: [id])
+
+  @@index([workOrderId], name: "idx_wo_parts_order")
+  @@index([partId], name: "idx_wo_parts_part")
+  @@map("work_order_parts")
+}
+
+model PhotoEvidence {
+  id          String    @id @default(uuid())
+  workOrderId String
+  r2Key       String    @db.Text
+  filename    String    @db.VarChar(255)
+  sizeBytes   Int
+  phase       String    @db.VarChar(20)
+  description String?   @db.Text
+  uploadedBy  String
+  deletedAt   DateTime? @db.Timestamptz()
+  createdAt   DateTime  @default(now()) @db.Timestamptz()
+
+  workOrder  WorkOrder @relation(fields: [workOrderId], references: [id])
+  uploadedByUser User  @relation(fields: [uploadedBy], references: [id])
+
+  @@index([workOrderId, deletedAt], name: "idx_photo_evidences_order")
+  @@map("photo_evidences")
+}
+
+// ─── INVENTORY ────────────────────────────────────────────────────────────────
+
+model Part {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  sku                String   @db.VarChar(100)
+  name               String   @db.VarChar(255)
+  category           String   @db.VarChar(100)
+  unit               String   @db.VarChar(30)
+  costPrice          Decimal  @db.Decimal(12, 2)
+  salePrice          Decimal  @db.Decimal(12, 2)
+  description        String?  @db.Text
+  brand              String?  @db.VarChar(100)
+  supplierReference  String?  @db.VarChar(100)
+  imageUrl           String?  @db.Text
+  minStockAlert      Decimal? @db.Decimal(10, 3)
+  warehouseLocation  String?  @db.VarChar(100)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now()) @db.Timestamptz()
+  updatedAt          DateTime @updatedAt @db.Timestamptz()
+
+  tenant       Tenant            @relation(fields: [tenantId], references: [id])
+  branchStocks PartBranchStock[]
+  stockEntries StockEntry[]
+  workOrderParts WorkOrderPart[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId], name: "idx_parts_tenant")
+  @@index([tenantId, sku], name: "idx_parts_sku")
+  @@map("parts")
+}
+
+model PartBranchStock {
+  id              String   @id @default(uuid())
+  partId          String
+  branchId        String
+  stockFisico     Decimal  @default(0) @db.Decimal(10, 3)
+  stockReservado  Decimal  @default(0) @db.Decimal(10, 3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz()
+
+  part   Part   @relation(fields: [partId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([partId, branchId])
+  @@index([branchId], name: "idx_part_stocks_branch")
+  @@index([partId], name: "idx_part_stocks_part")
+  @@map("part_branch_stocks")
+}
+
+model StockEntry {
+  id          String   @id @default(uuid())
+  tenantId    String
+  partId      String
+  branchId    String
+  type        String   @db.VarChar(20)
+  quantity    Decimal  @db.Decimal(10, 3)
+  userId      String
+  referenceId String?
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now()) @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  part   Part   @relation(fields: [partId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@index([tenantId], name: "idx_stock_entries_tenant")
+  @@index([partId, branchId], name: "idx_stock_entries_part_branch")
+  @@index([createdAt], name: "idx_stock_entries_created")
+  @@map("stock_entries")
+}
+
+// ─── SERVICE CATALOG ──────────────────────────────────────────────────────────
+
+model ServiceCatalogItem {
+  id             String   @id @default(uuid())
+  tenantId       String
+  name           String   @db.VarChar(255)
+  description    String?  @db.Text
+  estimatedHours Decimal  @db.Decimal(6, 2)
+  suggestedPrice Decimal  @db.Decimal(12, 2)
+  serviceType    String   @db.VarChar(30)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now()) @db.Timestamptz()
+  updatedAt      DateTime @updatedAt @db.Timestamptz()
+
+  @@index([tenantId], name: "idx_service_catalog_tenant")
+  @@map("service_catalog_items")
+}
+
+// ─── COMMERCE: QUOTES & PAYMENTS ─────────────────────────────────────────────
+
+model Quote {
+  id              String   @id @default(uuid())
+  tenantId        String
+  workOrderId     String
+  quoteNumber     String   @db.VarChar(20)
+  status          String   @default("DRAFT") @db.VarChar(20)
+  subtotal        Decimal  @db.Decimal(12, 2)
+  vatPercentage   Decimal  @db.Decimal(5, 2)
+  vatAmount       Decimal  @db.Decimal(12, 2)
+  total           Decimal  @db.Decimal(12, 2)
+  validUntil      DateTime @db.Timestamptz()
+  pdfR2Key        String?  @db.Text
+  termsConditions String?  @db.Text
+  version         Int      @default(1)
+  createdAt       DateTime @default(now()) @db.Timestamptz()
+  updatedAt       DateTime @updatedAt @db.Timestamptz()
+
+  tenant    Tenant         @relation(fields: [tenantId], references: [id])
+  workOrder WorkOrder      @relation(fields: [workOrderId], references: [id])
+  versions  QuoteVersion[]
+
+  @@unique([tenantId, quoteNumber])
+  @@index([tenantId], name: "idx_quotes_tenant")
+  @@index([workOrderId], name: "idx_quotes_work_order")
+  @@index([status, validUntil], name: "idx_quotes_status")
+  @@map("quotes")
+}
+
+model QuoteVersion {
+  id        String   @id @default(uuid())
+  quoteId   String
+  version   Int
+  pdfR2Key  String   @db.Text
+  snapshot  Json
+  createdAt DateTime @default(now()) @db.Timestamptz()
+
+  quote Quote @relation(fields: [quoteId], references: [id])
+
+  @@unique([quoteId, version])
+  @@index([quoteId], name: "idx_quote_versions_quote")
+  @@map("quote_versions")
+}
+
+model Payment {
+  id            String   @id @default(uuid())
+  tenantId      String
+  workOrderId   String
+  amount        Decimal  @db.Decimal(12, 2)
+  paymentMethod String   @db.VarChar(20)
+  reference     String?  @db.VarChar(255)
+  notes         String?  @db.Text
+  paidAt        DateTime @db.Timestamptz()
+  createdBy     String
+  createdAt     DateTime @default(now()) @db.Timestamptz()
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
+  createdByUser User  @relation(fields: [createdBy], references: [id])
+
+  @@index([tenantId], name: "idx_payments_tenant")
+  @@index([workOrderId], name: "idx_payments_work_order")
+  @@index([tenantId, paidAt], name: "idx_payments_paid_at")
+  @@index([tenantId, paidAt(sort: Desc)], name: "idx_payments_branch_date")
+  @@map("payments")
+}
+
+// ─── WHATSAPP & MESSAGES ──────────────────────────────────────────────────────
+
+model WhatsAppSession {
+  id            String    @id @default(uuid())
+  tenantId      String
+  customerId    String?
+  phoneNumber   String    @db.VarChar(50)
+  isAnonymous   Boolean   @default(false)
+  lastMessageAt DateTime? @db.Timestamptz()
+  createdAt     DateTime  @default(now()) @db.Timestamptz()
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  customer Customer? @relation(fields: [customerId], references: [id])
+  messages Message[]
+
+  @@unique([tenantId, phoneNumber])
+  @@index([tenantId], name: "idx_wa_sessions_tenant")
+  @@index([customerId], name: "idx_wa_sessions_customer")
+  @@map("whatsapp_sessions")
+}
+
+model Message {
+  id          String    @id @default(uuid())
+  sessionId   String
+  direction   String    @db.VarChar(10)
+  content     String    @db.Text
+  status      String    @default("SENT") @db.VarChar(20)
+  waMessageId String?   @db.VarChar(255)
+  sentBy      String?
+  isAi        Boolean   @default(false)
+  createdAt   DateTime  @default(now()) @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @db.Timestamptz()
+
+  session    WhatsAppSession @relation(fields: [sessionId], references: [id])
+  sentByUser User?           @relation(fields: [sentBy], references: [id])
+
+  @@index([sessionId, createdAt], name: "idx_messages_session")
+  @@map("messages")
+}
+
+// ─── NOTIFICATIONS & AUDIT ────────────────────────────────────────────────────
+
+model Notification {
+  id           String    @id @default(uuid())
+  tenantId     String
+  userId       String
+  type         String    @db.VarChar(50)
+  title        String    @db.VarChar(255)
+  body         String    @db.Text
+  resourceType String?   @db.VarChar(50)
+  resourceId   String?
+  isRead       Boolean   @default(false)
+  readAt       DateTime? @db.Timestamptz()
+  createdAt    DateTime  @default(now()) @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead, createdAt(sort: Desc)], name: "idx_notifications_user")
+  @@index([tenantId], name: "idx_notifications_tenant")
+  @@map("notifications")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  tenantId     String
+  branchId     String?
+  actorUserId  String?
+  entityType   String   @db.VarChar(100)
+  entityId     String
+  action       String   @db.VarChar(20)
+  previousData Json?
+  newData      Json?
+  ipAddress    String?  @db.VarChar(50)
+  traceId      String?
+  createdAt    DateTime @default(now()) @db.Timestamptz()
+
+  @@index([tenantId, createdAt(sort: Desc)], name: "idx_audit_logs_tenant")
+  @@index([entityType, entityId], name: "idx_audit_logs_entity")
+  @@index([actorUserId, createdAt(sort: Desc)], name: "idx_audit_logs_actor")
+  @@map("audit_logs")
+}

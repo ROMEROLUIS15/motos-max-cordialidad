@@ -1,0 +1,41 @@
+import { Body, Controller, Get, Inject, Post, Put, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { CurrentUser } from '../decorators/current-user.decorator';
+import { JWTPayload } from '../../../application/ports/jwt.port';
+import { CreateTenantUseCase, CreateTenantInput } from '../../../application/use-cases/identity/create-tenant.use-case';
+import { UpdateTenantConfigUseCase } from '../../../application/use-cases/identity/update-tenant-config.use-case';
+import { TenantRepository, TENANT_REPOSITORY } from '../../../domain/repositories/tenant.repository';
+
+@Controller('tenants')
+export class TenantsController {
+  constructor(
+    private readonly createTenantUseCase: CreateTenantUseCase,
+    private readonly updateTenantConfigUseCase: UpdateTenantConfigUseCase,
+    @Inject(TENANT_REPOSITORY) private readonly tenantRepo: TenantRepository,
+  ) {}
+
+  @Post()
+  async create(@Body() body: CreateTenantInput) {
+    return this.createTenantUseCase.execute(body);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async getMe(@CurrentUser() user: JWTPayload) {
+    const tenant = await this.tenantRepo.findById(user.tenantId);
+    if (!tenant) return null;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { whatsappToken: _token, ...safeConfig } = tenant;
+    return safeConfig;
+  }
+
+  @Put('me')
+  @UseGuards(JwtAuthGuard)
+  async updateMe(
+    @CurrentUser() user: JWTPayload,
+    @Body() body: Record<string, unknown>,
+  ) {
+    await this.updateTenantConfigUseCase.execute({ tenantId: user.tenantId, ...body } as Parameters<UpdateTenantConfigUseCase['execute']>[0]);
+    return { success: true };
+  }
+}
