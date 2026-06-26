@@ -18,6 +18,7 @@ import { NotificationsModule } from './notifications.module';
 import { DashboardModule } from './dashboard.module';
 import { AuditModule } from './audit.module';
 import { SettingsModule } from './settings.module';
+import { AgentsModule } from './agents.module';
 import { DomainExceptionFilter } from './presentation/http/filters/domain-exception.filter';
 import { SentryExceptionFilter } from './presentation/http/filters/sentry-exception.filter';
 
@@ -38,6 +39,7 @@ import { SentryExceptionFilter } from './presentation/http/filters/sentry-except
     DashboardModule,
     AuditModule,
     SettingsModule,
+    AgentsModule,
   ],
   controllers: [AppController],
   providers: [
