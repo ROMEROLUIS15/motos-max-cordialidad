@@ -1,8 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Bell } from 'lucide-react';
 import { apiGet, apiSend } from '@/lib/api';
 import type { PaginatedResponse } from '@/types/api';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface Notification {
   id: string;
@@ -53,33 +56,62 @@ export function NotificationBell() {
     await loadList();
   };
 
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [open]);
+
   return (
-    <div className="relative">
-      <button onClick={() => void toggle()} className="relative p-2 rounded hover:bg-gray-100" aria-label="Notificaciones">
-        <span className="text-xl">🔔</span>
+    <div className="relative" ref={ref}>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => void toggle()}
+        aria-label="Notificaciones"
+        className="relative"
+      >
+        <Bell />
         {unread > 0 && (
-          <span className="absolute top-0 right-0 bg-red-600 text-white text-[10px] rounded-full px-1.5 min-w-[18px] text-center">
+          <span className="absolute right-1.5 top-1.5 flex min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-[14px] text-destructive-foreground ring-2 ring-card">
             {unread > 9 ? '9+' : unread}
           </span>
         )}
-      </button>
+      </Button>
       {open && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
-          <div className="flex items-center justify-between px-4 py-2 border-b">
+        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-card-hover animate-in-up">
+          <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
             <span className="text-sm font-semibold">Notificaciones</span>
-            <button onClick={() => void markAllRead()} className="text-xs text-blue-600 hover:underline">
+            <button
+              onClick={() => void markAllRead()}
+              className="text-xs font-medium text-primary hover:underline"
+            >
               Marcar todas leídas
             </button>
           </div>
           <ul className="max-h-80 overflow-y-auto">
             {items.length === 0 ? (
-              <li className="px-4 py-6 text-sm text-gray-400 text-center">Sin notificaciones</li>
+              <li className="px-4 py-8 text-center text-sm text-muted-foreground">
+                Sin notificaciones
+              </li>
             ) : (
               items.map((n) => (
-                <li key={n.id} className={`px-4 py-2 border-b border-gray-100 ${n.isRead ? '' : 'bg-blue-50'}`}>
-                  <p className="text-sm font-medium text-gray-900">{n.title}</p>
-                  <p className="text-xs text-gray-500">{n.body}</p>
-                  <span className="text-[10px] text-gray-400">{new Date(n.createdAt).toLocaleString('es-CO')}</span>
+                <li
+                  key={n.id}
+                  className={cn(
+                    'border-b border-border px-4 py-2.5 last:border-0',
+                    n.isRead ? '' : 'bg-primary/5',
+                  )}
+                >
+                  <p className="text-sm font-medium text-foreground">{n.title}</p>
+                  <p className="text-xs text-muted-foreground">{n.body}</p>
+                  <span className="text-[10px] text-muted-foreground/70">
+                    {new Date(n.createdAt).toLocaleString('es-CO')}
+                  </span>
                 </li>
               ))
             )}

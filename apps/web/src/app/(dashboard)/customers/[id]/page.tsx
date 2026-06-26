@@ -5,7 +5,15 @@ export const runtime = 'edge';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { fetchApi } from '@/lib/api';
+import { ArrowLeft, Plus, Bike } from 'lucide-react';
+import { apiGet } from '@/lib/api';
+import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { buttonVariants } from '@/components/ui/button';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { WorkOrderStatus } from '@/types/workshop';
 
 interface CustomerProfile {
   customer: {
@@ -38,6 +46,15 @@ interface CustomerProfile {
   }>;
 }
 
+function Detail({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex justify-between gap-3 py-1.5 text-sm">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="text-right font-medium text-foreground/90">{children}</dd>
+    </div>
+  );
+}
+
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -45,145 +62,139 @@ export default function CustomerDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    fetchApi<CustomerProfile>(`/api/customers/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    apiGet<CustomerProfile>(`/api/customers/${id}`)
       .then(setProfile)
       .catch(() => router.push('/customers'))
       .finally(() => setLoading(false));
   }, [id, router]);
 
-  if (loading) return <div className="p-6 text-gray-500">Cargando...</div>;
+  if (loading) {
+    return (
+      <div className="space-y-5">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid gap-5 md:grid-cols-2">
+          <Skeleton className="h-56 rounded-xl" />
+          <Skeleton className="h-56 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
   if (!profile) return null;
 
   const { customer, vehicles, recentWorkOrders } = profile;
 
-  const statusColors: Record<string, string> = {
-    PENDING: 'bg-yellow-100 text-yellow-800',
-    IN_PROGRESS: 'bg-blue-100 text-blue-800',
-    WAITING_PARTS: 'bg-orange-100 text-orange-800',
-    COMPLETED: 'bg-green-100 text-green-800',
-    DELIVERED: 'bg-gray-100 text-gray-700',
-    CANCELLED: 'bg-red-100 text-red-800',
-  };
-
   return (
-    <div className="p-6 max-w-4xl">
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/customers" className="text-gray-500 hover:text-gray-700 text-sm">
-          ← Clientes
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">{customer.fullName}</h1>
-        <span
-          className={`px-2 py-0.5 rounded text-xs font-medium ${customer.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <Link
+          href="/customers"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
-          {customer.isActive ? 'Activo' : 'Inactivo'}
-        </span>
+          <ArrowLeft className="h-4 w-4" /> Clientes
+        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">{customer.fullName}</h1>
+          <Badge variant={customer.isActive ? 'success' : 'secondary'}>
+            {customer.isActive ? 'Activo' : 'Inactivo'}
+          </Badge>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-4">
-          <h2 className="font-semibold text-gray-800 mb-3">Datos del cliente</h2>
-          <dl className="space-y-2 text-sm">
-            <div className="flex gap-2">
-              <dt className="text-gray-500 w-32">Documento:</dt>
-              <dd>
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Datos del cliente</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="divide-y divide-border/60">
+              <Detail label="Documento">
                 {customer.documentType} {customer.documentNumber}
-              </dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="text-gray-500 w-32">Teléfono:</dt>
-              <dd>{customer.phone}</dd>
-            </div>
-            {customer.whatsappPhone && (
-              <div className="flex gap-2">
-                <dt className="text-gray-500 w-32">WhatsApp:</dt>
-                <dd>{customer.whatsappPhone}</dd>
-              </div>
-            )}
-            {customer.email && (
-              <div className="flex gap-2">
-                <dt className="text-gray-500 w-32">Email:</dt>
-                <dd>{customer.email}</dd>
-              </div>
-            )}
-            <div className="flex gap-2">
-              <dt className="text-gray-500 w-32">Ciudad:</dt>
-              <dd>{customer.city}</dd>
-            </div>
-            <div className="flex gap-2">
-              <dt className="text-gray-500 w-32">Visitas:</dt>
-              <dd>{customer.visitCount}</dd>
-            </div>
-          </dl>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-gray-800">Vehículos ({vehicles.length})</h2>
+              </Detail>
+              <Detail label="Teléfono">{customer.phone}</Detail>
+              {customer.whatsappPhone && <Detail label="WhatsApp">{customer.whatsappPhone}</Detail>}
+              {customer.email && <Detail label="Email">{customer.email}</Detail>}
+              <Detail label="Ciudad">{customer.city}</Detail>
+              <Detail label="Visitas">{customer.visitCount}</Detail>
+            </dl>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle>Vehículos ({vehicles.length})</CardTitle>
             <Link
               href={`/receptions/new?customerId=${customer.id}`}
-              className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
             >
-              Nueva recepción
+              <Plus className="h-4 w-4" /> Recepción
             </Link>
-          </div>
-          {vehicles.length === 0 ? (
-            <p className="text-sm text-gray-500">Sin vehículos registrados</p>
-          ) : (
-            <ul className="space-y-2">
-              {vehicles.map((v) => (
-                <li key={v.id} className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{v.plate}</span>
-                  <span className="text-gray-500">
-                    {v.brand} {v.model} {v.year}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+          </CardHeader>
+          <CardContent>
+            {vehicles.length === 0 ? (
+              <p className="py-4 text-sm text-muted-foreground">Sin vehículos registrados</p>
+            ) : (
+              <ul className="divide-y divide-border/60">
+                {vehicles.map((v) => (
+                  <li key={v.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                    <span className="inline-flex items-center gap-2 font-medium">
+                      <Bike className="h-4 w-4 text-muted-foreground" /> {v.plate}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {v.brand} {v.model} · {v.year}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-4">
-        <h2 className="font-semibold text-gray-800 mb-3">Órdenes recientes</h2>
-        {recentWorkOrders.length === 0 ? (
-          <p className="text-sm text-gray-500">Sin órdenes de trabajo</p>
-        ) : (
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="text-left text-gray-500 text-xs uppercase">
-                <th className="pb-2">Número</th>
-                <th className="pb-2">Vehículo</th>
-                <th className="pb-2">Estado</th>
-                <th className="pb-2">Fecha</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {recentWorkOrders.map((wo) => (
-                <tr key={wo.id} className="hover:bg-gray-50">
-                  <td className="py-2">
-                    <Link href={`/work-orders/${wo.id}`} className="text-blue-600 hover:underline">
-                      {wo.orderNumber}
-                    </Link>
-                  </td>
-                  <td className="py-2 text-gray-600">{wo.vehicle.plate}</td>
-                  <td className="py-2">
-                    <span
-                      className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[wo.status] ?? 'bg-gray-100'}`}
+      <Card className="overflow-hidden">
+        <CardHeader>
+          <CardTitle>Órdenes recientes</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {recentWorkOrders.length === 0 ? (
+            <p className="px-5 pb-5 text-sm text-muted-foreground">Sin órdenes de trabajo</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-sm">
+                <thead>
+                  <tr className="border-y border-border text-left">
+                    {['Número', 'Vehículo', 'Estado', 'Fecha'].map((h) => (
+                      <th
+                        key={h}
+                        className="px-5 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentWorkOrders.map((wo) => (
+                    <tr
+                      key={wo.id}
+                      onClick={() => router.push(`/work-orders/${wo.id}`)}
+                      className="cursor-pointer border-b border-border/60 last:border-0 hover:bg-secondary/40"
                     >
-                      {wo.status}
-                    </span>
-                  </td>
-                  <td className="py-2 text-gray-500">
-                    {new Date(wo.createdAt).toLocaleDateString('es-CO')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+                      <td className="px-5 py-3 font-medium text-primary">{wo.orderNumber}</td>
+                      <td className="tnum px-5 py-3 text-muted-foreground">{wo.vehicle.plate}</td>
+                      <td className="px-5 py-3">
+                        <StatusBadge status={wo.status as WorkOrderStatus} />
+                      </td>
+                      <td className="tnum px-5 py-3 text-muted-foreground">
+                        {new Date(wo.createdAt).toLocaleDateString('es-CO')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

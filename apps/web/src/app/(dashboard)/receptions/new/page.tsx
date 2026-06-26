@@ -2,9 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Search, Loader2, UploadCloud } from 'lucide-react';
 import { apiGet, apiSend, apiUpload } from '@/lib/api';
 import type { PaginatedResponse } from '@/types/api';
 import { FUEL_LEVELS, FUEL_LABELS, type FuelLevel } from '@/types/workshop';
+import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input, Textarea, fieldBase } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
 
 interface Customer {
   id: string;
@@ -32,32 +38,52 @@ function useDebounce<T>(value: T, delay: number): T {
   return v;
 }
 
+function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+  return (
+    <Card>
+      <CardContent className="space-y-4 p-5">
+        <h2 className="flex items-center gap-2.5 text-sm font-semibold">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary">
+            {n}
+          </span>
+          {title}
+        </h2>
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FieldLabel({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="text-sm font-medium text-foreground/90">{label}</span>
+      {children}
+    </label>
+  );
+}
+
 export default function NewReceptionPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Step 1: customer
   const [search, setSearch] = useState('');
   const debounced = useDebounce(search, 300);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customer, setCustomer] = useState<Customer | null>(null);
 
-  // Step 2: vehicle
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleId, setVehicleId] = useState('');
 
-  // Step 3: reception fields
   const [odometer, setOdometer] = useState('');
   const [fuel, setFuel] = useState<FuelLevel>('HALF');
   const [observations, setObservations] = useState('');
   const [damage, setDamage] = useState('');
 
-  // After reception created
   const [reception, setReception] = useState<Reception | null>(null);
   const [photos, setPhotos] = useState<{ name: string; url: string }[]>([]);
 
-  // Step 4: work order
   const [serviceType, setServiceType] = useState('');
   const [problem, setProblem] = useState('');
   const [technicianId, setTechnicianId] = useState('');
@@ -68,7 +94,9 @@ export default function NewReceptionPage() {
       setCustomers([]);
       return;
     }
-    apiGet<PaginatedResponse<Customer>>(`/api/customers?search=${encodeURIComponent(debounced)}&pageSize=8`)
+    apiGet<PaginatedResponse<Customer>>(
+      `/api/customers?search=${encodeURIComponent(debounced)}&pageSize=8`,
+    )
       .then((d) => setCustomers(d.items))
       .catch((e) => setError((e as Error).message));
   }, [debounced]);
@@ -78,8 +106,7 @@ export default function NewReceptionPage() {
     setCustomers([]);
     setSearch(c.fullName);
     try {
-      const vs = await apiGet<Vehicle[]>(`/api/customers/${c.id}/vehicles`);
-      setVehicles(vs);
+      setVehicles(await apiGet<Vehicle[]>(`/api/customers/${c.id}/vehicles`));
     } catch (e) {
       setError((e as Error).message);
     }
@@ -142,49 +169,60 @@ export default function NewReceptionPage() {
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Nueva recepción</h1>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+    <div className="mx-auto max-w-3xl space-y-5">
+      <PageHeader
+        title="Nueva recepción"
+        description="Registra el ingreso del vehículo y abre la orden"
+      />
+      {error && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
-      {/* Step 1: customer */}
-      <section className="bg-white rounded-lg shadow p-5">
-        <h2 className="font-semibold text-gray-900 mb-3">1. Cliente</h2>
-        <input
-          placeholder="Buscar por nombre, documento o teléfono..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setCustomer(null);
-          }}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-        />
+      <Step n={1} title="Cliente">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            placeholder="Buscar por nombre, documento o teléfono…"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCustomer(null);
+            }}
+          />
+        </div>
         {customers.length > 0 && (
-          <ul className="mt-2 border border-gray-200 rounded-md divide-y">
+          <ul className="overflow-hidden rounded-lg border border-border">
             {customers.map((c) => (
               <li key={c.id}>
                 <button
                   onClick={() => void selectCustomer(c)}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                  className="w-full border-b border-border/60 px-3 py-2 text-left text-sm last:border-0 hover:bg-secondary/60"
                 >
-                  {c.fullName} — {c.documentNumber} — {c.phone}
+                  <span className="font-medium">{c.fullName}</span>{' '}
+                  <span className="text-muted-foreground">
+                    · {c.documentNumber} · {c.phone}
+                  </span>
                 </button>
               </li>
             ))}
           </ul>
         )}
-      </section>
+      </Step>
 
-      {/* Step 2: vehicle */}
       {customer && (
-        <section className="bg-white rounded-lg shadow p-5">
-          <h2 className="font-semibold text-gray-900 mb-3">2. Vehículo</h2>
+        <Step n={2} title="Vehículo">
           {vehicles.length === 0 ? (
-            <p className="text-sm text-gray-500">El cliente no tiene vehículos registrados.</p>
+            <p className="text-sm text-muted-foreground">
+              El cliente no tiene vehículos registrados.
+            </p>
           ) : (
             <select
               value={vehicleId}
               onChange={(e) => setVehicleId(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className={cn(fieldBase, 'cursor-pointer')}
             >
               <option value="">Selecciona un vehículo</option>
               {vehicles.map((v) => (
@@ -194,32 +232,29 @@ export default function NewReceptionPage() {
               ))}
             </select>
           )}
-        </section>
+        </Step>
       )}
 
-      {/* Step 3: reception data */}
       {customer && vehicleId && !reception && (
-        <section className="bg-white rounded-lg shadow p-5 space-y-4">
-          <h2 className="font-semibold text-gray-900">3. Datos de recepción</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <label className="text-sm">
-              <span className="text-gray-600">Odómetro</span>
-              <input
-                type="number"
-                value={odometer}
-                onChange={(e) => setOdometer(e.target.value)}
-                className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-              />
-            </label>
-            <div className="text-sm">
-              <span className="text-gray-600">Nivel de combustible</span>
-              <div className="mt-1 flex gap-1">
+        <Step n={3} title="Datos de recepción">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FieldLabel label="Odómetro (km)">
+              <Input type="number" value={odometer} onChange={(e) => setOdometer(e.target.value)} />
+            </FieldLabel>
+            <div className="space-y-1.5">
+              <span className="text-sm font-medium text-foreground/90">Nivel de combustible</span>
+              <div className="grid grid-cols-5 gap-1 rounded-lg border border-border bg-secondary/40 p-1">
                 {FUEL_LEVELS.map((f) => (
                   <button
                     key={f}
                     type="button"
                     onClick={() => setFuel(f)}
-                    className={`flex-1 px-2 py-2 rounded text-xs border ${fuel === f ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600'}`}
+                    className={cn(
+                      'rounded-md px-1 py-1.5 text-xs font-medium transition-colors',
+                      fuel === f
+                        ? 'bg-card text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
                   >
                     {FUEL_LABELS[f]}
                   </button>
@@ -227,118 +262,95 @@ export default function NewReceptionPage() {
               </div>
             </div>
           </div>
-          <label className="block text-sm">
-            <span className="text-gray-600">Observaciones</span>
-            <textarea
+          <FieldLabel label="Observaciones">
+            <Textarea
               value={observations}
               onChange={(e) => setObservations(e.target.value)}
-              className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               rows={2}
             />
-          </label>
-          <label className="block text-sm">
-            <span className="text-gray-600">Daños visibles</span>
-            <textarea
-              value={damage}
-              onChange={(e) => setDamage(e.target.value)}
-              className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-              rows={2}
-            />
-          </label>
-          <button
-            disabled={busy || !odometer}
-            onClick={() => void createReception()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm disabled:opacity-40"
-          >
-            Guardar recepción
-          </button>
-        </section>
+          </FieldLabel>
+          <FieldLabel label="Daños visibles">
+            <Textarea value={damage} onChange={(e) => setDamage(e.target.value)} rows={2} />
+          </FieldLabel>
+          <Button disabled={busy || !odometer} onClick={() => void createReception()}>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Guardar recepción
+          </Button>
+        </Step>
       )}
 
-      {/* Step 3b: photos */}
       {reception && (
-        <section className="bg-white rounded-lg shadow p-5">
-          <h2 className="font-semibold text-gray-900 mb-3">Fotos de ingreso ({photos.length}/10)</h2>
+        <Step n={4} title={`Fotos de ingreso (${photos.length}/10)`}>
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
               if (e.dataTransfer.files.length) void uploadPhotos(e.dataTransfer.files);
             }}
-            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-500"
+            className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border bg-background/40 px-4 py-8 text-center"
           >
-            Arrastra imágenes aquí o
-            <label className="ml-1 text-blue-600 cursor-pointer hover:underline">
-              selecciona archivos
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                hidden
-                disabled={busy || photos.length >= 10}
-                onChange={(e) => e.target.files && void uploadPhotos(e.target.files)}
-              />
-            </label>
+            <UploadCloud className="h-6 w-6 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              Arrastra imágenes aquí o{' '}
+              <label className="cursor-pointer font-medium text-primary hover:underline">
+                selecciona archivos
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  hidden
+                  disabled={busy || photos.length >= 10}
+                  onChange={(e) => e.target.files && void uploadPhotos(e.target.files)}
+                />
+              </label>
+            </p>
           </div>
           {photos.length > 0 && (
-            <div className="flex flex-wrap gap-3 mt-3">
+            <div className="flex flex-wrap gap-3">
               {photos.map((p, i) => (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img key={i} src={p.url} alt={p.name} className="h-20 w-20 object-cover rounded border" />
+                <img
+                  key={i}
+                  src={p.url}
+                  alt={p.name}
+                  className="h-20 w-20 rounded-lg border border-border object-cover"
+                />
               ))}
             </div>
           )}
-        </section>
+        </Step>
       )}
 
-      {/* Step 4: create work order */}
       {reception && (
-        <section className="bg-white rounded-lg shadow p-5 space-y-4">
-          <h2 className="font-semibold text-gray-900">4. Crear orden de trabajo</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <label className="text-sm">
-              <span className="text-gray-600">Tipo de servicio</span>
-              <input
-                value={serviceType}
-                onChange={(e) => setServiceType(e.target.value)}
-                className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="text-sm">
-              <span className="text-gray-600">Técnico (ID)</span>
-              <input
-                value={technicianId}
-                onChange={(e) => setTechnicianId(e.target.value)}
-                className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="text-sm col-span-2">
-              <span className="text-gray-600">Entrega prometida</span>
-              <input
-                type="datetime-local"
-                value={promised}
-                onChange={(e) => setPromised(e.target.value)}
-                className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="text-sm col-span-2">
-              <span className="text-gray-600">Descripción del problema</span>
-              <textarea
-                value={problem}
-                onChange={(e) => setProblem(e.target.value)}
-                className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                rows={2}
-              />
-            </label>
+        <Step n={5} title="Crear orden de trabajo">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FieldLabel label="Tipo de servicio">
+              <Input value={serviceType} onChange={(e) => setServiceType(e.target.value)} />
+            </FieldLabel>
+            <FieldLabel label="Técnico (ID)">
+              <Input value={technicianId} onChange={(e) => setTechnicianId(e.target.value)} />
+            </FieldLabel>
+            <div className="sm:col-span-2">
+              <FieldLabel label="Entrega prometida">
+                <Input
+                  type="datetime-local"
+                  value={promised}
+                  onChange={(e) => setPromised(e.target.value)}
+                />
+              </FieldLabel>
+            </div>
+            <div className="sm:col-span-2">
+              <FieldLabel label="Descripción del problema">
+                <Textarea value={problem} onChange={(e) => setProblem(e.target.value)} rows={2} />
+              </FieldLabel>
+            </div>
           </div>
-          <button
+          <Button
             disabled={busy || !serviceType || !problem || !technicianId || !promised}
             onClick={() => void createWorkOrder()}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm disabled:opacity-40"
           >
-            Crear orden de trabajo
-          </button>
-        </section>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Crear orden de trabajo
+          </Button>
+        </Step>
       )}
     </div>
   );

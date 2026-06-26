@@ -1,14 +1,30 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Plus, Search, Package, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { apiGet, apiSend } from '@/lib/api';
 import type { PaginatedResponse } from '@/types/api';
-import { type PartWithStock, MOVEMENT_TYPES, MOVEMENT_LABELS, type MovementType } from '@/types/inventory';
+import {
+  type PartWithStock,
+  MOVEMENT_TYPES,
+  MOVEMENT_LABELS,
+  type MovementType,
+} from '@/types/inventory';
+import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input, Textarea, fieldBase } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Modal } from '@/components/ui/modal';
+import { PageHeader } from '@/components/ui/page-header';
+import { EmptyState, ErrorState, TableRowsSkeleton } from '@/components/ui/states';
 
 interface Branch {
   id: string;
   name: string;
 }
+
+const PAGE_SIZE = 20;
 
 function useDebounce<T>(value: T, delay: number): T {
   const [v, setV] = useState(value);
@@ -19,13 +35,34 @@ function useDebounce<T>(value: T, delay: number): T {
   return v;
 }
 
+function StockCell({ part }: { part: PartWithStock }) {
+  const out = part.stockDisponible <= 0;
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span
+        className={cn(
+          'tnum font-medium',
+          out ? 'text-destructive' : part.lowStock ? 'text-warning' : 'text-foreground',
+        )}
+      >
+        {part.stockDisponible}
+      </span>
+      {out ? (
+        <Badge variant="destructive">Agotado</Badge>
+      ) : part.lowStock ? (
+        <Badge variant="warning">Bajo</Badge>
+      ) : null}
+    </span>
+  );
+}
+
 export default function InventoryPage() {
   const [parts, setParts] = useState<PartWithStock[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const debounced = useDebounce(search, 300);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [movePart, setMovePart] = useState<PartWithStock | null>(null);
   const [showNew, setShowNew] = useState(false);
@@ -35,7 +72,7 @@ export default function InventoryPage() {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ page: String(page), pageSize: '20' });
+      const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
       if (debounced) params.set('search', debounced);
       const data = await apiGet<PaginatedResponse<PartWithStock>>(`/api/parts?${params}`);
       setParts(data.items);
@@ -51,107 +88,136 @@ export default function InventoryPage() {
     void load();
   }, [load]);
   useEffect(() => {
-    apiGet<Branch[]>('/api/branches').then(setBranches).catch(() => {});
+    apiGet<Branch[]>('/api/branches')
+      .then(setBranches)
+      .catch(() => {});
   }, []);
 
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Inventario</h1>
-        <button
-          onClick={() => setShowNew(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-        >
-          Nuevo repuesto
-        </button>
+    <div className="space-y-5">
+      <PageHeader
+        title="Inventario"
+        description={
+          total > 0
+            ? `${total} repuesto${total === 1 ? '' : 's'} en catálogo`
+            : 'Repuestos y niveles de stock'
+        }
+      >
+        <Button onClick={() => setShowNew(true)}>
+          <Plus /> Nuevo repuesto
+        </Button>
+      </PageHeader>
+
+      <div className="relative max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          className="pl-9"
+          placeholder="Buscar por nombre o SKU…"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+        />
       </div>
 
-      <input
-        type="text"
-        placeholder="Buscar por nombre o SKU..."
-        value={search}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          setPage(1);
-        }}
-        className="w-full max-w-md border border-gray-300 rounded-md px-3 py-2 text-sm mb-4"
-      />
-
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {['SKU', 'Nombre', 'Categoría', 'Disponible', 'Físico', 'Reservado', ''].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                  Cargando...
-                </td>
-              </tr>
-            ) : parts.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                  No se encontraron repuestos
-                </td>
-              </tr>
-            ) : (
-              parts.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm text-gray-600">{p.sku}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{p.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{p.category}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <span className={p.lowStock ? 'text-red-600 font-semibold' : 'text-gray-800'}>
-                      {p.stockDisponible}
-                      {p.lowStock && (
-                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs bg-red-100 text-red-700">
-                          bajo
-                        </span>
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-sm">
+            <thead>
+              <tr className="border-b border-border text-left">
+                {['SKU', 'Nombre', 'Categoría', 'Disponible', 'Físico', 'Reservado', ''].map(
+                  (h, i) => (
+                    <th
+                      key={h || i}
+                      className={cn(
+                        'px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground',
+                        i === 6 && 'text-right',
                       )}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{p.stockFisico}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{p.stockReservado}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button onClick={() => setMovePart(p)} className="text-sm text-blue-600 hover:underline">
-                      Movimiento
-                    </button>
+                    >
+                      {h}
+                    </th>
+                  ),
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <TableRowsSkeleton rows={6} cols={7} />
+              ) : error ? (
+                <tr>
+                  <td colSpan={7}>
+                    <ErrorState message={error} onRetry={() => void load()} />
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-        <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200">
-          <span className="text-sm text-gray-500">{total} repuesto(s)</span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1 text-sm border rounded disabled:opacity-40"
-            >
-              Anterior
-            </button>
-            <span className="px-3 py-1 text-sm">Página {page}</span>
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              disabled={parts.length < 20}
-              className="px-3 py-1 text-sm border rounded disabled:opacity-40"
-            >
-              Siguiente
-            </button>
-          </div>
+              ) : parts.length === 0 ? (
+                <tr>
+                  <td colSpan={7}>
+                    <EmptyState
+                      icon={Package}
+                      title={debounced ? 'Sin resultados' : 'Aún no hay repuestos'}
+                      description={
+                        debounced
+                          ? 'Prueba con otro término.'
+                          : 'Agrega el primer repuesto al catálogo.'
+                      }
+                    />
+                  </td>
+                </tr>
+              ) : (
+                parts.map((p) => (
+                  <tr
+                    key={p.id}
+                    className="border-b border-border/60 last:border-0 hover:bg-secondary/40"
+                  >
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
+                    <td className="px-4 py-3 font-medium text-foreground">{p.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{p.category}</td>
+                    <td className="px-4 py-3">
+                      <StockCell part={p} />
+                    </td>
+                    <td className="tnum px-4 py-3 text-muted-foreground">{p.stockFisico}</td>
+                    <td className="tnum px-4 py-3 text-muted-foreground">{p.stockReservado}</td>
+                    <td className="px-4 py-3 text-right">
+                      <Button variant="outline" size="sm" onClick={() => setMovePart(p)}>
+                        Movimiento
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      </div>
+
+        {!loading && !error && parts.length > 0 && (
+          <div className="flex items-center justify-between border-t border-border px-4 py-3">
+            <span className="text-xs text-muted-foreground">
+              Página {page} de {totalPages} · {total} en total
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                <ChevronLeft className="h-4 w-4" /> Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page >= totalPages}
+              >
+                Siguiente <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
 
       {movePart && (
         <MovementModal
@@ -197,15 +263,36 @@ function MovementModal({
   const [error, setError] = useState<string | null>(null);
 
   const difference = newCount !== '' ? Number(newCount) - part.stockFisico : 0;
+  const disabled =
+    busy ||
+    (type === 'adjust'
+      ? !notes || newCount === ''
+      : type === 'transfer'
+        ? !toBranchId || !quantity
+        : !quantity);
 
   const submit = async () => {
     setBusy(true);
     setError(null);
     try {
-      if (type === 'entry') await apiSend('/api/stock/entry', 'POST', { partId: part.id, quantity: Number(quantity), notes });
-      else if (type === 'exit') await apiSend('/api/stock/exit', 'POST', { partId: part.id, quantity: Number(quantity), notes });
+      if (type === 'entry')
+        await apiSend('/api/stock/entry', 'POST', {
+          partId: part.id,
+          quantity: Number(quantity),
+          notes,
+        });
+      else if (type === 'exit')
+        await apiSend('/api/stock/exit', 'POST', {
+          partId: part.id,
+          quantity: Number(quantity),
+          notes,
+        });
       else if (type === 'adjust')
-        await apiSend('/api/stock/adjust', 'POST', { partId: part.id, newPhysicalCount: Number(newCount), notes });
+        await apiSend('/api/stock/adjust', 'POST', {
+          partId: part.id,
+          newPhysicalCount: Number(newCount),
+          notes,
+        });
       else
         await apiSend('/api/stock/transfer', 'POST', {
           partId: part.id,
@@ -221,94 +308,101 @@ function MovementModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-5">
-        <h2 className="text-lg font-semibold text-gray-900">Movimiento — {part.name}</h2>
-        <p className="text-sm text-gray-500 mb-4">Disponible actual: {part.stockDisponible}</p>
-
-        <div className="flex gap-1 mb-4">
+    <Modal
+      open
+      onClose={onClose}
+      title={`Movimiento · ${part.name}`}
+      description={`Disponible actual: ${part.stockDisponible}`}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button disabled={disabled} onClick={() => void submit()}>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Confirmar
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-4 gap-1 rounded-lg border border-border bg-secondary/40 p-1">
           {MOVEMENT_TYPES.map((t) => (
             <button
               key={t}
+              type="button"
               onClick={() => setType(t)}
-              className={`flex-1 px-2 py-1.5 rounded text-sm border ${type === t ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-300 text-gray-600'}`}
+              className={cn(
+                'rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
+                type === t
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
             >
               {MOVEMENT_LABELS[t]}
             </button>
           ))}
         </div>
 
-        <div className="space-y-3">
-          {(type === 'entry' || type === 'exit' || type === 'transfer') && (
-            <input
-              type="number"
-              placeholder="Cantidad"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            />
-          )}
-          {type === 'adjust' && (
-            <>
-              <input
-                type="number"
-                placeholder="Nuevo conteo físico"
-                value={newCount}
-                onChange={(e) => setNewCount(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-              />
-              {newCount !== '' && (
-                <p className={`text-sm ${difference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  Diferencia: {difference >= 0 ? '+' : ''}
-                  {difference} ({difference >= 0 ? 'ganancia' : 'merma'})
-                </p>
-              )}
-            </>
-          )}
-          {type === 'transfer' && (
-            <select
-              value={toBranchId}
-              onChange={(e) => setToBranchId(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            >
-              <option value="">Sucursal destino</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          )}
-          <textarea
-            placeholder={type === 'adjust' ? 'Justificación (obligatoria)' : 'Notas (opcional)'}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+        {(type === 'entry' || type === 'exit' || type === 'transfer') && (
+          <Input
+            type="number"
+            placeholder="Cantidad"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
           />
-        </div>
-
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-
-        <div className="flex justify-end gap-2 mt-5">
-          <button onClick={onClose} className="px-4 py-2 text-sm border rounded-md">
-            Cancelar
-          </button>
-          <button
-            disabled={busy || (type === 'adjust' ? !notes || newCount === '' : type === 'transfer' ? !toBranchId || !quantity : !quantity)}
-            onClick={() => void submit()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm disabled:opacity-40"
+        )}
+        {type === 'adjust' && (
+          <>
+            <Input
+              type="number"
+              placeholder="Nuevo conteo físico"
+              value={newCount}
+              onChange={(e) => setNewCount(e.target.value)}
+            />
+            {newCount !== '' && (
+              <p className={cn('text-sm', difference >= 0 ? 'text-success' : 'text-destructive')}>
+                Diferencia: {difference >= 0 ? '+' : ''}
+                {difference} ({difference >= 0 ? 'ganancia' : 'merma'})
+              </p>
+            )}
+          </>
+        )}
+        {type === 'transfer' && (
+          <select
+            value={toBranchId}
+            onChange={(e) => setToBranchId(e.target.value)}
+            className={cn(fieldBase, 'cursor-pointer')}
           >
-            Confirmar
-          </button>
-        </div>
+            <option value="">Sucursal destino</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        )}
+        <Textarea
+          placeholder={type === 'adjust' ? 'Justificación (obligatoria)' : 'Notas (opcional)'}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+        />
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
-    </div>
+    </Modal>
   );
 }
 
 function NewPartModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
-  const [form, setForm] = useState({ sku: '', name: '', category: '', unit: 'unidad', costPrice: '', salePrice: '', minStockAlert: '' });
+  const [form, setForm] = useState({
+    sku: '',
+    name: '',
+    category: '',
+    unit: 'unidad',
+    costPrice: '',
+    salePrice: '',
+    minStockAlert: '',
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -336,32 +430,54 @@ function NewPartModal({ onClose, onDone }: { onClose: () => void; onDone: () => 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-5">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Nuevo repuesto</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <input placeholder="SKU" value={form.sku} onChange={set('sku')} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
-          <input placeholder="Categoría" value={form.category} onChange={set('category')} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
-          <input placeholder="Nombre" value={form.name} onChange={set('name')} className="col-span-2 border border-gray-300 rounded-md px-3 py-2 text-sm" />
-          <input placeholder="Unidad" value={form.unit} onChange={set('unit')} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
-          <input placeholder="Stock mínimo" type="number" value={form.minStockAlert} onChange={set('minStockAlert')} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
-          <input placeholder="Precio costo" type="number" value={form.costPrice} onChange={set('costPrice')} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
-          <input placeholder="Precio venta" type="number" value={form.salePrice} onChange={set('salePrice')} className="border border-gray-300 rounded-md px-3 py-2 text-sm" />
-        </div>
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-        <div className="flex justify-end gap-2 mt-5">
-          <button onClick={onClose} className="px-4 py-2 text-sm border rounded-md">
+    <Modal
+      open
+      onClose={onClose}
+      title="Nuevo repuesto"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button
             disabled={busy || !form.sku || !form.name || !form.costPrice || !form.salePrice}
             onClick={() => void submit()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm disabled:opacity-40"
           >
-            Crear
-          </button>
-        </div>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Crear
+          </Button>
+        </>
+      }
+    >
+      <div className="grid grid-cols-2 gap-3">
+        <Input placeholder="SKU" value={form.sku} onChange={set('sku')} />
+        <Input placeholder="Categoría" value={form.category} onChange={set('category')} />
+        <Input
+          className="col-span-2"
+          placeholder="Nombre"
+          value={form.name}
+          onChange={set('name')}
+        />
+        <Input placeholder="Unidad" value={form.unit} onChange={set('unit')} />
+        <Input
+          placeholder="Stock mínimo"
+          type="number"
+          value={form.minStockAlert}
+          onChange={set('minStockAlert')}
+        />
+        <Input
+          placeholder="Precio costo"
+          type="number"
+          value={form.costPrice}
+          onChange={set('costPrice')}
+        />
+        <Input
+          placeholder="Precio venta"
+          type="number"
+          value={form.salePrice}
+          onChange={set('salePrice')}
+        />
       </div>
-    </div>
+      {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+    </Modal>
   );
 }

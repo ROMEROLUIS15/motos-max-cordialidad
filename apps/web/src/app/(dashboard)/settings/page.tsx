@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Loader2, Check, Upload } from 'lucide-react';
 import { apiGet, apiSend, apiUpload } from '@/lib/api';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { PageHeader } from '@/components/ui/page-header';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface TenantConfig {
   name: string;
@@ -12,6 +18,35 @@ interface TenantConfig {
   vatPercentage: number;
   whatsappPhone: string | null;
   logoUrl: string | null;
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  disabled = false,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange?: (v: string) => void;
+  type?: string;
+  disabled?: boolean;
+  hint?: string;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-sm font-medium text-foreground/90">{label}</label>
+      <Input
+        type={type}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange?.(e.target.value)}
+      />
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
 }
 
 export default function SettingsPage() {
@@ -66,93 +101,97 @@ export default function SettingsPage() {
     }
   };
 
-  if (!config) {
-    return <div className="p-6 text-gray-500">{error ?? 'Cargando configuración...'}</div>;
-  }
-
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Configuración del taller</h1>
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      {saved && <p className="text-sm text-green-600">Cambios guardados.</p>}
-
-      <section className="bg-white rounded-lg shadow p-5 space-y-3">
-        <h2 className="font-semibold text-gray-900">Perfil</h2>
-        <Field label="Nombre" value={config.name} disabled />
-        <Field label="NIT" value={config.taxId} disabled />
-        <Field label="Dirección" value={config.address ?? ''} onChange={(v) => set('address', v)} />
-        <Field label="Teléfono" value={config.phone ?? ''} onChange={(v) => set('phone', v)} />
-        <Field label="Email" value={config.email ?? ''} onChange={(v) => set('email', v)} />
-      </section>
-
-      <section className="bg-white rounded-lg shadow p-5 space-y-3">
-        <h2 className="font-semibold text-gray-900">Impuesto</h2>
-        <Field
-          label="IVA (%)"
-          type="number"
-          value={String(config.vatPercentage)}
-          onChange={(v) => set('vatPercentage', v)}
-        />
-      </section>
-
-      <section className="bg-white rounded-lg shadow p-5 space-y-3">
-        <h2 className="font-semibold text-gray-900">WhatsApp</h2>
-        <Field
-          label="Número"
-          value={config.whatsappPhone ?? ''}
-          onChange={(v) => set('whatsappPhone', v)}
-        />
-        <p className="text-xs text-gray-400">El token se gestiona de forma cifrada y no se muestra.</p>
-      </section>
-
-      <section className="bg-white rounded-lg shadow p-5 space-y-3">
-        <h2 className="font-semibold text-gray-900">Logo</h2>
-        <div className="flex items-center gap-3">
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="text-sm" />
-          <button
-            disabled={busy}
-            onClick={() => void uploadLogo()}
-            className="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1.5 rounded-md text-sm disabled:opacity-40"
-          >
-            Subir logo
-          </button>
-        </div>
-      </section>
-
-      <button
-        disabled={busy}
-        onClick={() => void save()}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md text-sm font-medium disabled:opacity-40"
-      >
-        Guardar cambios
-      </button>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = 'text',
-  disabled = false,
-}: {
-  label: string;
-  value: string;
-  onChange?: (v: string) => void;
-  type?: string;
-  disabled?: boolean;
-}) {
-  return (
-    <label className="block text-sm">
-      <span className="text-gray-600">{label}</span>
-      <input
-        type={type}
-        value={value}
-        disabled={disabled}
-        onChange={(e) => onChange?.(e.target.value)}
-        className="mt-1 w-full border border-gray-300 rounded-md px-3 py-2 text-sm disabled:bg-gray-100 disabled:text-gray-500"
+    <div className="mx-auto max-w-2xl space-y-5">
+      <PageHeader
+        title="Configuración del taller"
+        description="Datos del negocio, impuesto y canales"
       />
-    </label>
+
+      {error && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+      {saved && (
+        <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-3 py-2.5 text-sm text-success">
+          <Check className="h-4 w-4" /> Cambios guardados.
+        </div>
+      )}
+
+      {!config ? (
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-44 rounded-xl" />
+          ))}
+        </div>
+      ) : (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Perfil</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Nombre" value={config.name} disabled />
+              <Field label="NIT" value={config.taxId} disabled />
+              <Field
+                label="Dirección"
+                value={config.address ?? ''}
+                onChange={(v) => set('address', v)}
+              />
+              <Field
+                label="Teléfono"
+                value={config.phone ?? ''}
+                onChange={(v) => set('phone', v)}
+              />
+              <Field label="Email" value={config.email ?? ''} onChange={(v) => set('email', v)} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Impuesto y WhatsApp</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field
+                label="IVA (%)"
+                type="number"
+                value={String(config.vatPercentage)}
+                onChange={(v) => set('vatPercentage', v)}
+              />
+              <Field
+                label="WhatsApp"
+                value={config.whatsappPhone ?? ''}
+                onChange={(v) => set('whatsappPhone', v)}
+                hint="El token se gestiona cifrado y no se muestra."
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Logo</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center gap-3">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-secondary/70"
+              />
+              <Button variant="outline" disabled={busy} onClick={() => void uploadLogo()}>
+                <Upload className="h-4 w-4" /> Subir logo
+              </Button>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button disabled={busy} onClick={() => void save()}>
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />} Guardar cambios
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

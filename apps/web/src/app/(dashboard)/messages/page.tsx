@@ -1,9 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { MessageSquare, Bot, Send, Loader2 } from 'lucide-react';
 import { apiGet, apiSend } from '@/lib/api';
 import type { PaginatedResponse } from '@/types/api';
 import { STATUS_ICON, type WhatsAppSession, type Message } from '@/types/messaging';
+import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function MessagesPage() {
   const [sessions, setSessions] = useState<WhatsAppSession[]>([]);
@@ -12,10 +19,13 @@ export default function MessagesPage() {
   const [reply, setReply] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const loadSessions = useCallback(async () => {
     try {
-      const data = await apiGet<PaginatedResponse<WhatsAppSession>>('/api/messages/sessions?pageSize=50');
+      const data = await apiGet<PaginatedResponse<WhatsAppSession>>(
+        '/api/messages/sessions?pageSize=50',
+      );
       setSessions(data.items);
     } catch (e) {
       setError((e as Error).message);
@@ -27,7 +37,6 @@ export default function MessagesPage() {
       const data = await apiGet<PaginatedResponse<Message>>(
         `/api/messages/sessions/${sessionId}/messages?pageSize=100`,
       );
-      // API returns newest first; show oldest at top.
       setMessages([...data.items].reverse());
     } catch (e) {
       setError((e as Error).message);
@@ -41,6 +50,10 @@ export default function MessagesPage() {
   useEffect(() => {
     if (active) void loadMessages(active.id);
   }, [active, loadMessages]);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [messages]);
 
   const send = async () => {
     if (!active || !reply) return;
@@ -58,81 +71,109 @@ export default function MessagesPage() {
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Mensajes</h1>
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-      <div className="flex gap-4 h-[70vh]">
-        {/* Sessions list */}
-        <div className="w-72 bg-white rounded-lg shadow overflow-y-auto">
+    <div className="flex h-[calc(100vh-7.5rem)] flex-col space-y-4">
+      <PageHeader title="Mensajes" description="Conversaciones de WhatsApp del taller" />
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <div className="flex min-h-0 flex-1 gap-4">
+        {/* Lista de sesiones */}
+        <Card className="hidden w-80 shrink-0 overflow-y-auto p-0 sm:block">
           {sessions.length === 0 ? (
-            <p className="p-4 text-sm text-gray-400">Sin conversaciones</p>
+            <p className="p-4 text-sm text-muted-foreground">Sin conversaciones</p>
           ) : (
             sessions.map((s) => (
               <button
                 key={s.id}
                 onClick={() => setActive(s)}
-                className={`w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-gray-50 ${active?.id === s.id ? 'bg-blue-50' : ''}`}
+                className={cn(
+                  'w-full border-b border-border/60 px-4 py-3 text-left transition-colors last:border-0 hover:bg-secondary/50',
+                  active?.id === s.id && 'bg-secondary',
+                )}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-900">{s.phoneNumber}</span>
-                  {s.isAnonymous && (
-                    <span className="text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">Anónimo</span>
-                  )}
+                <div className="flex items-center justify-between gap-2">
+                  <span className="tnum truncate text-sm font-medium text-foreground">
+                    {s.phoneNumber}
+                  </span>
+                  {s.isAnonymous && <Badge variant="secondary">Anónimo</Badge>}
                 </div>
                 {s.lastMessageAt && (
-                  <span className="text-xs text-gray-400">{new Date(s.lastMessageAt).toLocaleString('es-CO')}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(s.lastMessageAt).toLocaleString('es-CO')}
+                  </span>
                 )}
               </button>
             ))
           )}
-        </div>
+        </Card>
 
-        {/* Conversation */}
-        <div className="flex-1 bg-white rounded-lg shadow flex flex-col">
+        {/* Conversación */}
+        <Card className="flex min-w-0 flex-1 flex-col overflow-hidden p-0">
           {!active ? (
-            <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
-              Selecciona una conversación
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
+              <MessageSquare className="h-7 w-7 opacity-40" />
+              <p className="text-sm">Selecciona una conversación</p>
             </div>
           ) : (
             <>
-              <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {messages.map((m) => (
-                  <div key={m.id} className={`flex ${m.direction === 'OUTBOUND' ? 'justify-end' : 'justify-start'}`}>
-                    <div
-                      className={`max-w-[70%] px-3 py-2 rounded-lg text-sm ${
-                        m.direction === 'OUTBOUND' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      <p>{m.content}</p>
-                      <div className="text-[10px] opacity-70 mt-1 flex items-center gap-1 justify-end">
-                        {m.isAi && <span>🤖</span>}
-                        <span>{new Date(m.createdAt).toLocaleTimeString('es-CO')}</span>
-                        {m.direction === 'OUTBOUND' && <span>{STATUS_ICON[m.status]}</span>}
+              <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+                <span className="tnum text-sm font-medium">{active.phoneNumber}</span>
+              </div>
+              <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto p-4">
+                {messages.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Sin mensajes</p>
+                )}
+                {messages.map((m) => {
+                  const out = m.direction === 'OUTBOUND';
+                  return (
+                    <div key={m.id} className={cn('flex', out ? 'justify-end' : 'justify-start')}>
+                      <div
+                        className={cn(
+                          'max-w-[75%] rounded-2xl px-3 py-2 text-sm',
+                          out
+                            ? 'rounded-br-sm bg-primary text-primary-foreground'
+                            : 'rounded-bl-sm border border-border bg-secondary text-foreground',
+                        )}
+                      >
+                        <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                        <div
+                          className={cn(
+                            'mt-1 flex items-center justify-end gap-1 text-[10px]',
+                            out ? 'text-primary-foreground/70' : 'text-muted-foreground',
+                          )}
+                        >
+                          {m.isAi && <Bot className="h-3 w-3" />}
+                          <span className="tnum">
+                            {new Date(m.createdAt).toLocaleTimeString('es-CO', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                          {out && <span>{STATUS_ICON[m.status]}</span>}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-                {messages.length === 0 && <p className="text-sm text-gray-400">Sin mensajes</p>}
+                  );
+                })}
               </div>
-              <div className="border-t border-gray-200 p-3 flex gap-2">
-                <input
+              <div className="flex gap-2 border-t border-border p-3">
+                <Input
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && void send()}
-                  placeholder="Escribe una respuesta..."
-                  className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  placeholder="Escribe una respuesta…"
                 />
-                <button
-                  disabled={busy || !reply}
-                  onClick={() => void send()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm disabled:opacity-40"
-                >
+                <Button disabled={busy || !reply} onClick={() => void send()}>
+                  {busy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
                   Enviar
-                </button>
+                </Button>
               </div>
             </>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );
