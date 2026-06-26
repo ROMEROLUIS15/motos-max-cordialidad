@@ -33,6 +33,8 @@ export interface WorkOrderPartRecord {
   id: string;
   workOrderId: string;
   partId: string;
+  partName: string;
+  partSku: string;
   quantity: number;
   unitPriceAtSale: number;
 }
@@ -60,7 +62,11 @@ export interface WorkOrderRepository {
     filters: WorkOrderFilters,
     pagination: Pagination,
   ): Promise<PaginatedResult<WorkOrder>>;
-  findNearingDeadline(thresholdHours: number, tenantId: string, branchId?: string): Promise<WorkOrder[]>;
+  findNearingDeadline(
+    thresholdHours: number,
+    tenantId: string,
+    branchId?: string,
+  ): Promise<WorkOrder[]>;
   countActiveByStatus(branchId: string, tenantId: string): Promise<Record<string, number>>;
   avgCycleTimeHours(branchId: string, tenantId: string, from: Date, to: Date): Promise<number>;
   technicianRanking(
@@ -70,7 +76,11 @@ export interface WorkOrderRepository {
     to: Date,
     limit: number,
   ): Promise<Array<{ technicianId: string; technicianName: string; completed: number }>>;
-  countByStatusInPeriod(status: WorkOrderStatus, branchId: string, tenantId: string): Promise<number>;
+  countByStatusInPeriod(
+    status: WorkOrderStatus,
+    branchId: string,
+    tenantId: string,
+  ): Promise<number>;
   create(workOrder: WorkOrder): Promise<void>;
   save(workOrder: WorkOrder): Promise<void>;
   saveStatusHistory(entry: StatusHistoryEntry): Promise<void>;

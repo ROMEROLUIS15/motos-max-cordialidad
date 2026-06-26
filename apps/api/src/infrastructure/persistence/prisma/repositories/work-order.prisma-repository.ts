@@ -76,7 +76,7 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
       where: { id, tenantId, deletedAt: null },
       include: {
         lines: { orderBy: { createdAt: 'asc' } },
-        parts: { orderBy: { createdAt: 'asc' } },
+        parts: { include: { part: true }, orderBy: { createdAt: 'asc' } },
         statusHistory: { orderBy: { changedAt: 'asc' } },
       },
     });
@@ -95,6 +95,8 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
       id: p.id,
       workOrderId: p.workOrderId,
       partId: p.partId,
+      partName: p.part.name,
+      partSku: p.part.sku,
       quantity: Number(p.quantity),
       unitPriceAtSale: Number(p.unitPriceAtSale),
     }));
@@ -383,12 +385,17 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
   }
 
   async findPartById(id: string, workOrderId: string): Promise<WorkOrderPartRecord | null> {
-    const p = await this.prisma.workOrderPart.findFirst({ where: { id, workOrderId } });
+    const p = await this.prisma.workOrderPart.findFirst({
+      where: { id, workOrderId },
+      include: { part: true },
+    });
     if (!p) return null;
     return {
       id: p.id,
       workOrderId: p.workOrderId,
       partId: p.partId,
+      partName: p.part.name,
+      partSku: p.part.sku,
       quantity: Number(p.quantity),
       unitPriceAtSale: Number(p.unitPriceAtSale),
     };
