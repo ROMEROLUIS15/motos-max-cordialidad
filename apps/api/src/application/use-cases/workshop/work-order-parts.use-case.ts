@@ -29,7 +29,7 @@ export class AddPartToWorkOrderUseCase {
 
     const part = await this.prisma.part.findFirst({
       where: { id: input.partId, tenantId: input.tenantId },
-      select: { salePrice: true },
+      select: { salePrice: true, name: true, sku: true },
     });
     if (!part) throw new NotFoundException('Repuesto no encontrado');
 
@@ -45,6 +45,8 @@ export class AddPartToWorkOrderUseCase {
       id: randomUUID(),
       workOrderId: input.workOrderId,
       partId: input.partId,
+      partName: part.name,
+      partSku: part.sku,
       quantity: input.quantity,
       unitPriceAtSale: Number(part.salePrice),
     };

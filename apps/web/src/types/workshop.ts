@@ -78,6 +78,8 @@ export interface WorkOrderPart {
   id: string;
   workOrderId: string;
   partId: string;
+  partName: string;
+  partSku: string;
   quantity: number;
   unitPriceAtSale: number;
 }
