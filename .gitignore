@@ -12,6 +12,11 @@ out/
 .vercel/
 .open-next/
 
+# Test artifacts (Playwright)
+test-results/
+playwright-report/
+.playwright/
+
 # Environment files
 .env
 .env.local
