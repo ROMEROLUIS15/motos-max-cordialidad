@@ -109,6 +109,7 @@ export class WorkOrdersController {
       serviceType: string;
       problemDescription: string;
       promisedDeliveryAt: string;
+      observations?: string;
     },
   ) {
     return this.createWorkOrder.execute({
@@ -118,6 +119,7 @@ export class WorkOrdersController {
       serviceType: body.serviceType,
       problemDescription: body.problemDescription,
       promisedDeliveryAt: new Date(body.promisedDeliveryAt),
+      observations: body.observations,
     });
   }
 
@@ -132,7 +134,13 @@ export class WorkOrdersController {
   async update(
     @Param('id') id: string,
     @CurrentUser() user: JWTPayload,
-    @Body() body: { technicianId?: string; serviceType?: string; problemDescription?: string },
+    @Body()
+    body: {
+      technicianId?: string;
+      serviceType?: string;
+      problemDescription?: string;
+      observations?: string;
+    },
   ) {
     await this.updateWorkOrder.execute({ tenantId: user.tenantId, workOrderId: id, ...body });
     return { success: true };

@@ -1,4 +1,8 @@
-import { WorkOrderStatus, isValidTransition, TERMINAL_STATUSES } from '../value-objects/work-order-status.vo';
+import {
+  WorkOrderStatus,
+  isValidTransition,
+  TERMINAL_STATUSES,
+} from '../value-objects/work-order-status.vo';
 import {
   DomainException,
   WorkOrderInvalidTransitionException,
@@ -27,7 +31,14 @@ export class WorkOrder {
     public readonly createdAt: Date,
     public updatedAt: Date,
     public deletedAt: Date | null,
+    public observations: string | null = null,
   ) {}
+
+  /** Observaciones del servicio (qué encontró/hizo el mecánico). */
+  updateObservations(text: string | null): void {
+    this.observations = text && text.trim() ? text.trim() : null;
+    this.updatedAt = new Date();
+  }
 
   /**
    * Changes status. Throws if the transition is not allowed. Returns the

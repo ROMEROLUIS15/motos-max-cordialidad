@@ -11,7 +11,10 @@ import {
   VehicleReceptionRepository,
   VEHICLE_RECEPTION_REPOSITORY,
 } from '../../../domain/repositories/vehicle-reception.repository';
-import { VehicleRepository, VEHICLE_REPOSITORY } from '../../../domain/repositories/vehicle.repository';
+import {
+  VehicleRepository,
+  VEHICLE_REPOSITORY,
+} from '../../../domain/repositories/vehicle.repository';
 
 export interface CreateWorkOrderInput {
   tenantId: string;
@@ -20,6 +23,7 @@ export interface CreateWorkOrderInput {
   serviceType: string;
   problemDescription: string;
   promisedDeliveryAt: Date;
+  observations?: string;
 }
 
 @Injectable()
@@ -35,7 +39,10 @@ export class CreateWorkOrderUseCase {
     const reception = await this.receptionRepo.findById(input.receptionId, input.tenantId);
     if (!reception) throw new NotFoundException('Recepción no encontrada');
 
-    const hasActive = await this.vehicleRepo.hasActiveWorkOrder(reception.vehicleId, input.tenantId);
+    const hasActive = await this.vehicleRepo.hasActiveWorkOrder(
+      reception.vehicleId,
+      input.tenantId,
+    );
     if (hasActive) throw new VehicleHasActiveOrderException(reception.vehicleId);
 
     const year = new Date().getFullYear();
@@ -59,6 +66,7 @@ export class CreateWorkOrderUseCase {
       now,
       now,
       null,
+      input.observations?.trim() || null,
     );
     await this.workOrderRepo.create(workOrder);
     return workOrder;

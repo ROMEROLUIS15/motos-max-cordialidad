@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea, fieldBase } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
+import { useTeam } from '@/hooks/use-team';
 
 interface Customer {
   id: string;
@@ -65,6 +66,7 @@ function FieldLabel({ label, children }: { label: string; children: React.ReactN
 
 export default function NewReceptionPage() {
   const router = useRouter();
+  const { technicians } = useTeam();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -88,6 +90,7 @@ export default function NewReceptionPage() {
   const [problem, setProblem] = useState('');
   const [technicianId, setTechnicianId] = useState('');
   const [promised, setPromised] = useState('');
+  const [serviceObservations, setServiceObservations] = useState('');
 
   useEffect(() => {
     if (!debounced) {
@@ -160,6 +163,7 @@ export default function NewReceptionPage() {
         serviceType,
         problemDescription: problem,
         promisedDeliveryAt: new Date(promised).toISOString(),
+        observations: serviceObservations.trim() || undefined,
       });
       router.push(`/work-orders/${wo.id}`);
     } catch (e) {
@@ -326,8 +330,19 @@ export default function NewReceptionPage() {
             <FieldLabel label="Tipo de servicio">
               <Input value={serviceType} onChange={(e) => setServiceType(e.target.value)} />
             </FieldLabel>
-            <FieldLabel label="Técnico (ID)">
-              <Input value={technicianId} onChange={(e) => setTechnicianId(e.target.value)} />
+            <FieldLabel label="Mecánico que atiende">
+              <select
+                value={technicianId}
+                onChange={(e) => setTechnicianId(e.target.value)}
+                className={cn(fieldBase, 'cursor-pointer')}
+              >
+                <option value="">Selecciona un mecánico</option>
+                {technicians.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.fullName}
+                  </option>
+                ))}
+              </select>
             </FieldLabel>
             <div className="sm:col-span-2">
               <FieldLabel label="Entrega prometida">
@@ -341,6 +356,16 @@ export default function NewReceptionPage() {
             <div className="sm:col-span-2">
               <FieldLabel label="Descripción del problema">
                 <Textarea value={problem} onChange={(e) => setProblem(e.target.value)} rows={2} />
+              </FieldLabel>
+            </div>
+            <div className="sm:col-span-2">
+              <FieldLabel label="Observaciones del servicio (opcional)">
+                <Textarea
+                  value={serviceObservations}
+                  onChange={(e) => setServiceObservations(e.target.value)}
+                  rows={2}
+                  placeholder="Qué encontró/hizo el mecánico"
+                />
               </FieldLabel>
             </div>
           </div>

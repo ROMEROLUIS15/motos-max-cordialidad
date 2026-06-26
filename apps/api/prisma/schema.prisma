@@ -308,6 +308,7 @@ model WorkOrder {
   status             String    @default("PENDING") @db.VarChar(20)
   promisedDeliveryAt DateTime  @db.Timestamptz()
   finalOdometer      Int?
+  observations       String?   @db.Text
   deletedAt          DateTime? @db.Timestamptz()
   createdAt          DateTime  @default(now()) @db.Timestamptz()
   updatedAt          DateTime  @updatedAt @db.Timestamptz()
