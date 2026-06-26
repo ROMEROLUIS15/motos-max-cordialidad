@@ -31,7 +31,14 @@ async function main() {
   let branch = await prisma.branch.findFirst({ where: { tenantId } });
   if (!branch) {
     branch = await prisma.branch.create({
-      data: { id: randomUUID(), tenantId, name: 'Sede Principal', address: 'Calle 123 #45-67', phone: '+57 1 555 0100', isActive: true },
+      data: {
+        id: randomUUID(),
+        tenantId,
+        name: 'Sede Principal',
+        address: 'Calle 123 #45-67',
+        phone: '+57 1 555 0100',
+        isActive: true,
+      },
     });
   }
   const branchId = branch.id;
@@ -85,22 +92,54 @@ async function main() {
 
   // ── Customers + Vehicles ─────────────────────────────────────────────────
   const customers = [
-    { fullName: 'Carlos Pérez', documentNumber: 'CC1001', phone: '+57 300 111 2233', city: 'Bogotá', plate: 'ABC12D', brand: 'Yamaha', model: 'FZ 2.0' },
-    { fullName: 'María Gómez', documentNumber: 'CC1002', phone: '+57 300 444 5566', city: 'Medellín', plate: 'XYZ98E', brand: 'Honda', model: 'CB 190R' },
+    {
+      fullName: 'Carlos Pérez',
+      documentNumber: 'CC1001',
+      phone: '+57 300 111 2233',
+      city: 'Bogotá',
+      plate: 'ABC12D',
+      brand: 'Yamaha',
+      model: 'FZ 2.0',
+    },
+    {
+      fullName: 'María Gómez',
+      documentNumber: 'CC1002',
+      phone: '+57 300 444 5566',
+      city: 'Medellín',
+      plate: 'XYZ98E',
+      brand: 'Honda',
+      model: 'CB 190R',
+    },
   ];
   for (const c of customers) {
-    let customer = await prisma.customer.findFirst({ where: { tenantId, documentNumber: c.documentNumber } });
+    let customer = await prisma.customer.findFirst({
+      where: { tenantId, documentNumber: c.documentNumber },
+    });
     if (!customer) {
       customer = await prisma.customer.create({
         data: {
-          id: randomUUID(), tenantId, fullName: c.fullName, documentType: 'CC',
-          documentNumber: c.documentNumber, phone: c.phone, whatsappPhone: c.phone, city: c.city, isActive: true,
+          id: randomUUID(),
+          tenantId,
+          fullName: c.fullName,
+          documentType: 'CC',
+          documentNumber: c.documentNumber,
+          phone: c.phone,
+          whatsappPhone: c.phone,
+          city: c.city,
+          isActive: true,
         },
       });
       await prisma.vehicle.create({
         data: {
-          id: randomUUID(), tenantId, plate: c.plate, brand: c.brand, model: c.model,
-          year: 2022, color: 'Negro', engineNumber: `ENG-${c.plate}`, currentOwnerId: customer.id,
+          id: randomUUID(),
+          tenantId,
+          plate: c.plate,
+          brand: c.brand,
+          model: c.model,
+          year: 2022,
+          color: 'Negro',
+          engineNumber: `ENG-${c.plate}`,
+          currentOwnerId: customer.id,
         },
       });
     }
@@ -108,29 +147,77 @@ async function main() {
 
   // ── Parts + stock ────────────────────────────────────────────────────────
   const parts = [
-    { sku: 'OIL-10W40', name: 'Aceite 10W40 1L', category: 'Lubricantes', cost: 18000, sale: 28000, min: 5, stock: 20 },
-    { sku: 'BRK-PAD-01', name: 'Pastillas de freno', category: 'Frenos', cost: 25000, sale: 45000, min: 4, stock: 12 },
-    { sku: 'FLT-AIR-01', name: 'Filtro de aire', category: 'Filtros', cost: 12000, sale: 22000, min: 6, stock: 3 },
+    {
+      sku: 'OIL-10W40',
+      name: 'Aceite 10W40 1L',
+      category: 'Lubricantes',
+      cost: 18000,
+      sale: 28000,
+      min: 5,
+      stock: 20,
+    },
+    {
+      sku: 'BRK-PAD-01',
+      name: 'Pastillas de freno',
+      category: 'Frenos',
+      cost: 25000,
+      sale: 45000,
+      min: 4,
+      stock: 12,
+    },
+    {
+      sku: 'FLT-AIR-01',
+      name: 'Filtro de aire',
+      category: 'Filtros',
+      cost: 12000,
+      sale: 22000,
+      min: 6,
+      stock: 3,
+    },
   ];
   for (const p of parts) {
     let part = await prisma.part.findFirst({ where: { tenantId, sku: p.sku } });
     if (!part) {
       part = await prisma.part.create({
         data: {
-          id: randomUUID(), tenantId, sku: p.sku, name: p.name, category: p.category, unit: 'unidad',
-          costPrice: p.cost, salePrice: p.sale, minStockAlert: p.min, isActive: true,
+          id: randomUUID(),
+          tenantId,
+          sku: p.sku,
+          name: p.name,
+          category: p.category,
+          unit: 'unidad',
+          costPrice: p.cost,
+          salePrice: p.sale,
+          minStockAlert: p.min,
+          isActive: true,
         },
       });
       await prisma.partBranchStock.create({
-        data: { id: randomUUID(), partId: part.id, branchId, stockFisico: p.stock, stockReservado: 0 },
+        data: {
+          id: randomUUID(),
+          partId: part.id,
+          branchId,
+          stockFisico: p.stock,
+          stockReservado: 0,
+        },
       });
     }
   }
 
   // ── Service catalog ──────────────────────────────────────────────────────
   const services = [
-    { name: 'Cambio de aceite', serviceType: 'MAINTENANCE', estimatedHours: 0.5, suggestedPrice: 35000 },
-    { name: 'Sincronización', serviceType: 'MAINTENANCE', estimatedHours: 1.5, suggestedPrice: 80000 },
+    {
+      name: 'Cambio de aceite',
+      serviceType: 'MAINTENANCE',
+      estimatedHours: 0.5,
+      suggestedPrice: 35000,
+    },
+    {
+      name: 'Sincronización',
+      serviceType: 'MAINTENANCE',
+      estimatedHours: 1.5,
+      suggestedPrice: 80000,
+    },
     { name: 'Revisión de frenos', serviceType: 'REPAIR', estimatedHours: 1, suggestedPrice: 60000 },
   ];
   for (const s of services) {
@@ -138,8 +225,171 @@ async function main() {
     if (!exists) {
       await prisma.serviceCatalogItem.create({
         data: {
-          id: randomUUID(), tenantId, name: s.name, serviceType: s.serviceType,
-          estimatedHours: s.estimatedHours, suggestedPrice: s.suggestedPrice, isActive: true,
+          id: randomUUID(),
+          tenantId,
+          name: s.name,
+          serviceType: s.serviceType,
+          estimatedHours: s.estimatedHours,
+          suggestedPrice: s.suggestedPrice,
+          isActive: true,
+        },
+      });
+    }
+  }
+
+  // ── Órdenes de trabajo (varios estados, para demo) ───────────────────────
+  const techId = userIdByEmail['tecnico@demo.com'];
+  const recepId = userIdByEmail['recepcion@demo.com'];
+  const allCustomers = await prisma.customer.findMany({ where: { tenantId } });
+  const allVehicles = await prisma.vehicle.findMany({ where: { tenantId } });
+
+  const H = 3_600_000;
+  const Dy = 24 * H;
+  const now = Date.now();
+
+  type OrderSpec = {
+    num: string;
+    status: string;
+    serviceType: string;
+    problem: string;
+    promised: number;
+    lineDesc: string;
+    linePrice: number;
+    hours: number;
+    finalOdometer?: number;
+    paid?: number;
+  };
+
+  const orderSpecs: OrderSpec[] = [
+    {
+      num: 'OT-0001',
+      status: 'IN_PROGRESS',
+      serviceType: 'Mantenimiento',
+      problem: 'La moto pierde fuerza al acelerar.',
+      promised: now + 6 * H,
+      lineDesc: 'Sincronización de carburador',
+      linePrice: 80000,
+      hours: 1.5,
+    },
+    {
+      num: 'OT-0002',
+      status: 'WAITING_PARTS',
+      serviceType: 'Reparación',
+      problem: 'Frenos delanteros desgastados.',
+      promised: now + 1 * H,
+      lineDesc: 'Cambio de pastillas de freno',
+      linePrice: 60000,
+      hours: 1,
+    },
+    {
+      num: 'OT-0003',
+      status: 'PENDING',
+      serviceType: 'Mantenimiento',
+      problem: 'Mantenimiento preventivo 5.000 km.',
+      promised: now + 2 * Dy,
+      lineDesc: 'Cambio de aceite 10W40',
+      linePrice: 35000,
+      hours: 0.5,
+    },
+    {
+      num: 'OT-0004',
+      status: 'COMPLETED',
+      serviceType: 'Reparación',
+      problem: 'Revisión general y ajuste.',
+      promised: now - 2 * H,
+      lineDesc: 'Mantenimiento preventivo',
+      linePrice: 120000,
+      hours: 2,
+      finalOdometer: 15240,
+    },
+    {
+      num: 'OT-0005',
+      status: 'DELIVERED',
+      serviceType: 'Mantenimiento',
+      problem: 'Cambio de aceite y filtro.',
+      promised: now - 2 * Dy,
+      lineDesc: 'Aceite + filtro de aire',
+      linePrice: 57000,
+      hours: 0.5,
+      finalOdometer: 22110,
+      paid: 57000,
+    },
+  ];
+
+  for (let i = 0; i < orderSpecs.length; i++) {
+    const spec = orderSpecs[i];
+    const exists = await prisma.workOrder.findFirst({ where: { tenantId, orderNumber: spec.num } });
+    if (exists) continue;
+
+    const customer = allCustomers[i % allCustomers.length];
+    if (!customer) break;
+    const vehicle = allVehicles.find((v) => v.currentOwnerId === customer.id) ?? allVehicles[0];
+    if (!vehicle) break;
+
+    const reception = await prisma.vehicleReception.create({
+      data: {
+        id: randomUUID(),
+        tenantId,
+        branchId,
+        vehicleId: vehicle.id,
+        customerId: customer.id,
+        receivedBy: recepId,
+        odometerReading: 15000 + i * 1200,
+        fuelLevel: 'HALF',
+        observations: 'Recepción de demostración.',
+      },
+    });
+
+    const order = await prisma.workOrder.create({
+      data: {
+        id: randomUUID(),
+        tenantId,
+        branchId,
+        orderNumber: spec.num,
+        receptionId: reception.id,
+        vehicleId: vehicle.id,
+        customerId: customer.id,
+        technicianId: techId,
+        serviceType: spec.serviceType,
+        problemDescription: spec.problem,
+        status: spec.status,
+        promisedDeliveryAt: new Date(spec.promised),
+        finalOdometer: spec.finalOdometer ?? null,
+      },
+    });
+
+    await prisma.workOrderLine.create({
+      data: {
+        id: randomUUID(),
+        workOrderId: order.id,
+        description: spec.lineDesc,
+        estimatedHours: spec.hours,
+        unitPrice: spec.linePrice,
+        technicianId: techId,
+      },
+    });
+
+    await prisma.workOrderStatusHistory.create({
+      data: {
+        id: randomUUID(),
+        workOrderId: order.id,
+        fromStatus: null,
+        toStatus: spec.status,
+        changedBy: recepId,
+        note: 'Estado inicial (demo).',
+      },
+    });
+
+    if (spec.paid) {
+      await prisma.payment.create({
+        data: {
+          id: randomUUID(),
+          tenantId,
+          workOrderId: order.id,
+          amount: spec.paid,
+          paymentMethod: 'CASH',
+          paidAt: new Date(now - 1 * H),
+          createdBy: recepId,
         },
       });
     }
