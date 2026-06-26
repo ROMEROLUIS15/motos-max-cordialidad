@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationBell } from '@/components/NotificationBell';
 import { InstallButton } from '@/components/install-button';
+import { LogoutButton } from '@/components/logout-button';
 
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
@@ -120,7 +121,10 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
           <span className="h-2 w-2 rounded-full bg-success shadow-[0_0_8px] shadow-success/50" />
           <span className="text-xs text-muted-foreground">Operativo</span>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center">
+          <ThemeToggle />
+          <LogoutButton />
+        </div>
       </div>
     </>
   );

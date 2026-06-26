@@ -22,6 +22,18 @@ export function clearSession(): void {
   }
 }
 
+/** Cierra sesión: revoca el refresh token en el servidor (best-effort), limpia y va al login. */
+export async function logout(): Promise<void> {
+  const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+  try {
+    if (refreshToken) await apiSend('/api/auth/logout', 'POST', { refreshToken });
+  } catch {
+    // best-effort: aunque falle la revocación, cerramos sesión localmente
+  }
+  clearSession();
+  if (typeof window !== 'undefined') window.location.href = '/login';
+}
+
 function authHeaders(token?: string): Record<string, string> {
   const t = token ?? getToken();
   return t ? { Authorization: `Bearer ${t}` } : {};
