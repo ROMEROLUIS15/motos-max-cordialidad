@@ -40,6 +40,9 @@ model Tenant {
   stockEntries    StockEntry[]
   workOrders      WorkOrder[]
   vehicleReceptions VehicleReception[]
+  reports             Report[]
+  homeServiceRequests HomeServiceRequest[]
+  purchaseOrderDrafts PurchaseOrderDraft[]
 
   @@map("tenants")
 }
@@ -60,6 +63,7 @@ model Branch {
   stockEntries      StockEntry[]
   workOrders        WorkOrder[]
   vehicleReceptions VehicleReception[]
+  homeServiceRequests HomeServiceRequest[]
 
   @@unique([tenantId, name])
   @@index([tenantId], name: "idx_branches_tenant")
@@ -107,6 +111,7 @@ model User {
   email        String    @db.VarChar(255)
   passwordHash String    @db.VarChar(255)
   fullName     String    @db.VarChar(255)
+  whatsappPhone String?  @db.VarChar(50)
   isActive     Boolean   @default(true)
   lastLoginAt  DateTime? @db.Timestamptz()
   createdAt    DateTime  @default(now()) @db.Timestamptz()
@@ -126,10 +131,12 @@ model User {
   payments        Payment[]
   messages        Message[]
   ownershipTransfersBy VehicleOwnershipHistory[] @relation("TransferredBy")
+  homeServiceRequests  HomeServiceRequest[]      @relation("HomeServiceAssignee")
 
   @@unique([tenantId, email])
   @@index([tenantId], name: "idx_users_tenant")
   @@index([roleId], name: "idx_users_role")
+  @@index([tenantId, whatsappPhone], name: "idx_users_whatsapp")
   @@map("users")
 }
 
@@ -190,6 +197,7 @@ model Customer {
   vehicleReceptions VehicleReception[]
   ownedVehicles    VehicleOwnershipHistory[] @relation("PreviousOwner")
   newVehicles      VehicleOwnershipHistory[] @relation("NewOwner")
+  homeServiceRequests HomeServiceRequest[]
 
   @@unique([tenantId, documentNumber])
   @@index([tenantId, deletedAt], name: "idx_customers_tenant")
@@ -325,6 +333,7 @@ model WorkOrder {
   photoEvidences PhotoEvidence[]
   quotes         Quote[]
   payments       Payment[]
+  homeServiceRequests HomeServiceRequest[]
 
   @@unique([tenantId, orderNumber])
   @@index([tenantId, deletedAt], name: "idx_work_orders_tenant")
@@ -644,4 +653,74 @@ model AuditLog {
   @@index([entityType, entityId], name: "idx_audit_logs_entity")
   @@index([actorUserId, createdAt(sort: Desc)], name: "idx_audit_logs_actor")
   @@map("audit_logs")
+}
+
+// ─── FASE 2: AGENTES ──────────────────────────────────────────────────────────
+
+// Reportes generados por el microservicio de agentes (semanal/mensual). El PDF
+// vive en R2 (pdfR2Key); el registro se crea en PENDING y pasa a READY/FAILED.
+model Report {
+  id          String    @id @default(uuid())
+  tenantId    String
+  type        String    @db.VarChar(30) // WEEKLY | MONTHLY
+  periodStart DateTime  @db.Timestamptz()
+  periodEnd   DateTime  @db.Timestamptz()
+  pdfR2Key    String?   @db.Text
+  status      String    @default("PENDING") @db.VarChar(20) // PENDING | READY | FAILED
+  generatedAt DateTime? @db.Timestamptz()
+  createdAt   DateTime  @default(now()) @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, createdAt(sort: Desc)], name: "idx_reports_tenant")
+  @@map("reports")
+}
+
+// Solicitudes de servicio a domicilio capturadas por el RouterAgent o creadas
+// desde la web. customerId es opcional (clientes anónimos por WhatsApp).
+model HomeServiceRequest {
+  id            String   @id @default(uuid())
+  tenantId      String
+  branchId      String?
+  customerId    String?
+  customerName  String   @db.VarChar(255)
+  customerPhone String   @db.VarChar(50)
+  address       String   @db.Text
+  problemDesc   String   @db.Text
+  serviceType   String   @db.VarChar(50)
+  status        String   @default("PENDING") @db.VarChar(20) // PENDING | ASSIGNED | IN_PROGRESS | COMPLETED | CANCELLED
+  assignedTo    String?
+  workOrderId   String?
+  estimatedCost Decimal? @db.Decimal(12, 2)
+  createdAt     DateTime @default(now()) @db.Timestamptz()
+  updatedAt     DateTime @updatedAt @db.Timestamptz()
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  branch    Branch?    @relation(fields: [branchId], references: [id])
+  customer  Customer?  @relation(fields: [customerId], references: [id])
+  assignee  User?      @relation("HomeServiceAssignee", fields: [assignedTo], references: [id])
+  workOrder WorkOrder? @relation(fields: [workOrderId], references: [id])
+
+  @@index([tenantId, status, createdAt(sort: Desc)], name: "idx_home_services_tenant")
+  @@index([assignedTo], name: "idx_home_services_assignee")
+  @@map("home_service_requests")
+}
+
+// Borradores de orden de compra sugeridos por el agente de inventario. items es
+// un JSONB [{ partId, quantity, reason }]. createdBy puede ser "agents-service".
+model PurchaseOrderDraft {
+  id         String    @id @default(uuid())
+  tenantId   String
+  status     String    @default("DRAFT") @db.VarChar(20) // DRAFT | APPROVED | REJECTED
+  items      Json
+  notes      String?   @db.Text
+  createdBy  String    @db.VarChar(100)
+  approvedBy String?
+  approvedAt DateTime? @db.Timestamptz()
+  createdAt  DateTime  @default(now()) @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, status, createdAt(sort: Desc)], name: "idx_po_drafts_tenant")
+  @@map("purchase_order_drafts")
 }
