@@ -8,9 +8,11 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "icons": "node scripts/generate-pwa-icons.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:ci": "vitest run --reporter=verbose"
+    "test:ci": "vitest run --reporter=verbose",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -38,6 +40,8 @@
   },
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.16",
+    "@playwright/test": "^1.61.1",
+    "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.0.1",
     "@testing-library/user-event": "^14.5.2",
     "@types/node": "^20.16.11",
@@ -48,6 +52,7 @@
     "eslint-config-next": "15.5.19",
     "jsdom": "^25.0.1",
     "postcss": "^8.4.47",
+    "sharp": "^0.33.5",
     "tailwindcss": "^3.4.13",
     "typescript": "~5.5.4",
     "vitest": "^2.1.3",

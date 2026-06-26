@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationBell } from '@/components/NotificationBell';
+import { InstallButton } from '@/components/install-button';
 
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
@@ -111,6 +112,9 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
         <Brand />
       </div>
       <NavLinks onNavigate={onNavigate} />
+      <div className="px-1 pt-2">
+        <InstallButton />
+      </div>
       <div className="mt-2 flex items-center justify-between gap-2 border-t border-border px-1 pt-3">
         <div className="flex items-center gap-2 px-2">
           <span className="h-2 w-2 rounded-full bg-success shadow-[0_0_8px] shadow-success/50" />
