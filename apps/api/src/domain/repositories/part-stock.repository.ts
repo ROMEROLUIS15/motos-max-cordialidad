@@ -27,6 +27,8 @@ export interface PartStockRepository {
   /** Full transfer in a single DB transaction (lives in infrastructure). */
   transferAtomically(input: TransferStockInput): Promise<void>;
   findLowStock(branchId: string, tenantId: string): Promise<LowStockItem[]>;
+  /** Low-stock items tenant-wide (across branches), optionally scoped to one. */
+  findLowStockByTenant(tenantId: string, branchId?: string): Promise<LowStockItem[]>;
   valuation(branchId: string, tenantId: string): Promise<{ totalCost: number; totalSale: number }>;
 }
 

@@ -20,7 +20,13 @@ export class PartStockPrismaRepository implements PartStockRepository {
       where: { partId_branchId: { partId, branchId } },
     });
     if (!r) return null;
-    return new PartBranchStock(r.id, r.partId, r.branchId, Number(r.stockFisico), Number(r.stockReservado));
+    return new PartBranchStock(
+      r.id,
+      r.partId,
+      r.branchId,
+      Number(r.stockFisico),
+      Number(r.stockReservado),
+    );
   }
 
   async save(stock: PartBranchStock): Promise<void> {
@@ -36,7 +42,13 @@ export class PartStockPrismaRepository implements PartStockRepository {
       update: {},
       create: { id: randomUUID(), partId, branchId, stockFisico: 0, stockReservado: 0 },
     });
-    return new PartBranchStock(r.id, r.partId, r.branchId, Number(r.stockFisico), Number(r.stockReservado));
+    return new PartBranchStock(
+      r.id,
+      r.partId,
+      r.branchId,
+      Number(r.stockFisico),
+      Number(r.stockReservado),
+    );
   }
 
   async transferAtomically(input: TransferStockInput): Promise<void> {
@@ -70,15 +82,25 @@ export class PartStockPrismaRepository implements PartStockRepository {
       await tx.stockEntry.createMany({
         data: [
           {
-            id: randomUUID(), tenantId: input.tenantId, partId: input.partId,
-            branchId: input.fromBranchId, type: StockEntryType.TRANSFER_OUT,
-            quantity: input.quantity, userId: input.userId, referenceId: transferRef,
+            id: randomUUID(),
+            tenantId: input.tenantId,
+            partId: input.partId,
+            branchId: input.fromBranchId,
+            type: StockEntryType.TRANSFER_OUT,
+            quantity: input.quantity,
+            userId: input.userId,
+            referenceId: transferRef,
             notes: input.notes ?? null,
           },
           {
-            id: randomUUID(), tenantId: input.tenantId, partId: input.partId,
-            branchId: input.toBranchId, type: StockEntryType.TRANSFER_IN,
-            quantity: input.quantity, userId: input.userId, referenceId: transferRef,
+            id: randomUUID(),
+            tenantId: input.tenantId,
+            partId: input.partId,
+            branchId: input.toBranchId,
+            type: StockEntryType.TRANSFER_IN,
+            quantity: input.quantity,
+            userId: input.userId,
+            referenceId: transferRef,
             notes: input.notes ?? null,
           },
         ],
@@ -118,14 +140,55 @@ export class PartStockPrismaRepository implements PartStockRepository {
     }));
   }
 
-  async valuation(branchId: string, tenantId: string): Promise<{ totalCost: number; totalSale: number }> {
-    const rows = await this.prisma.$queryRaw<Array<{ totalCost: Prisma.Decimal | null; totalSale: Prisma.Decimal | null }>>`
+  async findLowStockByTenant(tenantId: string, branchId?: string): Promise<LowStockItem[]> {
+    const branch = branchId ?? null;
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        partId: string;
+        sku: string;
+        name: string;
+        branchId: string;
+        stockDisponible: Prisma.Decimal;
+        minStockAlert: Prisma.Decimal;
+      }>
+    >`
+      SELECT pbs."partId" AS "partId", p."sku" AS "sku", p."name" AS "name",
+             pbs."branchId" AS "branchId",
+             (pbs."stockFisico" - pbs."stockReservado") AS "stockDisponible",
+             p."minStockAlert" AS "minStockAlert"
+      FROM "part_branch_stocks" pbs
+      JOIN "parts" p ON p."id" = pbs."partId"
+      WHERE p."tenantId" = ${tenantId}
+        AND (${branch}::text IS NULL OR pbs."branchId" = ${branch})
+        AND p."minStockAlert" IS NOT NULL
+        AND (pbs."stockFisico" - pbs."stockReservado") < p."minStockAlert"
+    `;
+    return rows.map((r) => ({
+      partId: r.partId,
+      sku: r.sku,
+      name: r.name,
+      branchId: r.branchId,
+      stockDisponible: Number(r.stockDisponible),
+      minStockAlert: Number(r.minStockAlert),
+    }));
+  }
+
+  async valuation(
+    branchId: string,
+    tenantId: string,
+  ): Promise<{ totalCost: number; totalSale: number }> {
+    const rows = await this.prisma.$queryRaw<
+      Array<{ totalCost: Prisma.Decimal | null; totalSale: Prisma.Decimal | null }>
+    >`
       SELECT COALESCE(SUM(pbs."stockFisico" * p."costPrice"), 0) AS "totalCost",
              COALESCE(SUM(pbs."stockFisico" * p."salePrice"), 0) AS "totalSale"
       FROM "part_branch_stocks" pbs
       JOIN "parts" p ON p."id" = pbs."partId"
       WHERE p."tenantId" = ${tenantId} AND pbs."branchId" = ${branchId}
     `;
-    return { totalCost: Number(rows[0]?.totalCost ?? 0), totalSale: Number(rows[0]?.totalSale ?? 0) };
+    return {
+      totalCost: Number(rows[0]?.totalCost ?? 0),
+      totalSale: Number(rows[0]?.totalSale ?? 0),
+    };
   }
 }

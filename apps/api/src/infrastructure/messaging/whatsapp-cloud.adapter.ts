@@ -1,7 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { MessagingPort } from '../../application/ports/messaging.port';
-import { WhatsAppRepository, WHATSAPP_REPOSITORY } from '../../domain/repositories/whatsapp.repository';
+import {
+  WhatsAppRepository,
+  WHATSAPP_REPOSITORY,
+} from '../../domain/repositories/whatsapp.repository';
 import { WhatsAppOutboundQueue } from './whatsapp-outbound.queue';
 import { PrismaService } from '../persistence/prisma/prisma.service';
 
@@ -22,6 +25,27 @@ export class WhatsAppCloudAdapter implements MessagingPort {
 
   async sendManualMessage(customerId: string, content: string, tenantId: string): Promise<void> {
     await this.queueForCustomer(customerId, content, tenantId, null);
+  }
+
+  async sendOwnerMessage(tenantId: string, content: string): Promise<boolean> {
+    const owner = await this.prisma.user.findFirst({
+      where: { tenantId, isActive: true, whatsappPhone: { not: null }, role: { name: 'OWNER' } },
+      select: { whatsappPhone: true },
+    });
+    let phone = owner?.whatsappPhone ?? null;
+    if (!phone) {
+      const tenant = await this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { whatsappPhone: true },
+      });
+      phone = tenant?.whatsappPhone ?? null;
+    }
+    if (!phone) {
+      this.logger.warn(`No owner/tenant phone for tenant ${tenantId} — message not queued`);
+      return false;
+    }
+    await this.sendToPhone(tenantId, phone, null, content, null);
+    return true;
   }
 
   async sendWorkOrderCompletedNotification(wo: {

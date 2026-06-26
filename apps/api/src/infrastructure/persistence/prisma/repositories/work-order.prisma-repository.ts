@@ -261,6 +261,36 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
     });
   }
 
+  async countCompletedInPeriod(
+    tenantId: string,
+    from: Date,
+    to: Date,
+    branchId?: string,
+  ): Promise<number> {
+    return this.prisma.workOrder.count({
+      where: {
+        tenantId,
+        deletedAt: null,
+        ...(branchId ? { branchId } : {}),
+        status: { in: [WorkOrderStatus.COMPLETED, WorkOrderStatus.DELIVERED] },
+        updatedAt: { gte: from, lte: to },
+      },
+    });
+  }
+
+  async findPendingByTenant(tenantId: string, branchId?: string): Promise<WorkOrder[]> {
+    const rows = await this.prisma.workOrder.findMany({
+      where: {
+        tenantId,
+        deletedAt: null,
+        ...(branchId ? { branchId } : {}),
+        status: { in: ACTIVE_STATUSES as unknown as string[] },
+      },
+      orderBy: { promisedDeliveryAt: 'asc' },
+    });
+    return rows.map((r) => this.toDomain(r));
+  }
+
   async create(workOrder: WorkOrder): Promise<void> {
     await this.prisma.workOrder.create({
       data: {
