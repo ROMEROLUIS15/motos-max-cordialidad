@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Motos Max Cordialidad">
+  <rect width="512" height="512" rx="116" fill="#17c2da"/>
+  <g transform="translate(98 96) scale(13)" fill="none" stroke="#06222a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="18.5" cy="17.5" r="3.5"/>
+    <circle cx="5.5" cy="17.5" r="3.5"/>
+    <circle cx="15" cy="5" r="1"/>
+    <path d="M12 17.5V14l-3-3 4-3 2 3h2"/>
+  </g>
+</svg>
