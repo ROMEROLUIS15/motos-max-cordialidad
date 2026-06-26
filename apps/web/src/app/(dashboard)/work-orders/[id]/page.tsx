@@ -34,6 +34,8 @@ import { Input, fieldBase } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/input';
+import { useTeam } from '@/hooks/use-team';
 
 const money = (n: number) =>
   n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
@@ -53,6 +55,7 @@ type Run = (fn: () => Promise<unknown>) => Promise<void>;
 
 export default function WorkOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { nameOf } = useTeam();
   const [detail, setDetail] = useState<WorkOrderDetail | null>(null);
   const [evidences, setEvidences] = useState<PhotoEvidence[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -135,12 +138,8 @@ export default function WorkOrderDetailPage() {
               }
             />
             <Meta
-              label="Técnico"
-              value={
-                <span className="font-mono text-xs text-muted-foreground">
-                  {wo.technicianId.slice(0, 8)}
-                </span>
-              }
+              label="Mecánico"
+              value={<span className="text-foreground/90">{nameOf(wo.technicianId)}</span>}
             />
           </dl>
 
@@ -173,6 +172,7 @@ export default function WorkOrderDetailPage() {
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
+      <ObservationsSection workOrderId={id} observations={wo.observations} busy={busy} run={run} />
       <ServiceLinesSection detail={detail} workOrderId={id} busy={busy} run={run} />
       <PartsSection detail={detail} workOrderId={id} busy={busy} run={run} />
       <EvidencesSection evidences={evidences} workOrderId={id} busy={busy} run={run} />
@@ -245,6 +245,73 @@ function TransitionButton({
     >
       {STATUS_LABELS[next]}
     </Button>
+  );
+}
+
+function ObservationsSection({
+  workOrderId,
+  observations,
+  busy,
+  run,
+}: {
+  workOrderId: string;
+  observations: string | null;
+  busy: boolean;
+  run: Run;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(observations ?? '');
+
+  return (
+    <SectionCard
+      title="Observaciones del servicio"
+      action={
+        !editing && (
+          <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+            {observations ? 'Editar' : 'Añadir'}
+          </Button>
+        )
+      }
+    >
+      {editing ? (
+        <div className="space-y-3">
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={3}
+            placeholder="Qué encontró/hizo el mecánico"
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setText(observations ?? '');
+                setEditing(false);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              disabled={busy}
+              onClick={() =>
+                run(async () => {
+                  await apiSend(`/api/work-orders/${workOrderId}`, 'PUT', { observations: text });
+                  setEditing(false);
+                })
+              }
+            >
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />} Guardar
+            </Button>
+          </div>
+        </div>
+      ) : observations ? (
+        <p className="whitespace-pre-wrap text-sm text-foreground/90">{observations}</p>
+      ) : (
+        <p className="text-sm text-muted-foreground">Sin observaciones registradas.</p>
+      )}
+    </SectionCard>
   );
 }
 

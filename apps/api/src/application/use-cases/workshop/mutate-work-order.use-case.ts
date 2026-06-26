@@ -10,13 +10,12 @@ export interface UpdateWorkOrderInput {
   technicianId?: string;
   serviceType?: string;
   problemDescription?: string;
+  observations?: string;
 }
 
 @Injectable()
 export class UpdateWorkOrderUseCase {
-  constructor(
-    @Inject(WORK_ORDER_REPOSITORY) private readonly workOrderRepo: WorkOrderRepository,
-  ) {}
+  constructor(@Inject(WORK_ORDER_REPOSITORY) private readonly workOrderRepo: WorkOrderRepository) {}
 
   async execute(input: UpdateWorkOrderInput): Promise<void> {
     const workOrder = await this.workOrderRepo.findById(input.workOrderId, input.tenantId);
@@ -24,7 +23,9 @@ export class UpdateWorkOrderUseCase {
 
     if (input.technicianId !== undefined) workOrder.reassignTechnician(input.technicianId);
     if (input.serviceType !== undefined) workOrder.serviceType = input.serviceType;
-    if (input.problemDescription !== undefined) workOrder.problemDescription = input.problemDescription;
+    if (input.problemDescription !== undefined)
+      workOrder.problemDescription = input.problemDescription;
+    if (input.observations !== undefined) workOrder.updateObservations(input.observations);
 
     await this.workOrderRepo.save(workOrder);
   }
@@ -32,9 +33,7 @@ export class UpdateWorkOrderUseCase {
 
 @Injectable()
 export class DeleteWorkOrderUseCase {
-  constructor(
-    @Inject(WORK_ORDER_REPOSITORY) private readonly workOrderRepo: WorkOrderRepository,
-  ) {}
+  constructor(@Inject(WORK_ORDER_REPOSITORY) private readonly workOrderRepo: WorkOrderRepository) {}
 
   async execute(workOrderId: string, tenantId: string): Promise<void> {
     const workOrder = await this.workOrderRepo.findById(workOrderId, tenantId);

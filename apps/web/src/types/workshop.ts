@@ -60,6 +60,7 @@ export interface WorkOrder {
   status: WorkOrderStatus;
   promisedDeliveryAt: string;
   finalOdometer: number | null;
+  observations: string | null;
   createdAt: string;
 }
 

@@ -10,8 +10,15 @@ import {
   WorkOrderWithDetails,
 } from '../../../../domain/repositories/work-order.repository';
 import { WorkOrder } from '../../../../domain/entities/work-order.entity';
-import { WorkOrderStatus, ACTIVE_STATUSES } from '../../../../domain/value-objects/work-order-status.vo';
-import { Pagination, PaginatedResult, paginationToSkipTake } from '../../../../domain/shared/pagination';
+import {
+  WorkOrderStatus,
+  ACTIVE_STATUSES,
+} from '../../../../domain/value-objects/work-order-status.vo';
+import {
+  Pagination,
+  PaginatedResult,
+  paginationToSkipTake,
+} from '../../../../domain/shared/pagination';
 
 type WorkOrderRow = {
   id: string;
@@ -27,6 +34,7 @@ type WorkOrderRow = {
   status: string;
   promisedDeliveryAt: Date;
   finalOdometer: number | null;
+  observations: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -38,10 +46,23 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
 
   private toDomain(r: WorkOrderRow): WorkOrder {
     return new WorkOrder(
-      r.id, r.tenantId, r.branchId, r.orderNumber, r.receptionId, r.vehicleId,
-      r.customerId, r.technicianId, r.serviceType, r.problemDescription,
-      r.status as WorkOrderStatus, r.promisedDeliveryAt, r.finalOdometer,
-      r.createdAt, r.updatedAt, r.deletedAt,
+      r.id,
+      r.tenantId,
+      r.branchId,
+      r.orderNumber,
+      r.receptionId,
+      r.vehicleId,
+      r.customerId,
+      r.technicianId,
+      r.serviceType,
+      r.problemDescription,
+      r.status as WorkOrderStatus,
+      r.promisedDeliveryAt,
+      r.finalOdometer,
+      r.createdAt,
+      r.updatedAt,
+      r.deletedAt,
+      r.observations,
     );
   }
 
@@ -150,7 +171,11 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
     return this.paginate(this.buildWhere(tenantId, filters, { technicianId }), pagination);
   }
 
-  async findNearingDeadline(thresholdHours: number, tenantId: string, branchId?: string): Promise<WorkOrder[]> {
+  async findNearingDeadline(
+    thresholdHours: number,
+    tenantId: string,
+    branchId?: string,
+  ): Promise<WorkOrder[]> {
     const threshold = new Date(Date.now() + thresholdHours * 60 * 60 * 1000);
     const rows = await this.prisma.workOrder.findMany({
       where: {
@@ -168,7 +193,12 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
   async countActiveByStatus(branchId: string, tenantId: string): Promise<Record<string, number>> {
     const grouped = await this.prisma.workOrder.groupBy({
       by: ['status'],
-      where: { tenantId, branchId, deletedAt: null, status: { in: ACTIVE_STATUSES as unknown as string[] } },
+      where: {
+        tenantId,
+        branchId,
+        deletedAt: null,
+        status: { in: ACTIVE_STATUSES as unknown as string[] },
+      },
       _count: { _all: true },
     });
     const result: Record<string, number> = {};
@@ -176,7 +206,12 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
     return result;
   }
 
-  async avgCycleTimeHours(branchId: string, tenantId: string, from: Date, to: Date): Promise<number> {
+  async avgCycleTimeHours(
+    branchId: string,
+    tenantId: string,
+    from: Date,
+    to: Date,
+  ): Promise<number> {
     const rows = await this.prisma.$queryRaw<Array<{ avg: number | null }>>`
       SELECT AVG(EXTRACT(EPOCH FROM (wo."updatedAt" - wo."createdAt")) / 3600) AS "avg"
       FROM "work_orders" wo
@@ -214,7 +249,11 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
     }));
   }
 
-  async countByStatusInPeriod(status: WorkOrderStatus, branchId: string, tenantId: string): Promise<number> {
+  async countByStatusInPeriod(
+    status: WorkOrderStatus,
+    branchId: string,
+    tenantId: string,
+  ): Promise<number> {
     return this.prisma.workOrder.count({
       where: { tenantId, branchId, deletedAt: null, status },
     });
@@ -236,6 +275,7 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
         status: workOrder.status,
         promisedDeliveryAt: workOrder.promisedDeliveryAt,
         finalOdometer: workOrder.finalOdometer,
+        observations: workOrder.observations,
         createdAt: workOrder.createdAt,
         updatedAt: workOrder.updatedAt,
         deletedAt: workOrder.deletedAt,
@@ -252,6 +292,7 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
         problemDescription: workOrder.problemDescription,
         status: workOrder.status,
         finalOdometer: workOrder.finalOdometer,
+        observations: workOrder.observations,
         updatedAt: workOrder.updatedAt,
         deletedAt: workOrder.deletedAt,
       },
