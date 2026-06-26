@@ -28,6 +28,7 @@ import {
   type PaymentMethod,
 } from '@/types/commerce';
 import { cn } from '@/lib/utils';
+import { computeServiceTime, formatDuration } from '@/lib/service-time';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input, fieldBase } from '@/components/ui/input';
@@ -105,6 +106,7 @@ export default function WorkOrderDetailPage() {
 
   const wo = detail.workOrder;
   const transitions = VALID_TRANSITIONS[wo.status];
+  const serviceTime = computeServiceTime(wo, detail.statusHistory);
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
@@ -140,6 +142,23 @@ export default function WorkOrderDetailPage() {
             <Meta
               label="Mecánico"
               value={<span className="text-foreground/90">{nameOf(wo.technicianId)}</span>}
+            />
+            <Meta
+              label="Tiempo del servicio"
+              value={
+                <span className="text-foreground/90">
+                  {formatDuration(serviceTime.totalMs)}
+                  {serviceTime.ongoing && (
+                    <span className="ml-1 text-xs text-muted-foreground">(en curso)</span>
+                  )}
+                </span>
+              }
+            />
+            <Meta
+              label="Trabajo activo"
+              value={
+                <span className="text-foreground/90">{formatDuration(serviceTime.activeMs)}</span>
+              }
             />
           </dl>
 
