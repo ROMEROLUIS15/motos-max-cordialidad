@@ -6,9 +6,14 @@ import {
   StockEntryRecord,
   StockHistoryFilters,
   TopPartByRotation,
+  PartConsumption,
 } from '../../../../domain/repositories/stock-entry.repository';
 import { StockEntryType } from '../../../../domain/value-objects/stock-entry-type.vo';
-import { Pagination, PaginatedResult, paginationToSkipTake } from '../../../../domain/shared/pagination';
+import {
+  Pagination,
+  PaginatedResult,
+  paginationToSkipTake,
+} from '../../../../domain/shared/pagination';
 
 @Injectable()
 export class StockEntryPrismaRepository implements StockEntryRepository {
@@ -96,5 +101,24 @@ export class StockEntryPrismaRepository implements StockEntryRepository {
       name: r.name,
       totalQuantity: Number(r.totalQuantity),
     }));
+  }
+
+  async consumptionByPart(
+    tenantId: string,
+    from: Date,
+    to: Date,
+    branchId?: string,
+  ): Promise<PartConsumption[]> {
+    const branch = branchId ?? null;
+    const rows = await this.prisma.$queryRaw<Array<{ partId: string; totalOut: Prisma.Decimal }>>`
+      SELECT se."partId" AS "partId", SUM(se."quantity") AS "totalOut"
+      FROM "stock_entries" se
+      WHERE se."tenantId" = ${tenantId}
+        AND (${branch}::text IS NULL OR se."branchId" = ${branch})
+        AND se."type" = 'SALIDA'
+        AND se."createdAt" BETWEEN ${from} AND ${to}
+      GROUP BY se."partId"
+    `;
+    return rows.map((r) => ({ partId: r.partId, totalOut: Number(r.totalOut) }));
   }
 }

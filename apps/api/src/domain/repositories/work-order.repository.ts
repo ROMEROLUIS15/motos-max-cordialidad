@@ -81,6 +81,15 @@ export interface WorkOrderRepository {
     branchId: string,
     tenantId: string,
   ): Promise<number>;
+  /** Completed+delivered orders in a period, tenant-wide (optional branch). */
+  countCompletedInPeriod(
+    tenantId: string,
+    from: Date,
+    to: Date,
+    branchId?: string,
+  ): Promise<number>;
+  /** Active (non-terminal) orders tenant-wide, oldest promised delivery first. */
+  findPendingByTenant(tenantId: string, branchId?: string): Promise<WorkOrder[]>;
   create(workOrder: WorkOrder): Promise<void>;
   save(workOrder: WorkOrder): Promise<void>;
   saveStatusHistory(entry: StatusHistoryEntry): Promise<void>;

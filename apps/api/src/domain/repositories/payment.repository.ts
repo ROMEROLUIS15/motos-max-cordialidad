@@ -17,9 +17,15 @@ export interface PaymentRepository {
   create(payment: Payment): Promise<void>;
   findById(id: string, tenantId: string): Promise<Payment | null>;
   findByWorkOrder(workOrderId: string, tenantId: string): Promise<Payment[]>;
-  search(filters: PaymentFilters, tenantId: string, pagination: Pagination): Promise<PaginatedResult<Payment>>;
+  search(
+    filters: PaymentFilters,
+    tenantId: string,
+    pagination: Pagination,
+  ): Promise<PaginatedResult<Payment>>;
   sumByWorkOrder(workOrderId: string, tenantId: string): Promise<number>;
   sumByBranchAndPeriod(branchId: string, tenantId: string, from: Date, to: Date): Promise<number>;
+  /** Tenant-wide collected income for a period; optionally scoped to a branch. */
+  sumByTenantAndPeriod(tenantId: string, from: Date, to: Date, branchId?: string): Promise<number>;
   incomeTrend(branchId: string, tenantId: string, days: number): Promise<IncomeTrendPoint[]>;
 }
 

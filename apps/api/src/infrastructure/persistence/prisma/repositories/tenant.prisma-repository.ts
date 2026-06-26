@@ -17,6 +17,12 @@ export class TenantPrismaRepository implements TenantRepository {
     return r ? this.toDomain(r) : null;
   }
 
+  async findActive(): Promise<Tenant[]> {
+    // No `status` column yet — every tenant is considered active.
+    const rows = await this.prisma.tenant.findMany({ orderBy: { name: 'asc' } });
+    return rows.map((r) => this.toDomain(r));
+  }
+
   async save(tenant: Tenant): Promise<void> {
     await this.prisma.tenant.update({
       where: { id: tenant.id },
@@ -59,19 +65,38 @@ export class TenantPrismaRepository implements TenantRepository {
   }
 
   private toDomain(r: {
-    id: string; name: string; taxId: string; logoUrl: string | null;
-    address: string | null; phone: string | null; email: string | null;
-    vatPercentage: unknown; accountingPeriodStart: number;
-    whatsappPhone: string | null; whatsappToken: string | null;
-    businessHours: unknown; termsAndConditions: string | null;
-    createdAt: Date; updatedAt: Date;
+    id: string;
+    name: string;
+    taxId: string;
+    logoUrl: string | null;
+    address: string | null;
+    phone: string | null;
+    email: string | null;
+    vatPercentage: unknown;
+    accountingPeriodStart: number;
+    whatsappPhone: string | null;
+    whatsappToken: string | null;
+    businessHours: unknown;
+    termsAndConditions: string | null;
+    createdAt: Date;
+    updatedAt: Date;
   }): Tenant {
     return new Tenant(
-      r.id, r.name, r.taxId, r.logoUrl, r.address, r.phone, r.email,
-      Number(r.vatPercentage), r.accountingPeriodStart,
-      r.whatsappPhone, r.whatsappToken,
+      r.id,
+      r.name,
+      r.taxId,
+      r.logoUrl,
+      r.address,
+      r.phone,
+      r.email,
+      Number(r.vatPercentage),
+      r.accountingPeriodStart,
+      r.whatsappPhone,
+      r.whatsappToken,
       (r.businessHours as Record<string, { open: string; close: string }>) ?? null,
-      r.termsAndConditions, r.createdAt, r.updatedAt,
+      r.termsAndConditions,
+      r.createdAt,
+      r.updatedAt,
     );
   }
 }

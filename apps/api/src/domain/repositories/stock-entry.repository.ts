@@ -28,6 +28,11 @@ export interface TopPartByRotation {
   totalQuantity: number;
 }
 
+export interface PartConsumption {
+  partId: string;
+  totalOut: number;
+}
+
 export interface StockEntryRepository {
   create(entry: StockEntryRecord): Promise<void>;
   history(
@@ -42,6 +47,14 @@ export interface StockEntryRepository {
     to: Date,
     limit: number,
   ): Promise<TopPartByRotation[]>;
+  /** Outflow (SALIDA) quantity per part over a period, tenant-wide. Used to
+   *  estimate consumption rate / days-of-stock remaining. */
+  consumptionByPart(
+    tenantId: string,
+    from: Date,
+    to: Date,
+    branchId?: string,
+  ): Promise<PartConsumption[]>;
 }
 
 export const STOCK_ENTRY_REPOSITORY = Symbol('StockEntryRepository');

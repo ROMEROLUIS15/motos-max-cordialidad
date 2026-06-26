@@ -9,8 +9,22 @@ import { NotificationPort } from '../../ports/notification.port';
 function makeWorkOrder(status: WorkOrderStatus): WorkOrder {
   const now = new Date();
   return new WorkOrder(
-    'wo-1', 'tenant-1', 'branch-1', 'WO-2026-000001', 'rec-1', 'veh-1', 'cust-1',
-    'tech-1', 'GENERAL', 'desc', status, new Date(now.getTime() + 86400000), null, now, now, null,
+    'wo-1',
+    'tenant-1',
+    'branch-1',
+    'WO-2026-000001',
+    'rec-1',
+    'veh-1',
+    'cust-1',
+    'tech-1',
+    'GENERAL',
+    'desc',
+    status,
+    new Date(now.getTime() + 86400000),
+    null,
+    now,
+    now,
+    null,
   );
 }
 
@@ -37,21 +51,33 @@ describe('TransitionWorkOrderStatusUseCase', () => {
       sendWorkOrderCompletedNotification: jest.fn(),
       sendWaitingPartsNotification: jest.fn(),
       sendManualMessage: jest.fn(),
+      sendOwnerMessage: jest.fn(),
     };
     notification = { notifyAdmins: jest.fn(), notifyUser: jest.fn() };
-    useCase = new TransitionWorkOrderStatusUseCase(workOrderRepo, inventory, messaging, notification);
+    useCase = new TransitionWorkOrderStatusUseCase(
+      workOrderRepo,
+      inventory,
+      messaging,
+      notification,
+    );
   });
 
   it('confirms stock discount and persists history when transitioning to DELIVERED', async () => {
     workOrderRepo.findById.mockResolvedValue(makeWorkOrder(WorkOrderStatus.COMPLETED));
     const out = await useCase.execute({
-      workOrderId: 'wo-1', tenantId: 'tenant-1', changedBy: 'u1', newStatus: WorkOrderStatus.DELIVERED,
+      workOrderId: 'wo-1',
+      tenantId: 'tenant-1',
+      changedBy: 'u1',
+      newStatus: WorkOrderStatus.DELIVERED,
     });
     expect(inventory.confirmStockDiscount).toHaveBeenCalledWith('wo-1', 'tenant-1');
     expect(inventory.releaseAllReservations).not.toHaveBeenCalled();
     expect(workOrderRepo.save).toHaveBeenCalled();
     expect(workOrderRepo.saveStatusHistory).toHaveBeenCalledWith(
-      expect.objectContaining({ newStatus: WorkOrderStatus.DELIVERED, previousStatus: WorkOrderStatus.COMPLETED }),
+      expect.objectContaining({
+        newStatus: WorkOrderStatus.DELIVERED,
+        previousStatus: WorkOrderStatus.COMPLETED,
+      }),
     );
     expect(out.newStatus).toBe(WorkOrderStatus.DELIVERED);
   });
@@ -59,7 +85,10 @@ describe('TransitionWorkOrderStatusUseCase', () => {
   it('releases all reservations when transitioning to CANCELLED', async () => {
     workOrderRepo.findById.mockResolvedValue(makeWorkOrder(WorkOrderStatus.IN_PROGRESS));
     await useCase.execute({
-      workOrderId: 'wo-1', tenantId: 'tenant-1', changedBy: 'u1', newStatus: WorkOrderStatus.CANCELLED,
+      workOrderId: 'wo-1',
+      tenantId: 'tenant-1',
+      changedBy: 'u1',
+      newStatus: WorkOrderStatus.CANCELLED,
     });
     expect(inventory.releaseAllReservations).toHaveBeenCalledWith('wo-1', 'tenant-1');
     expect(inventory.confirmStockDiscount).not.toHaveBeenCalled();
@@ -68,17 +97,28 @@ describe('TransitionWorkOrderStatusUseCase', () => {
   it('sends completed + admin notifications when transitioning to COMPLETED', async () => {
     workOrderRepo.findById.mockResolvedValue(makeWorkOrder(WorkOrderStatus.IN_PROGRESS));
     await useCase.execute({
-      workOrderId: 'wo-1', tenantId: 'tenant-1', changedBy: 'u1', newStatus: WorkOrderStatus.COMPLETED,
+      workOrderId: 'wo-1',
+      tenantId: 'tenant-1',
+      changedBy: 'u1',
+      newStatus: WorkOrderStatus.COMPLETED,
       finalOdometer: 15000,
     });
     expect(messaging.sendWorkOrderCompletedNotification).toHaveBeenCalled();
-    expect(notification.notifyAdmins).toHaveBeenCalledWith('tenant-1', expect.objectContaining({ type: 'WORK_ORDER_COMPLETED' }));
+    expect(notification.notifyAdmins).toHaveBeenCalledWith(
+      'tenant-1',
+      expect.objectContaining({ type: 'WORK_ORDER_COMPLETED' }),
+    );
   });
 
   it('throws on invalid transition and does not persist', async () => {
     workOrderRepo.findById.mockResolvedValue(makeWorkOrder(WorkOrderStatus.DELIVERED));
     await expect(
-      useCase.execute({ workOrderId: 'wo-1', tenantId: 'tenant-1', changedBy: 'u1', newStatus: WorkOrderStatus.CANCELLED }),
+      useCase.execute({
+        workOrderId: 'wo-1',
+        tenantId: 'tenant-1',
+        changedBy: 'u1',
+        newStatus: WorkOrderStatus.CANCELLED,
+      }),
     ).rejects.toMatchObject({ code: 'WORK_ORDER_INVALID_TRANSITION' });
     expect(workOrderRepo.save).not.toHaveBeenCalled();
   });

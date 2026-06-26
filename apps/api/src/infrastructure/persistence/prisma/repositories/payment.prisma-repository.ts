@@ -8,7 +8,11 @@ import {
 } from '../../../../domain/repositories/payment.repository';
 import { Payment } from '../../../../domain/entities/payment.entity';
 import { PaymentMethod } from '../../../../domain/value-objects/payment-method.vo';
-import { Pagination, PaginatedResult, paginationToSkipTake } from '../../../../domain/shared/pagination';
+import {
+  Pagination,
+  PaginatedResult,
+  paginationToSkipTake,
+} from '../../../../domain/shared/pagination';
 
 type PaymentRow = {
   id: string;
@@ -29,17 +33,31 @@ export class PaymentPrismaRepository implements PaymentRepository {
 
   private toDomain(r: PaymentRow): Payment {
     return new Payment(
-      r.id, r.tenantId, r.workOrderId, Number(r.amount), r.paymentMethod as PaymentMethod,
-      r.reference, r.notes, r.paidAt, r.createdBy, r.createdAt,
+      r.id,
+      r.tenantId,
+      r.workOrderId,
+      Number(r.amount),
+      r.paymentMethod as PaymentMethod,
+      r.reference,
+      r.notes,
+      r.paidAt,
+      r.createdBy,
+      r.createdAt,
     );
   }
 
   async create(payment: Payment): Promise<void> {
     await this.prisma.payment.create({
       data: {
-        id: payment.id, tenantId: payment.tenantId, workOrderId: payment.workOrderId,
-        amount: payment.amount, paymentMethod: payment.paymentMethod, reference: payment.reference,
-        notes: payment.notes, paidAt: payment.paidAt, createdBy: payment.createdBy,
+        id: payment.id,
+        tenantId: payment.tenantId,
+        workOrderId: payment.workOrderId,
+        amount: payment.amount,
+        paymentMethod: payment.paymentMethod,
+        reference: payment.reference,
+        notes: payment.notes,
+        paidAt: payment.paidAt,
+        createdBy: payment.createdBy,
         createdAt: payment.createdAt,
       },
     });
@@ -92,9 +110,31 @@ export class PaymentPrismaRepository implements PaymentRepository {
     return Number(res._sum.amount ?? 0);
   }
 
-  async sumByBranchAndPeriod(branchId: string, tenantId: string, from: Date, to: Date): Promise<number> {
+  async sumByBranchAndPeriod(
+    branchId: string,
+    tenantId: string,
+    from: Date,
+    to: Date,
+  ): Promise<number> {
     const res = await this.prisma.payment.aggregate({
       where: { tenantId, workOrder: { branchId }, paidAt: { gte: from, lte: to } },
+      _sum: { amount: true },
+    });
+    return Number(res._sum.amount ?? 0);
+  }
+
+  async sumByTenantAndPeriod(
+    tenantId: string,
+    from: Date,
+    to: Date,
+    branchId?: string,
+  ): Promise<number> {
+    const res = await this.prisma.payment.aggregate({
+      where: {
+        tenantId,
+        paidAt: { gte: from, lte: to },
+        ...(branchId ? { workOrder: { branchId } } : {}),
+      },
       _sum: { amount: true },
     });
     return Number(res._sum.amount ?? 0);
