@@ -2,8 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { fetchApi } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import { Plus, Search, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { apiGet } from '@/lib/api';
 import type { PaginatedResponse } from '@/types/api';
+import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/ui/page-header';
+import { EmptyState, ErrorState, TableRowsSkeleton } from '@/components/ui/states';
 
 interface Customer {
   id: string;
@@ -14,114 +23,169 @@ interface Customer {
   city: string;
   visitCount: number;
   isActive: boolean;
-  deletedAt: string | null;
 }
 
+const PAGE_SIZE = 20;
+
 function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState(value);
+  const [debounced, setDebounced] = useState(value);
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
   }, [value, delay]);
-  return debouncedValue;
+  return debounced;
 }
 
 export default function CustomersPage() {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const debouncedSearch = useDebounce(search, 300);
 
-  const loadCustomers = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-      const params = new URLSearchParams({
-        page: String(page),
-        pageSize: '20',
-        ...(debouncedSearch && { search: debouncedSearch }),
-      });
-      const data = await fetchApi<PaginatedResponse<Customer>>(`/api/customers?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      const data = await apiGet<PaginatedResponse<Customer>>(`/api/customers?${params}`);
       setCustomers(data.items);
       setTotal(data.total);
-    } catch {
-      // handle error
+    } catch (e) {
+      setError((e as Error).message);
     } finally {
       setLoading(false);
     }
   }, [debouncedSearch, page]);
 
-  useEffect(() => { void loadCustomers(); }, [loadCustomers]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
-        <Link
-          href="/customers/new"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-        >
-          Nuevo cliente
+    <div className="space-y-5">
+      <PageHeader
+        title="Clientes"
+        description={
+          total > 0
+            ? `${total} cliente${total === 1 ? '' : 's'} registrados`
+            : 'Directorio de clientes del taller'
+        }
+      >
+        <Link href="/customers/new" className={cn(buttonVariants())}>
+          <Plus /> Nuevo cliente
         </Link>
-      </div>
+      </PageHeader>
 
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Buscar por nombre, documento o teléfono..."
+      <div className="relative max-w-md">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          className="pl-9"
+          placeholder="Buscar por nombre, documento o teléfono…"
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          className="w-full max-w-md border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
         />
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {['Nombre', 'Documento', 'Teléfono', 'Ciudad', 'Visitas', 'Estado'].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {loading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">Cargando...</td></tr>
-            ) : customers.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No se encontraron clientes</td></tr>
-            ) : customers.map((c) => (
-              <tr key={c.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3">
-                  <Link href={`/customers/${c.id}`} className="text-blue-600 hover:underline font-medium">
-                    {c.fullName}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600">{c.documentType} {c.documentNumber}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{c.phone}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{c.city}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{c.visitCount}</td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${c.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                    {c.isActive ? 'Activo' : 'Inactivo'}
-                  </span>
-                </td>
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[680px] text-sm">
+            <thead>
+              <tr className="border-b border-border text-left">
+                {['Nombre', 'Documento', 'Teléfono', 'Ciudad', 'Visitas', 'Estado'].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200">
-          <span className="text-sm text-gray-500">{total} cliente(s) en total</span>
-          <div className="flex gap-2">
-            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 text-sm border rounded disabled:opacity-40">Anterior</button>
-            <span className="px-3 py-1 text-sm">Página {page}</span>
-            <button onClick={() => setPage((p) => p + 1)} disabled={customers.length < 20} className="px-3 py-1 text-sm border rounded disabled:opacity-40">Siguiente</button>
-          </div>
+            </thead>
+            <tbody>
+              {loading ? (
+                <TableRowsSkeleton rows={6} cols={6} />
+              ) : error ? (
+                <tr>
+                  <td colSpan={6}>
+                    <ErrorState message={error} onRetry={() => void load()} />
+                  </td>
+                </tr>
+              ) : customers.length === 0 ? (
+                <tr>
+                  <td colSpan={6}>
+                    <EmptyState
+                      icon={Users}
+                      title={debouncedSearch ? 'Sin resultados' : 'Aún no hay clientes'}
+                      description={
+                        debouncedSearch
+                          ? 'Prueba con otro término de búsqueda.'
+                          : 'Registra el primer cliente.'
+                      }
+                    />
+                  </td>
+                </tr>
+              ) : (
+                customers.map((c) => (
+                  <tr
+                    key={c.id}
+                    onClick={() => router.push(`/customers/${c.id}`)}
+                    className="group cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-secondary/50"
+                  >
+                    <td className="px-4 py-3 font-medium text-foreground">{c.fullName}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {c.documentType} {c.documentNumber}
+                    </td>
+                    <td className="tnum px-4 py-3 text-muted-foreground">{c.phone}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{c.city}</td>
+                    <td className="tnum px-4 py-3 text-muted-foreground">{c.visitCount}</td>
+                    <td className="px-4 py-3">
+                      <Badge variant={c.isActive ? 'success' : 'secondary'}>
+                        {c.isActive ? 'Activo' : 'Inactivo'}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      </div>
+
+        {!loading && !error && customers.length > 0 && (
+          <div className="flex items-center justify-between border-t border-border px-4 py-3">
+            <span className="text-xs text-muted-foreground">
+              Página {page} de {totalPages} · {total} en total
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                <ChevronLeft className="h-4 w-4" /> Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page >= totalPages}
+              >
+                Siguiente <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

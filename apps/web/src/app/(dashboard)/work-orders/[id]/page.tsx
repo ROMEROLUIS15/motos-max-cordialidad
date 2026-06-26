@@ -4,10 +4,11 @@ export const runtime = 'edge';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft, Plus, Trash2, Upload, FileText, X, Loader2 } from 'lucide-react';
 import { apiGet, apiSend, apiUpload } from '@/lib/api';
 import {
   STATUS_LABELS,
-  STATUS_BADGE,
   VALID_TRANSITIONS,
   PHOTO_PHASES,
   type WorkOrderDetail,
@@ -19,16 +20,36 @@ import type { PaginatedResponse } from '@/types/api';
 import type { ServiceCatalogItem } from '@/types/inventory';
 import {
   QUOTE_STATUS_LABELS,
-  QUOTE_STATUS_BADGE,
   PAYMENT_METHODS,
   PAYMENT_METHOD_LABELS,
   type Quote,
+  type QuoteStatus,
   type PaymentSummary,
   type PaymentMethod,
 } from '@/types/commerce';
+import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input, fieldBase } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const money = (n: number) =>
   n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+
+const QUOTE_VARIANT: Record<
+  QuoteStatus,
+  'secondary' | 'default' | 'success' | 'destructive' | 'warning'
+> = {
+  DRAFT: 'secondary',
+  SENT: 'default',
+  APPROVED: 'success',
+  REJECTED: 'destructive',
+  EXPIRED: 'warning',
+};
+
+type Run = (fn: () => Promise<unknown>) => Promise<void>;
 
 export default function WorkOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -54,7 +75,7 @@ export default function WorkOrderDetailPage() {
     void load();
   }, [load]);
 
-  const run = async (fn: () => Promise<unknown>) => {
+  const run: Run = async (fn) => {
     setBusy(true);
     setError(null);
     try {
@@ -68,13 +89,13 @@ export default function WorkOrderDetailPage() {
   };
 
   if (!detail) {
-    return (
-      <div className="p-6">
-        {error ? (
-          <p className="text-red-600">{error}</p>
-        ) : (
-          <p className="text-gray-500">Cargando...</p>
-        )}
+    return error ? (
+      <p className="text-sm text-destructive">{error}</p>
+    ) : (
+      <div className="mx-auto max-w-5xl space-y-5">
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-40 rounded-xl" />
+        <Skeleton className="h-40 rounded-xl" />
       </div>
     );
   }
@@ -83,110 +104,119 @@ export default function WorkOrderDetailPage() {
   const transitions = VALID_TRANSITIONS[wo.status];
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="mx-auto max-w-5xl space-y-5">
+      <Link
+        href="/work-orders"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" /> Órdenes
+      </Link>
+
       {/* Header */}
-      <div className="bg-white rounded-lg shadow p-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{wo.orderNumber}</h1>
-            <p className="text-sm text-gray-500 mt-1">{wo.serviceType}</p>
+      <Card>
+        <CardContent className="p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">{wo.orderNumber}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">{wo.serviceType}</p>
+            </div>
+            <StatusBadge status={wo.status} className="px-3 py-1 text-sm" />
           </div>
-          <span
-            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${STATUS_BADGE[wo.status]}`}
-          >
-            {STATUS_LABELS[wo.status]}
-          </span>
-        </div>
-        <dl className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4 text-sm">
-          <div>
-            <dt className="text-gray-500">Vehículo</dt>
-            <dd className="text-gray-900">{wo.vehicleId}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Cliente</dt>
-            <dd className="text-gray-900">{wo.customerId}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Técnico</dt>
-            <dd className="text-gray-900">{wo.technicianId}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Entrega prometida</dt>
-            <dd className="text-gray-900">
-              {new Date(wo.promisedDeliveryAt).toLocaleString('es-CO')}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Odómetro final</dt>
-            <dd className="text-gray-900">{wo.finalOdometer ?? '—'}</dd>
-          </div>
-        </dl>
-        <p className="mt-4 text-sm text-gray-700">
-          <span className="text-gray-500">Problema: </span>
-          {wo.problemDescription}
-        </p>
 
-        {/* Status transitions */}
-        {transitions.length > 0 && (
-          <div className="mt-5 flex flex-wrap gap-2">
-            {transitions.map((next) => (
-              <TransitionButton
-                key={next}
-                next={next}
-                busy={busy}
-                onClick={(note, finalOdometer) =>
-                  run(() =>
-                    apiSend(`/api/work-orders/${id}/status`, 'POST', {
-                      newStatus: next,
-                      note,
-                      finalOdometer,
-                    }),
-                  )
-                }
-              />
-            ))}
-          </div>
-        )}
-      </div>
+          <dl className="mt-5 grid grid-cols-2 gap-4 text-sm md:grid-cols-3">
+            <Meta
+              label="Entrega prometida"
+              value={new Date(wo.promisedDeliveryAt).toLocaleString('es-CO')}
+            />
+            <Meta
+              label="Odómetro final"
+              value={
+                wo.finalOdometer != null ? `${wo.finalOdometer.toLocaleString('es-CO')} km` : '—'
+              }
+            />
+            <Meta
+              label="Técnico"
+              value={
+                <span className="font-mono text-xs text-muted-foreground">
+                  {wo.technicianId.slice(0, 8)}
+                </span>
+              }
+            />
+          </dl>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+          <p className="mt-4 text-sm">
+            <span className="text-muted-foreground">Problema: </span>
+            <span className="text-foreground/90">{wo.problemDescription}</span>
+          </p>
 
-      {/* Service lines */}
+          {transitions.length > 0 && (
+            <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
+              {transitions.map((next) => (
+                <TransitionButton
+                  key={next}
+                  next={next}
+                  busy={busy}
+                  onClick={(finalOdometer) =>
+                    run(() =>
+                      apiSend(`/api/work-orders/${id}/status`, 'POST', {
+                        newStatus: next,
+                        finalOdometer,
+                      }),
+                    )
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
       <ServiceLinesSection detail={detail} workOrderId={id} busy={busy} run={run} />
-
-      {/* Parts */}
       <PartsSection detail={detail} workOrderId={id} busy={busy} run={run} />
-
-      {/* Evidences */}
       <EvidencesSection evidences={evidences} workOrderId={id} busy={busy} run={run} />
-
-      {/* Quotes */}
       <QuotesSection workOrderId={id} woStatus={wo.status} />
-
-      {/* Payments */}
       <PaymentsSection workOrderId={id} />
 
       {/* Total + history */}
-      <div className="bg-white rounded-lg shadow p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Total</h2>
-          <span className="text-xl font-bold text-gray-900">{money(detail.total)}</span>
-        </div>
-        <h3 className="text-sm font-semibold text-gray-700 mt-5 mb-2">Historial de estado</h3>
-        <ol className="space-y-1 text-sm">
-          {detail.statusHistory.length === 0 && (
-            <li className="text-gray-400">Sin cambios registrados</li>
-          )}
-          {detail.statusHistory.map((h, i) => (
-            <li key={i} className="text-gray-600">
-              {new Date(h.changedAt).toLocaleString('es-CO')} —{' '}
-              {h.previousStatus ? `${STATUS_LABELS[h.previousStatus]} → ` : ''}
-              {STATUS_LABELS[h.newStatus]}
-              {h.note ? ` (${h.note})` : ''}
-            </li>
-          ))}
-        </ol>
-      </div>
+      <Card>
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold">Total</h2>
+            <span className="tnum text-xl font-semibold">{money(detail.total)}</span>
+          </div>
+          <h3 className="mb-2 mt-5 text-sm font-medium text-muted-foreground">
+            Historial de estado
+          </h3>
+          <ol className="space-y-1.5 text-sm">
+            {detail.statusHistory.length === 0 && (
+              <li className="text-muted-foreground">Sin cambios registrados</li>
+            )}
+            {detail.statusHistory.map((h, i) => (
+              <li key={i} className="flex items-center gap-2 text-muted-foreground">
+                <span className="tnum text-xs">
+                  {new Date(h.changedAt).toLocaleString('es-CO')}
+                </span>
+                <span className="text-foreground/80">
+                  {h.previousStatus ? `${STATUS_LABELS[h.previousStatus]} → ` : ''}
+                  {STATUS_LABELS[h.newStatus]}
+                </span>
+                {h.note ? <span className="text-muted-foreground/70">· {h.note}</span> : null}
+              </li>
+            ))}
+          </ol>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function Meta({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-foreground/90">{value}</dd>
     </div>
   );
 }
@@ -198,22 +228,43 @@ function TransitionButton({
 }: {
   next: WorkOrderStatus;
   busy: boolean;
-  onClick: (note?: string, finalOdometer?: number) => void;
+  onClick: (finalOdometer?: number) => void;
 }) {
   return (
-    <button
+    <Button
+      variant="outline"
+      size="sm"
       disabled={busy}
       onClick={() => {
         const finalOdometer =
           next === 'COMPLETED'
             ? Number(window.prompt('Odómetro final (opcional):') ?? '') || undefined
             : undefined;
-        onClick(undefined, finalOdometer);
+        onClick(finalOdometer);
       }}
-      className="px-3 py-1.5 text-sm rounded-md border border-blue-600 text-blue-700 hover:bg-blue-50 disabled:opacity-40"
     >
-      → {STATUS_LABELS[next]}
-    </button>
+      {STATUS_LABELS[next]}
+    </Button>
+  );
+}
+
+function SectionCard({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
+        <CardTitle>{title}</CardTitle>
+        {action}
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
   );
 }
 
@@ -226,7 +277,7 @@ function ServiceLinesSection({
   detail: WorkOrderDetail;
   workOrderId: string;
   busy: boolean;
-  run: (fn: () => Promise<unknown>) => Promise<void>;
+  run: Run;
 }) {
   const [description, setDescription] = useState('');
   const [unitPrice, setUnitPrice] = useState('');
@@ -249,7 +300,7 @@ function ServiceLinesSection({
     return () => clearTimeout(t);
   }, [catalogQuery]);
 
-  const pickCatalog = (item: ServiceCatalogItem) => {
+  const pick = (item: ServiceCatalogItem) => {
     setDescription(item.name);
     setUnitPrice(String(item.suggestedPrice));
     setServiceCatalogId(item.id);
@@ -258,71 +309,69 @@ function ServiceLinesSection({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-5">
-      <h2 className="text-lg font-semibold text-gray-900 mb-3">Servicios</h2>
-      <div className="relative mb-2">
-        <input
-          placeholder="Buscar en el catálogo de servicios..."
+    <SectionCard title="Servicios">
+      <div className="relative mb-3">
+        <Input
+          placeholder="Buscar en el catálogo de servicios…"
           value={catalogQuery}
           onChange={(e) => setCatalogQuery(e.target.value)}
-          className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm"
         />
         {suggestions.length > 0 && (
-          <ul className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow divide-y">
+          <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-card-hover">
             {suggestions.map((s) => (
               <li key={s.id}>
                 <button
-                  onClick={() => pickCatalog(s)}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                  onClick={() => pick(s)}
+                  className="w-full border-b border-border/60 px-3 py-2 text-left text-sm last:border-0 hover:bg-secondary/60"
                 >
-                  {s.name} — {s.suggestedPrice.toLocaleString('es-CO')} ({s.serviceType})
+                  {s.name} · {money(s.suggestedPrice)}{' '}
+                  <span className="text-muted-foreground">({s.serviceType})</span>
                 </button>
               </li>
             ))}
           </ul>
         )}
       </div>
-      <table className="min-w-full text-sm">
-        <tbody className="divide-y divide-gray-100">
-          {detail.lines.length === 0 && (
-            <tr>
-              <td className="py-2 text-gray-400">Sin servicios</td>
-            </tr>
-          )}
-          {detail.lines.map((l) => (
-            <tr key={l.id}>
-              <td className="py-2 text-gray-800">{l.description}</td>
-              <td className="py-2 text-right text-gray-800">{money(l.unitPrice)}</td>
-              <td className="py-2 text-right">
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    run(() => apiSend(`/api/work-orders/${workOrderId}/lines/${l.id}`, 'DELETE'))
-                  }
-                  className="text-red-600 hover:underline text-xs"
-                >
-                  Eliminar
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="flex gap-2 mt-3">
-        <input
+
+      <ul className="divide-y divide-border/60">
+        {detail.lines.length === 0 && (
+          <li className="py-2 text-sm text-muted-foreground">Sin servicios</li>
+        )}
+        {detail.lines.map((l) => (
+          <li key={l.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+            <span className="text-foreground/90">{l.description}</span>
+            <span className="flex items-center gap-3">
+              <span className="tnum font-medium">{money(l.unitPrice)}</span>
+              <button
+                disabled={busy}
+                onClick={() =>
+                  run(() => apiSend(`/api/work-orders/${workOrderId}/lines/${l.id}`, 'DELETE'))
+                }
+                className="text-muted-foreground transition-colors hover:text-destructive"
+                aria-label="Eliminar"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Input
+          className="min-w-[180px] flex-1"
           placeholder="Descripción del servicio"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
         />
-        <input
+        <Input
+          className="w-28"
           placeholder="Precio"
           type="number"
           value={unitPrice}
           onChange={(e) => setUnitPrice(e.target.value)}
-          className="w-28 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
         />
-        <button
+        <Button
           disabled={busy || !description || !unitPrice}
           onClick={() =>
             run(async () => {
@@ -336,12 +385,11 @@ function ServiceLinesSection({
               setServiceCatalogId(null);
             })
           }
-          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm disabled:opacity-40"
         >
-          Agregar
-        </button>
+          <Plus className="h-4 w-4" /> Agregar
+        </Button>
       </div>
-    </div>
+    </SectionCard>
   );
 }
 
@@ -354,58 +402,53 @@ function PartsSection({
   detail: WorkOrderDetail;
   workOrderId: string;
   busy: boolean;
-  run: (fn: () => Promise<unknown>) => Promise<void>;
+  run: Run;
 }) {
   const [partId, setPartId] = useState('');
   const [quantity, setQuantity] = useState('1');
 
   return (
-    <div className="bg-white rounded-lg shadow p-5">
-      <h2 className="text-lg font-semibold text-gray-900 mb-3">Repuestos</h2>
-      <table className="min-w-full text-sm">
-        <tbody className="divide-y divide-gray-100">
-          {detail.parts.length === 0 && (
-            <tr>
-              <td className="py-2 text-gray-400">Sin repuestos</td>
-            </tr>
-          )}
-          {detail.parts.map((p) => (
-            <tr key={p.id}>
-              <td className="py-2 text-gray-800">{p.partId}</td>
-              <td className="py-2 text-right text-gray-600">x{p.quantity}</td>
-              <td className="py-2 text-right text-gray-800">
-                {money(p.quantity * p.unitPriceAtSale)}
-              </td>
-              <td className="py-2 text-right">
-                <button
-                  disabled={busy}
-                  onClick={() =>
-                    run(() => apiSend(`/api/work-orders/${workOrderId}/parts/${p.id}`, 'DELETE'))
-                  }
-                  className="text-red-600 hover:underline text-xs"
-                >
-                  Eliminar
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="flex gap-2 mt-3">
-        <input
+    <SectionCard title="Repuestos">
+      <ul className="divide-y divide-border/60">
+        {detail.parts.length === 0 && (
+          <li className="py-2 text-sm text-muted-foreground">Sin repuestos</li>
+        )}
+        {detail.parts.map((p) => (
+          <li key={p.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+            <span className="font-mono text-xs text-muted-foreground">{p.partId.slice(0, 8)}</span>
+            <span className="flex items-center gap-3">
+              <span className="text-muted-foreground">x{p.quantity}</span>
+              <span className="tnum font-medium">{money(p.quantity * p.unitPriceAtSale)}</span>
+              <button
+                disabled={busy}
+                onClick={() =>
+                  run(() => apiSend(`/api/work-orders/${workOrderId}/parts/${p.id}`, 'DELETE'))
+                }
+                className="text-muted-foreground transition-colors hover:text-destructive"
+                aria-label="Eliminar"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Input
+          className="min-w-[180px] flex-1"
           placeholder="ID del repuesto"
           value={partId}
           onChange={(e) => setPartId(e.target.value)}
-          className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
         />
-        <input
+        <Input
+          className="w-24"
           placeholder="Cant."
           type="number"
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
-          className="w-24 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
         />
-        <button
+        <Button
           disabled={busy || !partId || !quantity}
           onClick={() =>
             run(async () => {
@@ -417,12 +460,11 @@ function PartsSection({
               setQuantity('1');
             })
           }
-          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm disabled:opacity-40"
         >
-          Agregar
-        </button>
+          <Plus className="h-4 w-4" /> Agregar
+        </Button>
       </div>
-    </div>
+    </SectionCard>
   );
 }
 
@@ -435,54 +477,59 @@ function EvidencesSection({
   evidences: PhotoEvidence[];
   workOrderId: string;
   busy: boolean;
-  run: (fn: () => Promise<unknown>) => Promise<void>;
+  run: Run;
 }) {
   const [phase, setPhase] = useState<PhotoPhase>('INGRESO');
   const fileRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="bg-white rounded-lg shadow p-5">
-      <h2 className="text-lg font-semibold text-gray-900 mb-3">Evidencias fotográficas</h2>
-      {PHOTO_PHASES.map((ph) => {
-        const items = evidences.filter((e) => e.phase === ph);
-        return (
-          <div key={ph} className="mb-4">
-            <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">{ph}</h3>
-            {items.length === 0 ? (
-              <p className="text-sm text-gray-400">Sin fotos</p>
-            ) : (
-              <div className="flex flex-wrap gap-3">
-                {items.map((e) => (
-                  <div key={e.id} className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={e.url}
-                      alt={e.filename}
-                      className="h-24 w-24 object-cover rounded border"
-                    />
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        run(() =>
-                          apiSend(`/api/work-orders/${workOrderId}/evidences/${e.id}`, 'DELETE'),
-                        )
-                      }
-                      className="absolute top-1 right-1 bg-red-600 text-white text-xs rounded-full w-5 h-5"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-      <div className="flex items-center gap-2 mt-2">
+    <SectionCard title="Evidencias fotográficas">
+      <div className="space-y-4">
+        {PHOTO_PHASES.map((ph) => {
+          const items = evidences.filter((e) => e.phase === ph);
+          return (
+            <div key={ph}>
+              <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                {ph}
+              </h3>
+              {items.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Sin fotos</p>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  {items.map((e) => (
+                    <div key={e.id} className="group relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={e.url}
+                        alt={e.filename}
+                        className="h-24 w-24 rounded-lg border border-border object-cover"
+                      />
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          run(() =>
+                            apiSend(`/api/work-orders/${workOrderId}/evidences/${e.id}`, 'DELETE'),
+                          )
+                        }
+                        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                        aria-label="Eliminar foto"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
         <select
           value={phase}
           onChange={(e) => setPhase(e.target.value as PhotoPhase)}
-          className="border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+          className={cn(fieldBase, 'w-auto cursor-pointer')}
         >
           {PHOTO_PHASES.map((ph) => (
             <option key={ph} value={ph}>
@@ -494,9 +541,10 @@ function EvidencesSection({
           ref={fileRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          className="text-sm"
+          className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-secondary/70"
         />
-        <button
+        <Button
+          variant="outline"
           disabled={busy}
           onClick={() => {
             const file = fileRef.current?.files?.[0];
@@ -506,12 +554,11 @@ function EvidencesSection({
               if (fileRef.current) fileRef.current.value = '';
             });
           }}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm disabled:opacity-40"
         >
-          Subir
-        </button>
+          <Upload className="h-4 w-4" /> Subir
+        </Button>
       </div>
-    </div>
+    </SectionCard>
   );
 }
 
@@ -558,83 +605,76 @@ function QuotesSection({
   const canGenerate = woStatus === 'PENDING' || woStatus === 'IN_PROGRESS';
 
   return (
-    <div className="bg-white rounded-lg shadow p-5">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold text-gray-900">Cotizaciones</h2>
-        {canGenerate && (
-          <button
+    <SectionCard
+      title="Cotizaciones"
+      action={
+        canGenerate && (
+          <Button
+            size="sm"
             disabled={busy}
             onClick={() => act(() => apiSend('/api/quotes', 'POST', { workOrderId }))}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm disabled:opacity-40"
           >
-            Generar cotización
-          </button>
+            <Plus className="h-4 w-4" /> Generar
+          </Button>
+        )
+      }
+    >
+      {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
+      <ul className="divide-y divide-border/60">
+        {quotes.length === 0 && (
+          <li className="py-2 text-sm text-muted-foreground">Sin cotizaciones</li>
         )}
-      </div>
-      {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
-      {quotes.length === 0 ? (
-        <p className="text-sm text-gray-400">Sin cotizaciones</p>
-      ) : (
-        <table className="min-w-full text-sm">
-          <tbody className="divide-y divide-gray-100">
-            {quotes.map((q) => (
-              <tr key={q.id}>
-                <td className="py-2 font-medium text-gray-800">{q.quoteNumber}</td>
-                <td className="py-2">
-                  <span
-                    className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${QUOTE_STATUS_BADGE[q.status]}`}
+        {quotes.map((q) => (
+          <li
+            key={q.id}
+            className="flex flex-wrap items-center justify-between gap-3 py-2.5 text-sm"
+          >
+            <span className="flex items-center gap-3">
+              <span className="font-medium">{q.quoteNumber}</span>
+              <Badge variant={QUOTE_VARIANT[q.status]}>{QUOTE_STATUS_LABELS[q.status]}</Badge>
+            </span>
+            <span className="flex items-center gap-3">
+              <span className="tnum font-medium">{money(q.total)}</span>
+              <Button variant="ghost" size="sm" onClick={() => void openPdf(q.id)}>
+                <FileText className="h-3.5 w-3.5" /> PDF
+              </Button>
+              {q.status === 'DRAFT' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => act(() => apiSend(`/api/quotes/${q.id}/send`, 'POST'))}
+                >
+                  Enviar
+                </Button>
+              )}
+              {q.status === 'SENT' && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-success hover:text-success"
+                    disabled={busy}
+                    onClick={() => act(() => apiSend(`/api/quotes/${q.id}/approve`, 'POST'))}
                   >
-                    {QUOTE_STATUS_LABELS[q.status]}
-                  </span>
-                </td>
-                <td className="py-2 text-right text-gray-800">
-                  {q.total.toLocaleString('es-CO', {
-                    style: 'currency',
-                    currency: 'COP',
-                    maximumFractionDigits: 0,
-                  })}
-                </td>
-                <td className="py-2 text-right space-x-2">
-                  <button
-                    onClick={() => void openPdf(q.id)}
-                    className="text-blue-600 hover:underline text-xs"
+                    Aprobar
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    disabled={busy}
+                    onClick={() => act(() => apiSend(`/api/quotes/${q.id}/reject`, 'POST'))}
                   >
-                    PDF
-                  </button>
-                  {q.status === 'DRAFT' && (
-                    <button
-                      disabled={busy}
-                      onClick={() => act(() => apiSend(`/api/quotes/${q.id}/send`, 'POST'))}
-                      className="text-blue-600 hover:underline text-xs"
-                    >
-                      Enviar
-                    </button>
-                  )}
-                  {q.status === 'SENT' && (
-                    <>
-                      <button
-                        disabled={busy}
-                        onClick={() => act(() => apiSend(`/api/quotes/${q.id}/approve`, 'POST'))}
-                        className="text-green-600 hover:underline text-xs"
-                      >
-                        Aprobar
-                      </button>
-                      <button
-                        disabled={busy}
-                        onClick={() => act(() => apiSend(`/api/quotes/${q.id}/reject`, 'POST'))}
-                        className="text-red-600 hover:underline text-xs"
-                      >
-                        Rechazar
-                      </button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+                    Rechazar
+                  </Button>
+                </>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </SectionCard>
   );
 }
 
@@ -679,47 +719,52 @@ function PaymentsSection({ workOrderId }: { workOrderId: string }) {
     summary && summary.orderTotal > 0
       ? Math.min(100, (summary.totalPaid / summary.orderTotal) * 100)
       : 0;
-  const fmt = (n: number) =>
-    n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
 
   return (
-    <div className="bg-white rounded-lg shadow p-5">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold text-gray-900">Pagos</h2>
-        <button
-          onClick={() => setShowForm((s) => !s)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm"
-        >
-          Registrar pago
-        </button>
-      </div>
-      {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
+    <SectionCard
+      title="Pagos"
+      action={
+        <Button size="sm" variant="outline" onClick={() => setShowForm((s) => !s)}>
+          <Plus className="h-4 w-4" /> Registrar pago
+        </Button>
+      }
+    >
+      {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
 
       {summary && (
-        <>
-          <div className="mb-1 flex justify-between text-sm text-gray-600">
-            <span>Pagado: {fmt(summary.totalPaid)}</span>
-            <span>Saldo: {fmt(summary.balance)}</span>
+        <div className="mb-4">
+          <div className="mb-1.5 flex justify-between text-sm">
+            <span className="text-muted-foreground">
+              Pagado:{' '}
+              <span className="tnum font-medium text-foreground">{money(summary.totalPaid)}</span>
+            </span>
+            <span className="text-muted-foreground">
+              Saldo:{' '}
+              <span className="tnum font-medium text-foreground">{money(summary.balance)}</span>
+            </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-            <div className="bg-green-500 h-2 rounded-full" style={{ width: `${pct}%` }} />
+          <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+            <div
+              className="h-full rounded-full bg-success transition-all"
+              style={{ width: `${pct}%` }}
+            />
           </div>
-        </>
+        </div>
       )}
 
       {showForm && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          <input
+        <div className="mb-4 flex flex-wrap gap-2">
+          <Input
+            className="w-32"
             type="number"
             placeholder="Monto"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="w-32 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
           />
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-            className="border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+            className={cn(fieldBase, 'w-auto cursor-pointer')}
           >
             {PAYMENT_METHODS.map((m) => (
               <option key={m} value={m}>
@@ -727,41 +772,35 @@ function PaymentsSection({ workOrderId }: { workOrderId: string }) {
               </option>
             ))}
           </select>
-          <input
+          <Input
+            className="min-w-[140px] flex-1"
             placeholder="Referencia"
             value={reference}
             onChange={(e) => setReference(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
           />
-          <button
-            disabled={busy || !amount}
-            onClick={() => void register()}
-            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-md text-sm disabled:opacity-40"
-          >
-            Guardar
-          </button>
+          <Button disabled={busy || !amount} onClick={() => void register()}>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Guardar
+          </Button>
         </div>
       )}
 
-      <table className="min-w-full text-sm">
-        <tbody className="divide-y divide-gray-100">
-          {summary?.payments.length === 0 && (
-            <tr>
-              <td className="py-2 text-gray-400">Sin pagos</td>
-            </tr>
-          )}
-          {summary?.payments.map((p) => (
-            <tr key={p.id}>
-              <td className="py-2 text-gray-600">
-                {new Date(p.paidAt).toLocaleDateString('es-CO')}
-              </td>
-              <td className="py-2 text-gray-600">{PAYMENT_METHOD_LABELS[p.paymentMethod]}</td>
-              <td className="py-2 text-gray-500">{p.reference}</td>
-              <td className="py-2 text-right font-medium text-gray-800">{fmt(p.amount)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+      <ul className="divide-y divide-border/60">
+        {summary?.payments.length === 0 && (
+          <li className="py-2 text-sm text-muted-foreground">Sin pagos</li>
+        )}
+        {summary?.payments.map((p) => (
+          <li key={p.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+            <span className="tnum text-muted-foreground">
+              {new Date(p.paidAt).toLocaleDateString('es-CO')}
+            </span>
+            <span className="flex-1 px-3 text-muted-foreground">
+              {PAYMENT_METHOD_LABELS[p.paymentMethod]}
+            </span>
+            <span className="text-muted-foreground/70">{p.reference}</span>
+            <span className="tnum font-medium">{money(p.amount)}</span>
+          </li>
+        ))}
+      </ul>
+    </SectionCard>
   );
 }

@@ -1,14 +1,25 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Plus, Wrench, Loader2 } from 'lucide-react';
 import { apiGet, apiSend } from '@/lib/api';
 import type { PaginatedResponse } from '@/types/api';
 import type { ServiceCatalogItem } from '@/types/inventory';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input, Textarea } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Modal } from '@/components/ui/modal';
+import { PageHeader } from '@/components/ui/page-header';
+import { EmptyState, ErrorState, TableRowsSkeleton } from '@/components/ui/states';
+
+const money = (n: number) =>
+  n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
 
 export default function ServiceCatalogPage() {
   const [items, setItems] = useState<ServiceCatalogItem[]>([]);
   const [serviceType, setServiceType] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<ServiceCatalogItem | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -19,7 +30,9 @@ export default function ServiceCatalogPage() {
     try {
       const params = new URLSearchParams({ pageSize: '100' });
       if (serviceType) params.set('serviceType', serviceType);
-      const data = await apiGet<PaginatedResponse<ServiceCatalogItem>>(`/api/service-catalog?${params}`);
+      const data = await apiGet<PaginatedResponse<ServiceCatalogItem>>(
+        `/api/service-catalog?${params}`,
+      );
       setItems(data.items);
     } catch (e) {
       setError((e as Error).message);
@@ -42,89 +55,110 @@ export default function ServiceCatalogPage() {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Catálogo de servicios</h1>
-        <button
+    <div className="space-y-5">
+      <PageHeader
+        title="Catálogo de servicios"
+        description="Servicios y precios sugeridos del taller"
+      >
+        <Button
           onClick={() => {
             setEditing(null);
             setShowForm(true);
           }}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
         >
-          Nuevo servicio
-        </button>
-      </div>
+          <Plus /> Nuevo servicio
+        </Button>
+      </PageHeader>
 
-      <input
-        placeholder="Filtrar por tipo de servicio..."
+      <Input
+        className="max-w-md"
+        placeholder="Filtrar por tipo de servicio…"
         value={serviceType}
         onChange={(e) => setServiceType(e.target.value)}
-        className="w-full max-w-md border border-gray-300 rounded-md px-3 py-2 text-sm mb-4"
       />
 
-      {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {['Nombre', 'Tipo', 'Horas est.', 'Precio sugerido', 'Estado', ''].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {loading ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                  Cargando...
-                </td>
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[680px] text-sm">
+            <thead>
+              <tr className="border-b border-border text-left">
+                {['Nombre', 'Tipo', 'Horas est.', 'Precio sugerido', 'Estado', ''].map((h, i) => (
+                  <th
+                    key={h || i}
+                    className={`px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground ${i === 5 ? 'text-right' : ''}`}
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ) : items.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                  Sin servicios
-                </td>
-              </tr>
-            ) : (
-              items.map((it) => (
-                <tr key={it.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">{it.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{it.serviceType}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{it.estimatedHours}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {it.suggestedPrice.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${it.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                      {it.isActive ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right space-x-3">
-                    <button
-                      onClick={() => {
-                        setEditing(it);
-                        setShowForm(true);
-                      }}
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      Editar
-                    </button>
-                    {it.isActive && (
-                      <button onClick={() => void deactivate(it.id)} className="text-sm text-red-600 hover:underline">
-                        Desactivar
-                      </button>
-                    )}
+            </thead>
+            <tbody>
+              {loading ? (
+                <TableRowsSkeleton rows={6} cols={6} />
+              ) : error ? (
+                <tr>
+                  <td colSpan={6}>
+                    <ErrorState message={error} onRetry={() => void load()} />
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : items.length === 0 ? (
+                <tr>
+                  <td colSpan={6}>
+                    <EmptyState
+                      icon={Wrench}
+                      title="Sin servicios"
+                      description="Crea el primer servicio del catálogo."
+                    />
+                  </td>
+                </tr>
+              ) : (
+                items.map((it) => (
+                  <tr
+                    key={it.id}
+                    className="border-b border-border/60 last:border-0 hover:bg-secondary/40"
+                  >
+                    <td className="px-4 py-3 font-medium text-foreground">{it.name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{it.serviceType}</td>
+                    <td className="tnum px-4 py-3 text-muted-foreground">{it.estimatedHours} h</td>
+                    <td className="tnum px-4 py-3 text-foreground/90">
+                      {money(it.suggestedPrice)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge variant={it.isActive ? 'success' : 'secondary'}>
+                        {it.isActive ? 'Activo' : 'Inactivo'}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditing(it);
+                            setShowForm(true);
+                          }}
+                        >
+                          Editar
+                        </Button>
+                        {it.isActive && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => void deactivate(it.id)}
+                          >
+                            Desactivar
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       {showForm && (
         <ServiceFormModal
@@ -180,60 +214,63 @@ function ServiceFormModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-5">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">{item ? 'Editar servicio' : 'Nuevo servicio'}</h2>
-        <div className="space-y-3">
-          <input
-            placeholder="Nombre"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-          />
-          <input
-            placeholder="Tipo de servicio"
-            value={form.serviceType}
-            onChange={(e) => setForm((f) => ({ ...f, serviceType: e.target.value }))}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              placeholder="Horas estimadas"
-              type="number"
-              value={form.estimatedHours}
-              onChange={(e) => setForm((f) => ({ ...f, estimatedHours: e.target.value }))}
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
-            />
-            <input
-              placeholder="Precio sugerido"
-              type="number"
-              value={form.suggestedPrice}
-              onChange={(e) => setForm((f) => ({ ...f, suggestedPrice: e.target.value }))}
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
-            />
-          </div>
-          <textarea
-            placeholder="Descripción (opcional)"
-            value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            rows={2}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-          />
-        </div>
-        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-        <div className="flex justify-end gap-2 mt-5">
-          <button onClick={onClose} className="px-4 py-2 text-sm border rounded-md">
+    <Modal
+      open
+      onClose={onClose}
+      title={item ? 'Editar servicio' : 'Nuevo servicio'}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
             Cancelar
-          </button>
-          <button
-            disabled={busy || !form.name || !form.serviceType || !form.estimatedHours || !form.suggestedPrice}
+          </Button>
+          <Button
+            disabled={
+              busy ||
+              !form.name ||
+              !form.serviceType ||
+              !form.estimatedHours ||
+              !form.suggestedPrice
+            }
             onClick={() => void submit()}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm disabled:opacity-40"
           >
-            Guardar
-          </button>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Guardar
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <Input
+          placeholder="Nombre"
+          value={form.name}
+          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+        />
+        <Input
+          placeholder="Tipo de servicio"
+          value={form.serviceType}
+          onChange={(e) => setForm((f) => ({ ...f, serviceType: e.target.value }))}
+        />
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            placeholder="Horas estimadas"
+            type="number"
+            value={form.estimatedHours}
+            onChange={(e) => setForm((f) => ({ ...f, estimatedHours: e.target.value }))}
+          />
+          <Input
+            placeholder="Precio sugerido"
+            type="number"
+            value={form.suggestedPrice}
+            onChange={(e) => setForm((f) => ({ ...f, suggestedPrice: e.target.value }))}
+          />
         </div>
+        <Textarea
+          placeholder="Descripción (opcional)"
+          value={form.description}
+          onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+          rows={2}
+        />
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
-    </div>
+    </Modal>
   );
 }
