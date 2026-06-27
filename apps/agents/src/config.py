@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     SENTRY_DSN: str = ""
     TZ: str = "America/Bogota"
     ADMIN_SESSION_TTL_SECONDS: int = 7200  # 2 hours
+    SCHEDULER_ENABLED: bool = True  # disable for a second instance or local runs
 
 
 @lru_cache
