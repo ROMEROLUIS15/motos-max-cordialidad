@@ -45,6 +45,7 @@ model Tenant {
   purchaseOrderDrafts PurchaseOrderDraft[]
   motorcycleUnits     MotorcycleUnit[]
   saleOrders          SaleOrder[]
+  customMotorcycleModels CustomMotorcycleModel[]
 
   @@map("tenants")
 }
@@ -728,6 +729,22 @@ model PurchaseOrderDraft {
 
   @@index([tenantId, status, createdAt(sort: Desc)], name: "idx_po_drafts_tenant")
   @@map("purchase_order_drafts")
+}
+
+model CustomMotorcycleModel {
+  id        String   @id @default(uuid())
+  tenantId  String
+  brand     String   @db.VarChar(100)
+  model     String   @db.VarChar(100)
+  yearFrom  Int      @db.SmallInt
+  yearTo    Int?     @db.SmallInt
+  createdAt DateTime @default(now()) @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, brand, model])
+  @@index([tenantId], name: "idx_custom_moto_models")
+  @@map("custom_motorcycle_models")
 }
 
 // ─── SALES — MOTORCYCLE UNITS (Fase 3) ────────────────────────────────────────
