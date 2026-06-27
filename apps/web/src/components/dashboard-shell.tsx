@@ -17,6 +17,7 @@ import {
   Truck,
   ShoppingCart,
   Bike,
+  Receipt,
   Menu,
   X,
   Search,
@@ -46,7 +47,10 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
   },
   {
     label: 'Ventas',
-    items: [{ href: '/sales', label: 'Motos', icon: Bike }],
+    items: [
+      { href: '/sales', label: 'Motos', icon: Bike },
+      { href: '/sales/orders', label: 'Órdenes', icon: Receipt },
+    ],
   },
   {
     label: 'Gestión',

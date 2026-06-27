@@ -241,31 +241,21 @@ export default function SalesPage() {
                         {busyId === u.id ? (
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                         ) : u.status === 'AVAILABLE' ? (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => void changeStatus(u, 'RESERVED')}
-                            >
-                              Reservar
-                            </Button>
-                            <Button size="sm" onClick={() => void changeStatus(u, 'SOLD')}>
-                              Vender
-                            </Button>
-                          </>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void changeStatus(u, 'RESERVED')}
+                          >
+                            Reservar
+                          </Button>
                         ) : u.status === 'RESERVED' ? (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => void changeStatus(u, 'AVAILABLE')}
-                            >
-                              Liberar
-                            </Button>
-                            <Button size="sm" onClick={() => void changeStatus(u, 'SOLD')}>
-                              Vender
-                            </Button>
-                          </>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => void changeStatus(u, 'AVAILABLE')}
+                          >
+                            Liberar
+                          </Button>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
