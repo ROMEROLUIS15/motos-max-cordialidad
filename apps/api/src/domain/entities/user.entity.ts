@@ -4,7 +4,7 @@ export class User {
     public readonly tenantId: string,
     public branchId: string | null,
     public roleId: string,
-    public readonly email: string,
+    public email: string,
     public passwordHash: string,
     public fullName: string,
     public isActive: boolean,
@@ -30,6 +30,16 @@ export class User {
 
   assignRole(roleId: string): void {
     this.roleId = roleId;
+    this.updatedAt = new Date();
+  }
+
+  changeEmail(email: string): void {
+    this.email = email;
+    this.updatedAt = new Date();
+  }
+
+  changePassword(passwordHash: string): void {
+    this.passwordHash = passwordHash;
     this.updatedAt = new Date();
   }
 }

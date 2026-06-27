@@ -4,7 +4,10 @@ import { CurrentUser } from '../decorators/current-user.decorator';
 import { RequirePermission } from '../decorators/require-permission.decorator';
 import { PermissionGuard } from '../guards/permission.guard';
 import { JWTPayload } from '../../../application/ports/jwt.port';
-import { CreateUserUseCase, CreateUserInput } from '../../../application/use-cases/identity/create-user.use-case';
+import {
+  CreateUserUseCase,
+  CreateUserInput,
+} from '../../../application/use-cases/identity/create-user.use-case';
 import { UpdateUserUseCase } from '../../../application/use-cases/identity/update-user.use-case';
 import { AssignRoleUseCase } from '../../../application/use-cases/identity/assign-role.use-case';
 import { UserRepository, USER_REPOSITORY } from '../../../domain/repositories/user.repository';
@@ -47,6 +50,8 @@ export class UsersController {
       fullName: body['fullName'] as string | undefined,
       branchId: body['branchId'] as string | null | undefined,
       isActive: body['isActive'] as boolean | undefined,
+      email: body['email'] as string | undefined,
+      password: body['password'] as string | undefined,
     });
     return { success: true };
   }

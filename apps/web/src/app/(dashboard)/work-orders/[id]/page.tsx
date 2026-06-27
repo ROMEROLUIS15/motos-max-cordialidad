@@ -365,8 +365,10 @@ function ServiceLinesSection({
   busy: boolean;
   run: Run;
 }) {
+  const { technicians, nameOf } = useTeam();
   const [description, setDescription] = useState('');
   const [unitPrice, setUnitPrice] = useState('');
+  const [technicianId, setTechnicianId] = useState('');
   const [serviceCatalogId, setServiceCatalogId] = useState<string | null>(null);
   const [catalogQuery, setCatalogQuery] = useState('');
   const [suggestions, setSuggestions] = useState<ServiceCatalogItem[]>([]);
@@ -425,7 +427,14 @@ function ServiceLinesSection({
         )}
         {detail.lines.map((l) => (
           <li key={l.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-            <span className="text-foreground/90">{l.description}</span>
+            <span className="flex min-w-0 flex-col">
+              <span className="text-foreground/90">{l.description}</span>
+              {l.technicianId && (
+                <span className="text-xs text-muted-foreground">
+                  Mecánico: {nameOf(l.technicianId)}
+                </span>
+              )}
+            </span>
             <span className="flex items-center gap-3">
               <span className="tnum font-medium">{money(l.unitPrice)}</span>
               <button
@@ -457,6 +466,19 @@ function ServiceLinesSection({
           value={unitPrice}
           onChange={(e) => setUnitPrice(e.target.value)}
         />
+        <select
+          value={technicianId}
+          onChange={(e) => setTechnicianId(e.target.value)}
+          className={cn(fieldBase, 'w-full cursor-pointer sm:w-44')}
+          aria-label="Mecánico que atendió"
+        >
+          <option value="">Mecánico…</option>
+          {technicians.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.fullName}
+            </option>
+          ))}
+        </select>
         <Button
           disabled={busy || !description || !unitPrice}
           onClick={() =>
@@ -464,10 +486,12 @@ function ServiceLinesSection({
               await apiSend(`/api/work-orders/${workOrderId}/lines`, 'POST', {
                 description,
                 unitPrice: Number(unitPrice),
+                technicianId: technicianId || undefined,
                 serviceCatalogId: serviceCatalogId ?? undefined,
               });
               setDescription('');
               setUnitPrice('');
+              setTechnicianId('');
               setServiceCatalogId(null);
             })
           }
