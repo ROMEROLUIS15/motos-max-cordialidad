@@ -165,6 +165,28 @@ describeIfDb('Agents service endpoints (e2e)', () => {
       .expect(400);
   });
 
+  it('lists and approves a purchase order draft via the web API', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/api/agents/purchase-orders/draft')
+      .set('Authorization', `Bearer ${serviceToken}`)
+      .send({ tenantId, items: [{ partId, quantity: 5 }], notes: 'reorder' })
+      .expect(201);
+
+    const list = await request(app.getHttpServer())
+      .get('/api/purchase-orders')
+      .set('Authorization', `Bearer ${userToken}`)
+      .expect(200);
+    const ids = (list.body.items as Array<{ id: string }>).map((d) => d.id);
+    expect(ids).toContain(created.body.id);
+
+    const approved = await request(app.getHttpServer())
+      .patch(`/api/purchase-orders/${created.body.id}/approve`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .expect(200);
+    expect(approved.body.status).toBe('APPROVED');
+    expect(approved.body.approvedBy).toBeTruthy();
+  });
+
   it('creates an in-app stock alert for the owner', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/agents/notifications/stock-alert')

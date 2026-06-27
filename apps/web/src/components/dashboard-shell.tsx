@@ -12,6 +12,9 @@ import {
   MessageSquare,
   Settings,
   ScrollText,
+  FileBarChart,
+  Truck,
+  ShoppingCart,
   Bike,
   Menu,
   X,
@@ -35,7 +38,15 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { href: '/customers', label: 'Clientes', icon: Users },
       { href: '/inventory', label: 'Inventario', icon: Package },
       { href: '/service-catalog', label: 'Servicios', icon: Wrench },
+      { href: '/home-services', label: 'Domicilios', icon: Truck },
       { href: '/messages', label: 'Mensajes', icon: MessageSquare },
+    ],
+  },
+  {
+    label: 'Gestión',
+    items: [
+      { href: '/reports', label: 'Reportes', icon: FileBarChart },
+      { href: '/purchase-orders', label: 'Órdenes de compra', icon: ShoppingCart },
     ],
   },
   {

@@ -29,8 +29,13 @@ import {
   ListReportsUseCase,
   GetReportDownloadUrlUseCase,
 } from './application/use-cases/agents/agents.use-cases';
+import {
+  ListPurchaseOrderDraftsUseCase,
+  DecidePurchaseOrderDraftUseCase,
+} from './application/use-cases/purchase-orders/purchase-orders.use-cases';
 import { AgentsController } from './presentation/http/controllers/agents.controller';
 import { ReportsController } from './presentation/http/controllers/reports.controller';
+import { PurchaseOrdersController } from './presentation/http/controllers/purchase-orders.controller';
 
 /**
  * Fase 2A — service-to-service surface consumed by the Python agents
@@ -48,7 +53,7 @@ import { ReportsController } from './presentation/http/controllers/reports.contr
     NotificationsModule,
     StorageModule,
   ],
-  controllers: [AgentsController, ReportsController],
+  controllers: [AgentsController, ReportsController, PurchaseOrdersController],
   providers: [
     TokenFactoryService,
     ServiceAuthGuard,
@@ -65,6 +70,8 @@ import { ReportsController } from './presentation/http/controllers/reports.contr
     SendOwnerWhatsAppUseCase,
     ListReportsUseCase,
     GetReportDownloadUrlUseCase,
+    ListPurchaseOrderDraftsUseCase,
+    DecidePurchaseOrderDraftUseCase,
   ],
   exports: [TokenFactoryService, ServiceAuthGuard],
 })
