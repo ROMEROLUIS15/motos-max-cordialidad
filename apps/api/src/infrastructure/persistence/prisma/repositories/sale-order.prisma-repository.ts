@@ -1,0 +1,163 @@
+import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma.service';
+import {
+  SaleOrderRepository,
+  SaleOrderSearchFilters,
+  SaleOrderListItem,
+} from '../../../../domain/repositories/sale-order.repository';
+import {
+  SaleOrder,
+  SaleOrderStatus,
+  SalePaymentMethod,
+} from '../../../../domain/entities/sale-order.entity';
+import {
+  Pagination,
+  PaginatedResult,
+  paginationToSkipTake,
+} from '../../../../domain/shared/pagination';
+
+type SaleOrderRow = {
+  id: string;
+  tenantId: string;
+  branchId: string;
+  customerId: string;
+  motorcycleUnitId: string;
+  orderNumber: string;
+  salePrice: Prisma.Decimal;
+  discount: Prisma.Decimal;
+  totalAmount: Prisma.Decimal;
+  paymentMethod: string;
+  downPayment: Prisma.Decimal;
+  financingMonths: number | null;
+  status: string;
+  notes: string | null;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+@Injectable()
+export class SaleOrderPrismaRepository implements SaleOrderRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  private toDomain(r: SaleOrderRow): SaleOrder {
+    return new SaleOrder(
+      r.id,
+      r.tenantId,
+      r.branchId,
+      r.customerId,
+      r.motorcycleUnitId,
+      r.orderNumber,
+      Number(r.salePrice),
+      Number(r.discount),
+      Number(r.totalAmount),
+      r.paymentMethod as SalePaymentMethod,
+      Number(r.downPayment),
+      r.financingMonths,
+      r.status as SaleOrderStatus,
+      r.notes,
+      r.createdBy,
+      r.createdAt,
+      r.updatedAt,
+    );
+  }
+
+  async findById(id: string, tenantId: string): Promise<SaleOrder | null> {
+    const r = await this.prisma.saleOrder.findFirst({ where: { id, tenantId } });
+    return r ? this.toDomain(r) : null;
+  }
+
+  async findActiveByUnit(motorcycleUnitId: string, tenantId: string): Promise<SaleOrder | null> {
+    const r = await this.prisma.saleOrder.findFirst({
+      where: { motorcycleUnitId, tenantId, status: { in: ['DRAFT', 'CONFIRMED'] } },
+    });
+    return r ? this.toDomain(r) : null;
+  }
+
+  async search(
+    filters: SaleOrderSearchFilters,
+    tenantId: string,
+    pagination: Pagination,
+  ): Promise<PaginatedResult<SaleOrderListItem>> {
+    const where: Prisma.SaleOrderWhereInput = { tenantId };
+    if (filters.status) where.status = filters.status;
+    if (filters.customerId) where.customerId = filters.customerId;
+    const { skip, take } = paginationToSkipTake(pagination);
+    const [rows, total] = await Promise.all([
+      this.prisma.saleOrder.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: {
+          customer: { select: { fullName: true } },
+          motorcycleUnit: { select: { brand: true, model: true, vin: true } },
+        },
+      }),
+      this.prisma.saleOrder.count({ where }),
+    ]);
+    const items: SaleOrderListItem[] = rows.map((r) => ({
+      id: r.id,
+      orderNumber: r.orderNumber,
+      status: r.status,
+      totalAmount: Number(r.totalAmount),
+      paymentMethod: r.paymentMethod,
+      customerId: r.customerId,
+      customerName: r.customer.fullName,
+      motorcycleUnitId: r.motorcycleUnitId,
+      motorcycleLabel: `${r.motorcycleUnit.brand} ${r.motorcycleUnit.model} · ${r.motorcycleUnit.vin}`,
+      createdAt: r.createdAt,
+    }));
+    return { items, total, page: pagination.page, pageSize: pagination.pageSize };
+  }
+
+  async create(order: SaleOrder): Promise<void> {
+    await this.prisma.saleOrder.create({
+      data: {
+        id: order.id,
+        tenantId: order.tenantId,
+        branchId: order.branchId,
+        customerId: order.customerId,
+        motorcycleUnitId: order.motorcycleUnitId,
+        orderNumber: order.orderNumber,
+        salePrice: order.salePrice,
+        discount: order.discount,
+        totalAmount: order.totalAmount,
+        paymentMethod: order.paymentMethod,
+        downPayment: order.downPayment,
+        financingMonths: order.financingMonths,
+        status: order.status,
+        notes: order.notes,
+        createdBy: order.createdBy,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      },
+    });
+  }
+
+  async save(order: SaleOrder): Promise<void> {
+    await this.prisma.saleOrder.update({
+      where: { id: order.id },
+      data: {
+        salePrice: order.salePrice,
+        discount: order.discount,
+        totalAmount: order.totalAmount,
+        paymentMethod: order.paymentMethod,
+        downPayment: order.downPayment,
+        financingMonths: order.financingMonths,
+        status: order.status,
+        notes: order.notes,
+        updatedAt: order.updatedAt,
+      },
+    });
+  }
+
+  async generateOrderNumber(tenantId: string, year: number): Promise<string> {
+    const prefix = `V-${year}-`;
+    const count = await this.prisma.saleOrder.count({
+      where: { tenantId, orderNumber: { startsWith: prefix } },
+    });
+    return `${prefix}${(count + 1).toString().padStart(6, '0')}`;
+  }
+}

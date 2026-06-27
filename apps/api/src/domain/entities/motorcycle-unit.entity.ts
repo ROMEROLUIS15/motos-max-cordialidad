@@ -62,4 +62,14 @@ export class MotorcycleUnit {
     this.status = next;
     this.updatedAt = new Date();
   }
+
+  /**
+   * Returns the unit to the sellable pool from any state. Reserved for the sale
+   * cancellation flow (e.g. a confirmed sale annulled), which legitimately needs
+   * to reverse a SOLD unit — something the public `changeStatus` machine forbids.
+   */
+  releaseToInventory(): void {
+    this.status = 'AVAILABLE';
+    this.updatedAt = new Date();
+  }
 }
