@@ -35,6 +35,7 @@ export class UserPrismaRepository implements UserRepository {
       data: {
         branchId: user.branchId,
         roleId: user.roleId,
+        email: user.email,
         fullName: user.fullName,
         passwordHash: user.passwordHash,
         isActive: user.isActive,
