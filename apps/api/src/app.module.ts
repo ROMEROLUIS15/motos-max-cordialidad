@@ -20,6 +20,7 @@ import { AuditModule } from './audit.module';
 import { SettingsModule } from './settings.module';
 import { AgentsModule } from './agents.module';
 import { HomeServicesModule } from './home-services.module';
+import { SalesModule } from './sales.module';
 import { DomainExceptionFilter } from './presentation/http/filters/domain-exception.filter';
 import { SentryExceptionFilter } from './presentation/http/filters/sentry-exception.filter';
 
@@ -42,6 +43,7 @@ import { SentryExceptionFilter } from './presentation/http/filters/sentry-except
     SettingsModule,
     AgentsModule,
     HomeServicesModule,
+    SalesModule,
   ],
   controllers: [AppController],
   providers: [

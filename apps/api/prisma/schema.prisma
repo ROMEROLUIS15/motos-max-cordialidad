@@ -43,6 +43,7 @@ model Tenant {
   reports             Report[]
   homeServiceRequests HomeServiceRequest[]
   purchaseOrderDrafts PurchaseOrderDraft[]
+  motorcycleUnits     MotorcycleUnit[]
 
   @@map("tenants")
 }
@@ -64,6 +65,7 @@ model Branch {
   workOrders        WorkOrder[]
   vehicleReceptions VehicleReception[]
   homeServiceRequests HomeServiceRequest[]
+  motorcycleUnits   MotorcycleUnit[]
 
   @@unique([tenantId, name])
   @@index([tenantId], name: "idx_branches_tenant")
@@ -723,4 +725,37 @@ model PurchaseOrderDraft {
 
   @@index([tenantId, status, createdAt(sort: Desc)], name: "idx_po_drafts_tenant")
   @@map("purchase_order_drafts")
+}
+
+// ─── SALES — MOTORCYCLE UNITS (Fase 3) ────────────────────────────────────────
+
+model MotorcycleUnit {
+  id            String   @id @default(uuid())
+  tenantId      String
+  branchId      String
+  vin           String   @db.VarChar(50)
+  brand         String   @db.VarChar(100)
+  model         String   @db.VarChar(100)
+  year          Int      @db.SmallInt
+  displacement  Int?     @db.SmallInt
+  color         String?  @db.VarChar(50)
+  condition     String   @default("NEW") @db.VarChar(10)
+  mileage       Int      @default(0)
+  engineNumber  String?  @db.VarChar(50)
+  plate         String?  @db.VarChar(20)
+  costPrice     Decimal  @db.Decimal(12, 2)
+  salePrice     Decimal  @db.Decimal(12, 2)
+  status        String   @default("AVAILABLE") @db.VarChar(20)
+  description   String?  @db.Text
+  imageUrl      String?  @db.Text
+  createdAt     DateTime @default(now()) @db.Timestamptz()
+  updatedAt     DateTime @updatedAt @db.Timestamptz()
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([tenantId, vin])
+  @@index([tenantId, status], name: "idx_moto_units_status")
+  @@index([branchId, status], name: "idx_moto_units_branch")
+  @@map("motorcycle_units")
 }
