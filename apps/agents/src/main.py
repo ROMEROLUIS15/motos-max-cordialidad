@@ -19,6 +19,7 @@ from .api.admin_handler import AdminHandler
 from .config import get_settings
 from .health import build_health
 from .saas_client import SaasClient
+from .schedulers.scheduler import build_scheduler
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,10 +39,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     sessions = AdminSessionStore(app.state.redis, settings.ADMIN_SESSION_TTL_SECONDS)
     app.state.admin_handler = AdminHandler(agent, sessions, app.state.saas)
 
+    scheduler = None
+    if settings.SCHEDULER_ENABLED:
+        scheduler = build_scheduler(settings, app.state.saas, app.state.redis)
+        scheduler.start()
+    app.state.scheduler = scheduler
+
     logger.info("agents service started (api=%s, llm=%s)", settings.API_BASE_URL, llm.providers)
     try:
         yield
     finally:
+        if scheduler is not None:
+            scheduler.shutdown(wait=False)
         await app.state.saas.aclose()
         await app.state.redis.aclose()
 

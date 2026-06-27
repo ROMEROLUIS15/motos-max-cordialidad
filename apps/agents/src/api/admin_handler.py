@@ -17,9 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class AdminHandler:
-    def __init__(
-        self, agent: AdminAgent, sessions: AdminSessionStore, client: SaasClient
-    ) -> None:
+    def __init__(self, agent: AdminAgent, sessions: AdminSessionStore, client: SaasClient) -> None:
         self._agent = agent
         self._sessions = sessions
         self._client = client
