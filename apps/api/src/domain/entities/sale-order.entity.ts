@@ -29,6 +29,7 @@ export class SaleOrder {
     public financingMonths: number | null,
     public status: SaleOrderStatus,
     public notes: string | null,
+    public contractR2Key: string | null,
     public readonly createdBy: string,
     public readonly createdAt: Date,
     public updatedAt: Date,
@@ -61,6 +62,11 @@ export class SaleOrder {
       throw new Error(`invalid sale order transition: ${this.status} → ${to}`);
     }
     this.status = to;
+    this.updatedAt = new Date();
+  }
+
+  attachContract(r2Key: string): void {
+    this.contractR2Key = r2Key;
     this.updatedAt = new Date();
   }
 

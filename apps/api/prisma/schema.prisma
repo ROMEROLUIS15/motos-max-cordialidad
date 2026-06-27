@@ -779,6 +779,7 @@ model SaleOrder {
   financingMonths  Int?     @db.SmallInt
   status           String   @default("DRAFT") @db.VarChar(20)
   notes            String?  @db.Text
+  contractR2Key    String?  @db.Text
   createdBy        String   @db.VarChar(100)
   createdAt        DateTime @default(now()) @db.Timestamptz()
   updatedAt        DateTime @updatedAt @db.Timestamptz()

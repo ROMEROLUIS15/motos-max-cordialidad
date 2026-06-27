@@ -30,6 +30,7 @@ function makeOrder(
     overrides.months ?? null,
     overrides.status ?? 'DRAFT',
     null,
+    null,
     'user1',
     now,
     now,
@@ -90,5 +91,12 @@ describe('SaleOrder status machine', () => {
     const o = makeOrder({ status: 'CONFIRMED' });
     expect(() => o.confirm()).not.toThrow();
     expect(o.status).toBe('CONFIRMED');
+  });
+
+  it('attachContract stores the R2 key', () => {
+    const o = makeOrder({ status: 'CONFIRMED' });
+    expect(o.contractR2Key).toBeNull();
+    o.attachContract('t1/sale-contracts/so1/V-2026-000001.pdf');
+    expect(o.contractR2Key).toContain('V-2026-000001.pdf');
   });
 });

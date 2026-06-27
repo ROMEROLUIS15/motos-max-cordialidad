@@ -10,6 +10,7 @@ import {
   CancelSaleOrderUseCase,
   SearchSaleOrdersUseCase,
   GetSaleOrderDetailUseCase,
+  GetSaleContractUrlUseCase,
   CreateSaleOrderInput,
 } from '../../../application/use-cases/sales/sale-orders.use-case';
 
@@ -22,6 +23,7 @@ export class SaleOrdersController {
     private readonly cancelOrder: CancelSaleOrderUseCase,
     private readonly searchOrders: SearchSaleOrdersUseCase,
     private readonly getDetail: GetSaleOrderDetailUseCase,
+    private readonly contractUrl: GetSaleContractUrlUseCase,
   ) {}
 
   @Get()
@@ -61,6 +63,12 @@ export class SaleOrdersController {
   @RequirePermission('sales:READ')
   async getOne(@Param('id') id: string, @CurrentUser() user: JWTPayload) {
     return this.getDetail.execute(id, user.tenantId);
+  }
+
+  @Get(':id/contract')
+  @RequirePermission('sales:READ')
+  async contract(@Param('id') id: string, @CurrentUser() user: JWTPayload) {
+    return this.contractUrl.execute(id, user.tenantId);
   }
 
   @Post(':id/confirm')

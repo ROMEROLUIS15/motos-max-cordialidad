@@ -4,6 +4,7 @@ import {
   PdfGeneratorPort,
   QuotePdfData,
   QuotePdfLine,
+  SaleContractPdfData,
 } from '../../application/ports/pdf-generator.port';
 
 // @react-pdf/renderer's primitives don't satisfy React.createElement's strict
@@ -114,6 +115,121 @@ export class ReactPdfAdapter implements PdfGeneratorPort {
               h(Text, { key: 'tc', style: s.muted }, data.termsConditions),
             ])
           : null,
+      ]),
+    );
+
+    return renderToBuffer(doc as Parameters<typeof renderToBuffer>[0]);
+  }
+
+  async generateSaleContractPdf(data: SaleContractPdfData): Promise<Buffer> {
+    const { Document, Page, Text, View, StyleSheet, renderToBuffer } = (await dynamicImport(
+      '@react-pdf/renderer',
+    )) as typeof import('@react-pdf/renderer');
+
+    const s = StyleSheet.create({
+      page: { padding: 36, fontSize: 10, color: '#1f2937', lineHeight: 1.4 },
+      h1: { fontSize: 16, fontWeight: 'bold', textAlign: 'center', marginBottom: 2 },
+      sub: { fontSize: 10, color: '#6b7280', textAlign: 'center', marginBottom: 12 },
+      muted: { color: '#6b7280' },
+      section: { marginTop: 12 },
+      sectionTitle: { fontSize: 11, fontWeight: 'bold', marginBottom: 4 },
+      kv: { flexDirection: 'row', paddingVertical: 1 },
+      k: { width: 130, color: '#6b7280' },
+      v: { flex: 1 },
+      totalRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 3 },
+      totalLabel: { width: 140, textAlign: 'right', marginRight: 8 },
+      totalValue: { width: 100, textAlign: 'right' },
+      grand: { fontSize: 12, fontWeight: 'bold' },
+      signRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 48 },
+      signBox: { width: '45%', borderTop: '1px solid #1f2937', paddingTop: 4, textAlign: 'center' },
+    });
+
+    const kv = (k: string, v: string) =>
+      h(View, { style: s.kv }, [
+        h(Text, { key: 'k', style: s.k }, k),
+        h(Text, { key: 'v', style: s.v }, v),
+      ]);
+
+    const totalLine = (label: string, value: string, grand = false) =>
+      h(View, { style: s.totalRow }, [
+        h(Text, { key: 'l', style: [s.totalLabel, ...(grand ? [s.grand] : [])] }, label),
+        h(Text, { key: 'v', style: [s.totalValue, ...(grand ? [s.grand] : [])] }, value),
+      ]);
+
+    const m = data.motorcycle;
+    const condition = m.condition === 'NEW' ? 'Nueva' : 'Usada';
+    const payment =
+      data.paymentMethod === 'FINANCED'
+        ? `Financiado — cuota inicial ${money(data.downPayment)}, ${data.financingMonths ?? 0} meses`
+        : 'Contado';
+
+    const doc = h(
+      Document,
+      {},
+      h(Page, { size: 'A4', style: s.page }, [
+        h(View, { key: 'hdr' }, [
+          h(Text, { key: 'name', style: s.h1 }, data.tenant.name),
+          h(
+            Text,
+            { key: 'tax', style: s.sub },
+            `NIT ${data.tenant.taxId}${data.tenant.address ? ` · ${data.tenant.address}` : ''}${data.tenant.phone ? ` · ${data.tenant.phone}` : ''}`,
+          ),
+        ]),
+        h(Text, { key: 'title', style: s.h1 }, 'Contrato de Compraventa de Motocicleta'),
+        h(
+          Text,
+          { key: 'no', style: s.sub },
+          `N° ${data.orderNumber} · ${data.issuedAt.toLocaleDateString('es-CO')}`,
+        ),
+        h(View, { key: 'parts', style: s.section }, [
+          h(Text, { key: 't', style: s.sectionTitle }, 'Partes'),
+          kv('Vendedor', `${data.tenant.name} (NIT ${data.tenant.taxId})`),
+          kv(
+            'Comprador',
+            `${data.customer.fullName} (${data.customer.documentType} ${data.customer.documentNumber})`,
+          ),
+          kv('Teléfono', data.customer.phone),
+          kv(
+            'Dirección',
+            `${data.customer.address ? `${data.customer.address}, ` : ''}${data.customer.city}`,
+          ),
+        ]),
+        h(View, { key: 'moto', style: s.section }, [
+          h(Text, { key: 't', style: s.sectionTitle }, 'Vehículo objeto de la venta'),
+          kv('Marca / Modelo', `${m.brand} ${m.model}`),
+          kv('Año', String(m.year)),
+          kv('Condición', `${condition}${m.condition === 'USED' ? ` · ${m.mileage} km` : ''}`),
+          kv('VIN / Chasis', m.vin),
+          m.engineNumber ? kv('N° de motor', m.engineNumber) : null,
+          m.plate ? kv('Placa', m.plate) : null,
+          m.color ? kv('Color', m.color) : null,
+        ]),
+        h(View, { key: 'price', style: s.section }, [
+          h(Text, { key: 't', style: s.sectionTitle }, 'Condiciones económicas'),
+          totalLine('Precio', money(data.salePrice)),
+          totalLine('Descuento', money(data.discount)),
+          totalLine('Total', money(data.totalAmount), true),
+          kv('Forma de pago', payment),
+        ]),
+        h(View, { key: 'decl', style: s.section }, [
+          h(
+            Text,
+            { key: 'd', style: s.muted },
+            'El vendedor declara que la motocicleta descrita es de su propiedad y se ' +
+              'encuentra libre de gravámenes. El comprador la recibe a satisfacción. ' +
+              'Las partes firman en señal de conformidad.',
+          ),
+        ]),
+        h(View, { key: 'sign', style: s.signRow }, [
+          h(View, { key: 'v', style: s.signBox }, [
+            h(Text, { key: 'a', style: s.muted }, 'Vendedor'),
+            h(Text, { key: 'b' }, data.tenant.name),
+          ]),
+          h(View, { key: 'c', style: s.signBox }, [
+            h(Text, { key: 'a', style: s.muted }, 'Comprador'),
+            h(Text, { key: 'b' }, data.customer.fullName),
+          ]),
+        ]),
       ]),
     );
 

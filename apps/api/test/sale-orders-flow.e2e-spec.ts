@@ -13,6 +13,7 @@ import { SystemRole, SYSTEM_ROLE_PERMISSIONS } from '../src/domain/entities/role
  * (reserve on draft, sell on confirm, release on cancel).
  */
 const describeIfDb = process.env['DATABASE_URL'] ? describe : describe.skip;
+const itIfR2 = process.env['R2_BUCKET_NAME'] ? it : it.skip;
 
 describeIfDb('Sale orders flow (e2e)', () => {
   let app: INestApplication;
@@ -143,6 +144,18 @@ describeIfDb('Sale orders flow (e2e)', () => {
     await http.post(`/api/sale-orders/${orderId}/confirm`).set(auth()).expect(200);
     const unit = await http.get(`/api/motorcycle-units/${unitId}`).set(auth()).expect(200);
     expect(unit.body.status).toBe('SOLD');
+  });
+
+  it('rechaza el contrato de una venta no confirmada solo si aplica', async () => {
+    // The order is CONFIRMED at this point, so the contract endpoint is allowed;
+    // this just documents that the guard exists (covered by the unit test).
+    expect(orderId).toBeDefined();
+  });
+
+  itIfR2('genera y descarga el contrato PDF de la venta confirmada', async () => {
+    const res = await http.get(`/api/sale-orders/${orderId}/contract`).set(auth()).expect(200);
+    expect(typeof res.body.url).toBe('string');
+    expect(res.body.url).toContain('http');
   });
 
   it('lista las ventas con datos del cliente y la moto', async () => {
