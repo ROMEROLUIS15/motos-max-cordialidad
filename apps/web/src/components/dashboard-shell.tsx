@@ -218,7 +218,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <Menu />
           </Button>
           <div className="lg:hidden">
-            <Brand />
+            <Link href="/" className="flex items-center gap-2 text-sm font-semibold">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-sm ring-highlight">
+                <Bike className="h-4 w-4" />
+              </span>
+              Motos Max
+            </Link>
           </div>
           <span className="hidden text-sm font-medium text-foreground lg:block">
             {current?.label ?? 'Dashboard'}
