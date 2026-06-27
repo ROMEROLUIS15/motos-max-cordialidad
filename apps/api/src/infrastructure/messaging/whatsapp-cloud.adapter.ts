@@ -48,6 +48,10 @@ export class WhatsAppCloudAdapter implements MessagingPort {
     return true;
   }
 
+  async sendDirectMessage(tenantId: string, phone: string, content: string): Promise<void> {
+    await this.sendToPhone(tenantId, phone, null, content, null);
+  }
+
   async sendWorkOrderCompletedNotification(wo: {
     customerId: string;
     orderNumber: string;

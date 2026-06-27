@@ -7,8 +7,15 @@ import { GetVehicleHistoryUseCase } from '../../../application/use-cases/vehicle
 import { CreateQuoteUseCase } from '../../../application/use-cases/commerce/create-quote.use-case';
 import { GetQuotePdfUrlUseCase } from '../../../application/use-cases/commerce/quote-lifecycle.use-case';
 import { PartRepository, PART_REPOSITORY } from '../../../domain/repositories/part.repository';
-import { PartStockRepository, PART_STOCK_REPOSITORY } from '../../../domain/repositories/part-stock.repository';
-import { TenantRepository, TENANT_REPOSITORY } from '../../../domain/repositories/tenant.repository';
+import {
+  PartStockRepository,
+  PART_STOCK_REPOSITORY,
+} from '../../../domain/repositories/part-stock.repository';
+import {
+  TenantRepository,
+  TENANT_REPOSITORY,
+} from '../../../domain/repositories/tenant.repository';
+import { CreateHomeServiceRequestUseCase } from '../../../application/use-cases/home-services/home-services.use-cases';
 import { PrismaService } from '../../persistence/prisma/prisma.service';
 
 /**
@@ -27,6 +34,7 @@ export class ToolRegistry {
     @Inject(PART_REPOSITORY) private readonly partRepo: PartRepository,
     @Inject(PART_STOCK_REPOSITORY) private readonly partStockRepo: PartStockRepository,
     @Inject(TENANT_REPOSITORY) private readonly tenantRepo: TenantRepository,
+    private readonly createHomeService: CreateHomeServiceRequestUseCase,
     private readonly prisma: PrismaService,
   ) {
     this.tools = [
@@ -36,6 +44,7 @@ export class ToolRegistry {
       this.createAppointmentTool(),
       this.createQuoteTool(),
       this.getBusinessInformationTool(),
+      this.createHomeServiceRequestTool(),
     ];
   }
 
@@ -204,7 +213,9 @@ export class ToolRegistry {
       schema: z.object({ infoType: z.enum(['hours', 'location', 'services', 'general']) }),
       parameters: {
         type: 'object',
-        properties: { infoType: { type: 'string', enum: ['hours', 'location', 'services', 'general'] } },
+        properties: {
+          infoType: { type: 'string', enum: ['hours', 'location', 'services', 'general'] },
+        },
         required: ['infoType'],
       },
       execute: async (args, ctx) => {
@@ -213,16 +224,74 @@ export class ToolRegistry {
         if (!tenant) return { content: 'Información no disponible.' };
         switch (infoType) {
           case 'hours':
-            return { content: tenant.businessHours ? JSON.stringify(tenant.businessHours) : 'Horario no configurado.' };
+            return {
+              content: tenant.businessHours
+                ? JSON.stringify(tenant.businessHours)
+                : 'Horario no configurado.',
+            };
           case 'location':
             return { content: tenant.address ?? 'Dirección no configurada.' };
           case 'services':
-            return { content: 'Ofrecemos mantenimiento, reparación y repuestos para motocicletas.' };
+            return {
+              content: 'Ofrecemos mantenimiento, reparación y repuestos para motocicletas.',
+            };
           default:
             return {
-              content: `${tenant.name}. Tel: ${tenant.phone ?? 'N/D'}. ${tenant.address ?? ''}`.trim(),
+              content:
+                `${tenant.name}. Tel: ${tenant.phone ?? 'N/D'}. ${tenant.address ?? ''}`.trim(),
             };
         }
+      },
+    };
+  }
+
+  private createHomeServiceRequestTool(): AgentTool {
+    return {
+      name: 'createHomeServiceRequest',
+      description:
+        'Registra una solicitud de servicio a domicilio cuando el cliente reporta que su moto está varada o no puede llegar al taller. Captura nombre, teléfono, dirección, problema y tipo de servicio.',
+      isPublic: true,
+      schema: z.object({
+        customerName: z.string().min(1),
+        customerPhone: z.string().min(1),
+        address: z.string().min(1),
+        problemDesc: z.string().min(1),
+        serviceType: z.string().min(1),
+      }),
+      parameters: {
+        type: 'object',
+        properties: {
+          customerName: { type: 'string' },
+          customerPhone: { type: 'string' },
+          address: { type: 'string' },
+          problemDesc: { type: 'string' },
+          serviceType: { type: 'string' },
+        },
+        required: ['customerName', 'customerPhone', 'address', 'problemDesc', 'serviceType'],
+      },
+      execute: async (args, ctx) => {
+        const a = args as {
+          customerName: string;
+          customerPhone: string;
+          address: string;
+          problemDesc: string;
+          serviceType: string;
+        };
+        const result = await this.createHomeService.execute({
+          tenantId: ctx.tenantId,
+          branchId: ctx.branchId,
+          customerId: ctx.customerId,
+          customerName: a.customerName,
+          customerPhone: a.customerPhone,
+          address: a.address,
+          problemDesc: a.problemDesc,
+          serviceType: a.serviceType,
+        });
+        return {
+          requestId: result.id,
+          status: result.status,
+          message: 'Solicitud registrada. El taller se pondrá en contacto pronto.',
+        };
       },
     };
   }

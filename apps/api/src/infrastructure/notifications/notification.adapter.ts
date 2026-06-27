@@ -14,11 +14,24 @@ const KEEP_PER_USER = 100;
 /** Human-readable title/body per notification type. */
 const TEMPLATES: Record<string, { title: string; body: string }> = {
   WORK_ORDER_COMPLETED: { title: 'Orden completada', body: 'Una orden de trabajo fue completada.' },
-  WORK_ORDER_NEAR_DEADLINE: { title: 'Orden por vencer', body: 'Una orden está próxima a su entrega.' },
+  WORK_ORDER_NEAR_DEADLINE: {
+    title: 'Orden por vencer',
+    body: 'Una orden está próxima a su entrega.',
+  },
   PAYMENT_REGISTERED: { title: 'Pago registrado', body: 'Se registró un nuevo pago.' },
   LOW_STOCK: { title: 'Stock bajo', body: 'Hay repuestos con stock por debajo del mínimo.' },
-  WHATSAPP_UNKNOWN_NUMBER: { title: 'Mensaje de número desconocido', body: 'Llegó un mensaje de un número no registrado.' },
-  WHATSAPP_ESCALATED: { title: 'Conversación escalada', body: 'El agente escaló una conversación a un humano.' },
+  HOME_SERVICE_REQUEST: {
+    title: 'Servicio a domicilio',
+    body: 'Llegó una nueva solicitud de servicio a domicilio.',
+  },
+  WHATSAPP_UNKNOWN_NUMBER: {
+    title: 'Mensaje de número desconocido',
+    body: 'Llegó un mensaje de un número no registrado.',
+  },
+  WHATSAPP_ESCALATED: {
+    title: 'Conversación escalada',
+    body: 'El agente escaló una conversación a un humano.',
+  },
   WHATSAPP_AGENT_ERROR: { title: 'Error del agente', body: 'El agente de IA encontró un error.' },
 };
 
@@ -36,9 +49,18 @@ export class NotificationAdapter implements NotificationPort {
 
   async notifyUser(
     userId: string,
-    payload: { type: string; title: string; body: string; resourceType?: string; resourceId?: string },
+    payload: {
+      type: string;
+      title: string;
+      body: string;
+      resourceType?: string;
+      resourceId?: string;
+    },
   ): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { tenantId: true } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { tenantId: true },
+    });
     if (!user) return;
     await this.persistAndEmit({
       tenantId: user.tenantId,
@@ -73,7 +95,9 @@ export class NotificationAdapter implements NotificationPort {
     );
   }
 
-  private async persistAndEmit(input: Omit<NotificationRecord, 'id' | 'isRead' | 'readAt' | 'createdAt'>): Promise<void> {
+  private async persistAndEmit(
+    input: Omit<NotificationRecord, 'id' | 'isRead' | 'readAt' | 'createdAt'>,
+  ): Promise<void> {
     const record: NotificationRecord = {
       ...input,
       id: randomUUID(),

@@ -52,6 +52,7 @@ describe('TransitionWorkOrderStatusUseCase', () => {
       sendWaitingPartsNotification: jest.fn(),
       sendManualMessage: jest.fn(),
       sendOwnerMessage: jest.fn(),
+      sendDirectMessage: jest.fn(),
     };
     notification = { notifyAdmins: jest.fn(), notifyUser: jest.fn() };
     useCase = new TransitionWorkOrderStatusUseCase(
