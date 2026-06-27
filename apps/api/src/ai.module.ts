@@ -16,6 +16,7 @@ import { LLMProviderFactory } from './infrastructure/ai/llm-provider.factory';
 import { ToolRegistry } from './infrastructure/ai/tools/tool-registry';
 import { ToolExecutor } from './infrastructure/ai/tool-executor';
 import { RouterAgent } from './infrastructure/ai/router-agent';
+import { AgentsServiceClient } from './infrastructure/agents/agents-service.client';
 
 // Use cases
 import { ProcessIncomingMessageUseCase } from './application/use-cases/messaging/process-incoming-message.use-case';
@@ -49,6 +50,7 @@ import { MessagesController } from './presentation/http/controllers/messages.con
     ToolRegistry,
     ToolExecutor,
     RouterAgent,
+    AgentsServiceClient,
     ProcessIncomingMessageUseCase,
     SendManualMessageUseCase,
     ListSessionsUseCase,
