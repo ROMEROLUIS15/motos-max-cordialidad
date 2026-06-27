@@ -21,8 +21,8 @@ export const metadata: Metadata = {
     title: 'Motos Max',
   },
   icons: {
-    icon: '/brand/logo-motos-max.jpeg',
-    apple: '/brand/logo-motos-max.jpeg',
+    icon: '/api/logo-image',
+    apple: '/api/logo-image',
   },
 };
 
