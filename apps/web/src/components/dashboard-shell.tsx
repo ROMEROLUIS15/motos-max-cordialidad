@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -26,6 +27,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { NotificationBell } from '@/components/NotificationBell';
 import { InstallButton } from '@/components/install-button';
 import { LogoutButton } from '@/components/logout-button';
+import { apiGet } from '@/lib/api';
 
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
 
@@ -66,10 +68,39 @@ function isActive(pathname: string, href: string) {
 }
 
 function Brand() {
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setLoading(true);
+    setLogoError(false);
+    apiGet<{ url: string | null }>('/api/settings/logo')
+      .then(({ url }) => setLogoUrl(url))
+      .catch(() => setLogoUrl(null))
+      .finally(() => setLoading(false));
+  }, [pathname]);
+
+  const showFallback = !logoUrl || logoError;
+
   return (
     <Link href="/" className="flex items-center gap-2.5">
-      <span className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-sm ring-highlight">
-        <Bike className="h-[18px] w-[18px]" />
+      <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg ring-1 ring-border">
+        {loading ? (
+          <span className="h-full w-full animate-pulse bg-muted" />
+        ) : showFallback ? (
+          <span className="flex h-full w-full items-center justify-center bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-sm ring-highlight">
+            <Bike className="h-[18px] w-[18px]" />
+          </span>
+        ) : (
+          <img
+            src={logoUrl}
+            alt="Motos Max Cordialidad"
+            className="h-full w-full object-contain"
+            onError={() => setLogoError(true)}
+          />
+        )}
       </span>
       <span className="flex flex-col leading-tight">
         <span className="text-[14px] font-semibold tracking-tight">Motos Max Cordialidad</span>

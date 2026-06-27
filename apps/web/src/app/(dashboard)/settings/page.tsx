@@ -51,15 +51,28 @@ function Field({
 
 export default function SettingsPage() {
   const [config, setConfig] = useState<TenantConfig | null>(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const fetchLogoPreview = async () => {
+    try {
+      const { url } = await apiGet<{ url: string | null }>('/api/settings/logo');
+      setLogoPreviewUrl(url);
+      setPreviewError(false);
+    } catch {
+      setLogoPreviewUrl(null);
+    }
+  };
+
   useEffect(() => {
     apiGet<TenantConfig>('/api/tenants/me')
       .then(setConfig)
       .catch((e) => setError((e as Error).message));
+    void fetchLogoPreview();
   }, []);
 
   const set = (k: keyof TenantConfig, v: string | number) =>
@@ -91,8 +104,11 @@ export default function SettingsPage() {
     if (!file) return;
     setBusy(true);
     setError(null);
+    setPreviewError(false);
     try {
       await apiUpload('/api/settings/logo', file);
+      if (fileRef.current) fileRef.current.value = '';
+      await fetchLogoPreview();
       setSaved(true);
     } catch (e) {
       setError((e as Error).message);
@@ -170,18 +186,41 @@ export default function SettingsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Logo</CardTitle>
+              <CardTitle>Logo del taller</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-wrap items-center gap-3">
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-secondary/70"
-              />
-              <Button variant="outline" disabled={busy} onClick={() => void uploadLogo()}>
-                <Upload className="h-4 w-4" /> Subir logo
-              </Button>
+            <CardContent className="flex flex-wrap items-center gap-4">
+              <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg ring-1 ring-border">
+                {logoPreviewUrl && !previewError ? (
+                  <img
+                    src={logoPreviewUrl}
+                    alt="Logo del taller"
+                    className="h-full w-full object-contain"
+                    onError={() => setPreviewError(true)}
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
+                    <Upload className="h-6 w-6" />
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={() => void uploadLogo()}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4" /> {busy ? 'Subiendo…' : 'Cambiar logo'}
+                </Button>
+                <p className="text-xs text-muted-foreground">JPEG, PNG o WebP. Máximo 2 MB.</p>
+              </div>
             </CardContent>
           </Card>
 

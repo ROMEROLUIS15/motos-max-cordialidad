@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Bike, Loader2 } from 'lucide-react';
-import { Card } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { setSession } from '@/lib/api';
@@ -76,77 +76,102 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4 py-10">
-      <Card className="w-full max-w-sm p-8 animate-in-up">
-        <div className="mb-7 flex flex-col items-center text-center">
-          <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-sm ring-highlight">
-            <Bike className="h-6 w-6" />
-          </span>
-          <h1 className="text-lg font-semibold tracking-tight">Motos Max Cordialidad</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Ingresa a tu cuenta</p>
+    <div className="flex min-h-screen flex-col lg:flex-row">
+      {/* Panel izquierdo — marca y logo */}
+      <div className="relative flex flex-1 flex-col items-center justify-center gap-6 bg-gradient-to-br from-primary/90 via-primary/60 to-primary/30 p-8 lg:basis-[55%]">
+        <div className="flex flex-col items-center gap-4">
+          <Image
+            src="/brand/logo-motos-max.jpeg"
+            alt="Motos Max Cordialidad"
+            width={280}
+            height={280}
+            className="h-auto w-48 rounded-2xl object-contain drop-shadow-lg sm:w-56 md:w-64"
+            priority
+          />
+          <h1 className="text-center text-2xl font-bold tracking-tight text-primary-foreground sm:text-3xl">
+            Motos Max Cordialidad
+          </h1>
+          <p className="max-w-sm text-center text-sm text-primary-foreground/70">
+            Sistema de gestión para tu taller de motocicletas
+          </p>
         </div>
+        {/* Elementos decorativos de fondo */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -left-20 -top-20 h-72 w-72 rounded-full bg-primary-foreground/5 blur-3xl" />
+          <div className="absolute -bottom-20 -right-20 h-96 w-96 rounded-full bg-primary-foreground/5 blur-3xl" />
+        </div>
+      </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-          {notice && (
-            <div className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2.5">
-              <p className="text-sm text-amber-300">{notice}</p>
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <label htmlFor="email" className="text-sm font-medium text-foreground/90">
-              Email
-            </label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="tu@email.com"
-              aria-invalid={!!errors.email}
-              {...register('email')}
-            />
-            {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+      {/* Panel derecho — formulario */}
+      <div className="flex flex-1 items-center justify-center px-4 py-10 lg:basis-[45%]">
+        <div className="w-full max-w-sm animate-in-up">
+          <div className="mb-7 text-center lg:text-left">
+            <h2 className="text-lg font-semibold tracking-tight">Bienvenido de nuevo</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Ingresa a tu cuenta</p>
           </div>
 
-          <div className="space-y-1.5">
-            <label htmlFor="password" className="text-sm font-medium text-foreground/90">
-              Contraseña
-            </label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              aria-invalid={!!errors.password}
-              {...register('password')}
-            />
-            {errors.password && (
-              <p className="text-xs text-destructive">{errors.password.message}</p>
+          <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+            {notice && (
+              <div className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2.5">
+                <p className="text-sm text-amber-300">{notice}</p>
+              </div>
             )}
-          </div>
 
-          {serverError && (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5">
-              <p className="text-sm text-destructive">{serverError}</p>
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="text-sm font-medium text-foreground/90">
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="tu@email.com"
+                aria-invalid={!!errors.email}
+                {...register('email')}
+              />
+              {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
             </div>
-          )}
 
-          <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 rounded border-input bg-card accent-primary"
-            />
-            Recordarme en este equipo de confianza
-          </label>
+            <div className="space-y-1.5">
+              <label htmlFor="password" className="text-sm font-medium text-foreground/90">
+                Contraseña
+              </label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="••••••••"
+                aria-invalid={!!errors.password}
+                {...register('password')}
+              />
+              {errors.password && (
+                <p className="text-xs text-destructive">{errors.password.message}</p>
+              )}
+            </div>
 
-          <Button type="submit" disabled={loading} className="w-full">
-            {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            {loading ? 'Ingresando…' : 'Ingresar'}
-          </Button>
-        </form>
-      </Card>
+            {serverError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5">
+                <p className="text-sm text-destructive">{serverError}</p>
+              </div>
+            )}
+
+            <label className="flex cursor-pointer select-none items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded border-input bg-card accent-primary"
+              />
+              Recordarme en este equipo de confianza
+            </label>
+
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {loading ? 'Ingresando…' : 'Ingresar'}
+            </Button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
