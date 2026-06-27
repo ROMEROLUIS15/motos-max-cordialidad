@@ -11,6 +11,7 @@ import {
   SearchSaleOrdersUseCase,
   GetSaleOrderDetailUseCase,
   GetSaleContractUrlUseCase,
+  GetSalesSummaryUseCase,
   CreateSaleOrderInput,
 } from '../../../application/use-cases/sales/sale-orders.use-case';
 
@@ -24,6 +25,7 @@ export class SaleOrdersController {
     private readonly searchOrders: SearchSaleOrdersUseCase,
     private readonly getDetail: GetSaleOrderDetailUseCase,
     private readonly contractUrl: GetSaleContractUrlUseCase,
+    private readonly salesSummary: GetSalesSummaryUseCase,
   ) {}
 
   @Get()
@@ -56,6 +58,20 @@ export class SaleOrdersController {
       tenantId: user.tenantId,
       branchId: body.branchId ?? user.branchId ?? '',
       createdBy: user.sub,
+    });
+  }
+
+  @Get('summary')
+  @RequirePermission('sales:READ')
+  async summary(
+    @CurrentUser() user: JWTPayload,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.salesSummary.execute({
+      tenantId: user.tenantId,
+      from: from ? new Date(from) : undefined,
+      to: to ? new Date(to) : undefined,
     });
   }
 

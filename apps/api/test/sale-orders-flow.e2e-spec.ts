@@ -146,6 +146,15 @@ describeIfDb('Sale orders flow (e2e)', () => {
     expect(unit.body.status).toBe('SOLD');
   });
 
+  it('expone el resumen de ventas con la venta confirmada', async () => {
+    const res = await http.get('/api/sale-orders/summary').set(auth()).expect(200);
+    expect(res.body.sales.confirmedCount).toBeGreaterThanOrEqual(1);
+    expect(res.body.sales.confirmedRevenue).toBeGreaterThanOrEqual(9500000);
+    expect(res.body.inventory.sold).toBeGreaterThanOrEqual(1);
+    expect(res.body.topBrands.some((b: { brand: string }) => b.brand === 'Yamaha')).toBe(true);
+    expect(Array.isArray(res.body.monthlyTrend)).toBe(true);
+  });
+
   it('rechaza el contrato de una venta no confirmada solo si aplica', async () => {
     // The order is CONFIRMED at this point, so the contract endpoint is allowed;
     // this just documents that the guard exists (covered by the unit test).

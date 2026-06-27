@@ -18,6 +18,7 @@ import {
   ShoppingCart,
   Bike,
   Receipt,
+  BarChart3,
   Menu,
   X,
   Search,
@@ -50,6 +51,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { href: '/sales', label: 'Motos', icon: Bike },
       { href: '/sales/orders', label: 'Órdenes', icon: Receipt },
+      { href: '/sales/dashboard', label: 'Resumen', icon: BarChart3 },
     ],
   },
   {

@@ -12,6 +12,7 @@ import {
   SALE_ORDER_REPOSITORY,
   SaleOrderSearchFilters,
   SaleOrderListItem,
+  SalesSummary,
 } from '../../../domain/repositories/sale-order.repository';
 import {
   MotorcycleUnitRepository,
@@ -183,6 +184,23 @@ export class GetSaleOrderDetailUseCase {
     const order = await this.orderRepo.findById(orderId, tenantId);
     if (!order) throw new NotFoundException('Orden de venta no encontrada');
     return order;
+  }
+}
+
+export interface GetSalesSummaryInput {
+  tenantId: string;
+  from?: Date;
+  to?: Date;
+}
+
+@Injectable()
+export class GetSalesSummaryUseCase {
+  constructor(@Inject(SALE_ORDER_REPOSITORY) private readonly orderRepo: SaleOrderRepository) {}
+
+  async execute(input: GetSalesSummaryInput): Promise<SalesSummary> {
+    const to = input.to ?? new Date();
+    const from = input.from ?? new Date(to.getFullYear(), to.getMonth() - 5, 1); // last 6 months inclusive
+    return this.orderRepo.summary(input.tenantId, from, to);
   }
 }
 
