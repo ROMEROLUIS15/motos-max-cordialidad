@@ -1,5 +1,7 @@
-// Genera los iconos PNG de la PWA desde public/brand/logo.{svg,png}
-// o, si no existe, desde los placeholders public/icons/{icon,maskable}.svg.
+// Genera los iconos PNG de la PWA desde el logo con fondo transparente
+// (public/icons/logo-motos-max-background-transparente.png). Si no existe,
+// cae a public/brand/logo.{svg,png} y, por último, a los placeholders
+// public/icons/{icon,maskable}.svg.
 // Uso: pnpm --filter @motoworkshop/web icons
 import sharp from 'sharp';
 import { existsSync, readFileSync } from 'node:fs';
@@ -12,6 +14,8 @@ const brand = join(pub, 'brand');
 const icons = join(pub, 'icons');
 
 function source(kind /* 'icon' | 'maskable' */) {
+  const transparent = join(icons, 'logo-motos-max-background-transparente.png');
+  if (existsSync(transparent)) return readFileSync(transparent);
   for (const f of ['logo.svg', 'logo.png', 'logo-motos-max.jpeg']) {
     const p = join(brand, f);
     if (existsSync(p)) return readFileSync(p);
@@ -19,9 +23,10 @@ function source(kind /* 'icon' | 'maskable' */) {
   return readFileSync(join(icons, `${kind}.svg`));
 }
 
-// Fondo propio del logo (#423e3e) — al usarlo como lienzo, el icono queda
-// seamless (sin caja/costura visible) y full-bleed para el maskable.
-const LOGO_BG = { r: 66, g: 62, b: 62, alpha: 1 };
+// Fondos: el logo es transparente, así que componemos sobre el color del tema
+// (#0d1117) para los iconos "any" y sobre el cian de marca para el maskable.
+const BG = { r: 13, g: 17, b: 23, alpha: 1 }; // #0d1117 — tema de la app
+const CYAN = { r: 23, g: 194, b: 218, alpha: 1 }; // #17c2da — acento de marca
 
 async function render(input, size, { pad = 0, bg } = {}) {
   const inner = Math.round(size * (1 - pad * 2));
@@ -38,10 +43,10 @@ async function main() {
     await sharp(buf).toFile(join(icons, name));
     console.log('✓', name);
   };
-  await out('icon-192.png', await render(source('icon'), 192, { pad: 0.06, bg: LOGO_BG }));
-  await out('icon-512.png', await render(source('icon'), 512, { pad: 0.06, bg: LOGO_BG }));
-  await out('maskable-512.png', await render(source('maskable'), 512, { pad: 0.16, bg: LOGO_BG }));
-  await out('apple-touch-icon.png', await render(source('icon'), 180, { pad: 0.06, bg: LOGO_BG }));
+  await out('icon-192.png', await render(source('icon'), 192, { pad: 0.12, bg: BG }));
+  await out('icon-512.png', await render(source('icon'), 512, { pad: 0.12, bg: BG }));
+  await out('maskable-512.png', await render(source('maskable'), 512, { pad: 0.12, bg: CYAN }));
+  await out('apple-touch-icon.png', await render(source('icon'), 180, { pad: 0.12, bg: BG }));
   console.log('PWA icons generados en public/icons/');
 }
 
