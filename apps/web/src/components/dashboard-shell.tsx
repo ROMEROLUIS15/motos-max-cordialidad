@@ -108,6 +108,37 @@ function Brand() {
   );
 }
 
+function BrandCompact() {
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setLogoError(false);
+    apiGet<{ url: string | null }>('/api/settings/logo')
+      .then(({ url }) => setLogoUrl(url))
+      .catch(() => setLogoUrl(null));
+  }, [pathname]);
+
+  return (
+    <Link href="/" className="flex items-center gap-2">
+      {logoUrl && !logoError ? (
+        <img
+          src={logoUrl}
+          alt="Motos Max"
+          className="h-7 w-auto max-w-[110px] rounded object-contain"
+          onError={() => setLogoError(true)}
+        />
+      ) : (
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-sm ring-highlight">
+          <Bike className="h-4 w-4" />
+        </span>
+      )}
+      {!logoUrl && <span className="text-sm font-semibold">Motos Max</span>}
+    </Link>
+  );
+}
+
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
@@ -218,12 +249,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <Menu />
           </Button>
           <div className="lg:hidden">
-            <Link href="/" className="flex items-center gap-2 text-sm font-semibold">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-sm ring-highlight">
-                <Bike className="h-4 w-4" />
-              </span>
-              Motos Max
-            </Link>
+            <BrandCompact />
           </div>
           <span className="hidden text-sm font-medium text-foreground lg:block">
             {current?.label ?? 'Dashboard'}
