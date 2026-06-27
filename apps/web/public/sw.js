@@ -1,12 +1,13 @@
 /* Service worker — Motos Max Cordialidad PWA
    Alcance: instalable + básico. Cachea el app shell estático y muestra
    /offline cuando una navegación falla. NO cachea la API (datos en vivo). */
-const VERSION = 'mmc-v2';
+const VERSION = 'mmc-v3';
 const PRECACHE = [
   '/offline',
   '/manifest.webmanifest',
   '/brand/logo-motos-max.jpeg',
-  '/api/logo-image',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
 ];
 
 self.addEventListener('install', (event) => {
