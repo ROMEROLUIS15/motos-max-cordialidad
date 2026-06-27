@@ -12,14 +12,16 @@ const brand = join(pub, 'brand');
 const icons = join(pub, 'icons');
 
 function source(kind /* 'icon' | 'maskable' */) {
-  for (const f of ['logo.svg', 'logo.png']) {
+  for (const f of ['logo.svg', 'logo.png', 'logo-motos-max.jpeg']) {
     const p = join(brand, f);
     if (existsSync(p)) return readFileSync(p);
   }
   return readFileSync(join(icons, `${kind}.svg`));
 }
 
-const CYAN = { r: 23, g: 194, b: 218, alpha: 1 };
+// Fondo propio del logo (#423e3e) — al usarlo como lienzo, el icono queda
+// seamless (sin caja/costura visible) y full-bleed para el maskable.
+const LOGO_BG = { r: 66, g: 62, b: 62, alpha: 1 };
 
 async function render(input, size, { pad = 0, bg } = {}) {
   const inner = Math.round(size * (1 - pad * 2));
@@ -36,10 +38,10 @@ async function main() {
     await sharp(buf).toFile(join(icons, name));
     console.log('✓', name);
   };
-  await out('icon-192.png', await render(source('icon'), 192));
-  await out('icon-512.png', await render(source('icon'), 512));
-  await out('maskable-512.png', await render(source('maskable'), 512, { bg: CYAN }));
-  await out('apple-touch-icon.png', await render(source('icon'), 180, { bg: CYAN }));
+  await out('icon-192.png', await render(source('icon'), 192, { pad: 0.06, bg: LOGO_BG }));
+  await out('icon-512.png', await render(source('icon'), 512, { pad: 0.06, bg: LOGO_BG }));
+  await out('maskable-512.png', await render(source('maskable'), 512, { pad: 0.16, bg: LOGO_BG }));
+  await out('apple-touch-icon.png', await render(source('icon'), 180, { pad: 0.06, bg: LOGO_BG }));
   console.log('PWA icons generados en public/icons/');
 }
 
