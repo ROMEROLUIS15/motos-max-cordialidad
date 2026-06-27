@@ -67,7 +67,7 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function Brand() {
+function Brand({ compact }: { compact?: boolean }) {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoError, setLogoError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -87,54 +87,27 @@ function Brand() {
   return (
     <Link href="/" className="flex items-center gap-2.5">
       {loading ? (
-        <span className="h-8 w-8 shrink-0 animate-pulse rounded-lg bg-muted" />
+        <span className="h-7 w-7 shrink-0 animate-pulse rounded-lg bg-muted sm:h-8 sm:w-8" />
       ) : showFallback ? (
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-sm ring-highlight">
-          <Bike className="h-[18px] w-[18px]" />
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-sm ring-highlight sm:h-8 sm:w-8">
+          <Bike className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
         </span>
       ) : (
         <img
           src={logoUrl}
           alt="Motos Max Cordialidad"
-          className="max-h-8 w-auto max-w-[160px] rounded object-contain"
+          className="max-h-7 w-auto max-w-[110px] rounded object-contain sm:max-h-8 sm:max-w-[160px]"
           onError={() => setLogoError(true)}
         />
       )}
       <span className="flex flex-col leading-tight">
-        <span className="text-[14px] font-semibold tracking-tight">Motos Max Cordialidad</span>
-        <span className="mt-0.5 text-[11px] text-muted-foreground">Panel del taller</span>
-      </span>
-    </Link>
-  );
-}
-
-function BrandCompact() {
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-  const [logoError, setLogoError] = useState(false);
-  const pathname = usePathname();
-
-  useEffect(() => {
-    setLogoError(false);
-    apiGet<{ url: string | null }>('/api/settings/logo')
-      .then(({ url }) => setLogoUrl(url))
-      .catch(() => setLogoUrl(null));
-  }, [pathname]);
-
-  return (
-    <Link href="/" className="flex items-center gap-2">
-      {logoUrl && !logoError ? (
-        <img
-          src={logoUrl}
-          alt="Motos Max"
-          className="h-7 w-auto max-w-[110px] rounded object-contain"
-          onError={() => setLogoError(true)}
-        />
-      ) : (
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-sm ring-highlight">
-          <Bike className="h-4 w-4" />
+        <span className="whitespace-nowrap text-[13px] font-semibold tracking-tight sm:text-[14px]">
+          Motos Max Cordialidad
         </span>
-      )}
-      {!logoUrl && <span className="text-sm font-semibold">Motos Max</span>}
+        {!compact && (
+          <span className="mt-0.5 text-[11px] text-muted-foreground">Panel del taller</span>
+        )}
+      </span>
     </Link>
   );
 }
@@ -248,8 +221,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           >
             <Menu />
           </Button>
-          <div className="lg:hidden">
-            <BrandCompact />
+          <div className="min-w-0 lg:hidden">
+            <Brand compact />
           </div>
           <span className="hidden text-sm font-medium text-foreground lg:block">
             {current?.label ?? 'Dashboard'}
