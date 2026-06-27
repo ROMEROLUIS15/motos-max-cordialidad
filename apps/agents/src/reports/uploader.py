@@ -28,7 +28,16 @@ class R2Uploader:
     def __init__(self, settings: Settings | None = None, s3_client: Any | None = None) -> None:
         self._settings = settings or get_settings()
         self._bucket = self._settings.R2_BUCKET_NAME
-        self._client = s3_client or _default_s3_client(self._settings)
+        # Lazily built so an instance can exist without R2 creds (e.g. the
+        # scheduler constructs the uploader at startup; boto3 validates the
+        # endpoint eagerly and would crash the service if creds are absent).
+        self._cached: Any | None = s3_client
+
+    @property
+    def _client(self) -> Any:
+        if self._cached is None:
+            self._cached = _default_s3_client(self._settings)
+        return self._cached
 
     @staticmethod
     def report_key(tenant_id: str, report_type: str, year: int, filename: str) -> str:
