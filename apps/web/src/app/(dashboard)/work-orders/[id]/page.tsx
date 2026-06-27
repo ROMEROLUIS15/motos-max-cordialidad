@@ -443,15 +443,15 @@ function ServiceLinesSection({
         ))}
       </ul>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <Input
-          className="min-w-[180px] flex-1"
+          className="w-full sm:min-w-[180px] sm:flex-1"
           placeholder="Descripción del servicio"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
         <Input
-          className="w-28"
+          className="w-full sm:w-28"
           placeholder="Precio"
           type="number"
           value={unitPrice}
@@ -586,9 +586,9 @@ function PartsSection({
             </ul>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Input
-            className="w-24"
+            className="w-full sm:w-24"
             placeholder="Cant."
             type="number"
             value={quantity}
@@ -674,11 +674,11 @@ function EvidencesSection({
         })}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+      <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:flex-wrap sm:items-center">
         <select
           value={phase}
           onChange={(e) => setPhase(e.target.value as PhotoPhase)}
-          className={cn(fieldBase, 'w-auto cursor-pointer')}
+          className={cn(fieldBase, 'w-full cursor-pointer sm:w-auto')}
         >
           {PHOTO_PHASES.map((ph) => (
             <option key={ph} value={ph}>
@@ -690,7 +690,7 @@ function EvidencesSection({
           ref={fileRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          className="text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-secondary/70"
+          className="w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-foreground hover:file:bg-secondary/70 sm:w-auto"
         />
         <Button
           variant="outline"
@@ -776,13 +776,13 @@ function QuotesSection({
         {quotes.map((q) => (
           <li
             key={q.id}
-            className="flex flex-wrap items-center justify-between gap-3 py-2.5 text-sm"
+            className="flex flex-col gap-2 py-2.5 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
           >
             <span className="flex items-center gap-3">
               <span className="font-medium">{q.quoteNumber}</span>
               <Badge variant={QUOTE_VARIANT[q.status]}>{QUOTE_STATUS_LABELS[q.status]}</Badge>
             </span>
-            <span className="flex items-center gap-3">
+            <span className="flex flex-wrap items-center gap-2 sm:gap-3">
               <span className="tnum font-medium">{money(q.total)}</span>
               <Button variant="ghost" size="sm" onClick={() => void openPdf(q.id)}>
                 <FileText className="h-3.5 w-3.5" /> PDF
@@ -902,9 +902,9 @@ function PaymentsSection({ workOrderId }: { workOrderId: string }) {
       )}
 
       {showForm && (
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <Input
-            className="w-32"
+            className="w-full sm:w-32"
             type="number"
             placeholder="Monto"
             value={amount}
@@ -913,7 +913,7 @@ function PaymentsSection({ workOrderId }: { workOrderId: string }) {
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-            className={cn(fieldBase, 'w-auto cursor-pointer')}
+            className={cn(fieldBase, 'w-full cursor-pointer sm:w-auto')}
           >
             {PAYMENT_METHODS.map((m) => (
               <option key={m} value={m}>
@@ -922,7 +922,7 @@ function PaymentsSection({ workOrderId }: { workOrderId: string }) {
             ))}
           </select>
           <Input
-            className="min-w-[140px] flex-1"
+            className="w-full sm:min-w-[140px] sm:flex-1"
             placeholder="Referencia"
             value={reference}
             onChange={(e) => setReference(e.target.value)}

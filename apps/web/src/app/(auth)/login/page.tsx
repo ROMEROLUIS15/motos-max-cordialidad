@@ -78,21 +78,21 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
       {/* Panel izquierdo — marca y logo */}
-      <div className="relative flex flex-1 flex-col items-center justify-center gap-6 bg-gradient-to-br from-primary/90 via-primary/60 to-primary/30 p-8 lg:basis-[55%]">
-        <div className="flex flex-col items-center gap-4">
+      <div className="relative flex flex-1 flex-col items-center justify-center gap-4 bg-gradient-to-br from-primary/90 via-primary/60 to-primary/30 px-6 py-10 lg:basis-[55%] lg:gap-6 lg:p-8">
+        <div className="flex flex-col items-center gap-3 lg:gap-4">
           <Image
             src="/brand/logo-motos-max.jpeg"
             alt="Motos Max Cordialidad"
             width={280}
             height={280}
-            className="h-auto w-48 rounded-2xl object-contain drop-shadow-lg sm:w-56 md:w-64"
+            className="h-auto w-32 rounded-2xl object-contain drop-shadow-lg sm:w-40 md:w-48 lg:w-56 xl:w-64"
             priority
           />
-          <h1 className="text-center text-2xl font-bold tracking-tight text-primary-foreground sm:text-3xl">
+          <h1 className="text-center text-xl font-bold tracking-tight text-primary-foreground sm:text-2xl lg:text-3xl">
             Motos Max Cordialidad
           </h1>
-          <p className="max-w-sm text-center text-sm text-primary-foreground/70">
-            Sistema de gestión para tu taller de motocicletas
+          <p className="max-w-xs text-center text-xs text-primary-foreground/70 sm:max-w-sm sm:text-sm">
+            Sistema de gestion para tu taller de motocicletas
           </p>
         </div>
         {/* Elementos decorativos de fondo */}

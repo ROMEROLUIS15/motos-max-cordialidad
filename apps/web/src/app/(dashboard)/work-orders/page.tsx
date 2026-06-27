@@ -137,7 +137,7 @@ export default function WorkOrdersPage() {
           })}
         </div>
 
-        <div className="flex items-center gap-2 pb-2">
+        <div className="flex flex-col gap-2 pb-2 sm:flex-row sm:flex-wrap sm:items-center">
           <input
             type="date"
             aria-label="Desde"
@@ -146,9 +146,9 @@ export default function WorkOrdersPage() {
               setFrom(e.target.value);
               setPage(1);
             }}
-            className={cn(fieldBase, 'h-8 w-auto cursor-pointer text-xs')}
+            className={cn(fieldBase, 'h-8 w-full cursor-pointer text-xs sm:w-auto')}
           />
-          <span className="text-xs text-muted-foreground">→</span>
+          <span className="hidden text-xs text-muted-foreground sm:inline">→</span>
           <input
             type="date"
             aria-label="Hasta"
@@ -157,7 +157,7 @@ export default function WorkOrdersPage() {
               setTo(e.target.value);
               setPage(1);
             }}
-            className={cn(fieldBase, 'h-8 w-auto cursor-pointer text-xs')}
+            className={cn(fieldBase, 'h-8 w-full cursor-pointer text-xs sm:w-auto')}
           />
           {hasDateFilter && (
             <Button
@@ -289,7 +289,7 @@ export default function WorkOrdersPage() {
 
         {/* Pie / paginación */}
         {!loading && !error && orders.length > 0 && (
-          <div className="flex items-center justify-between border-t border-border px-4 py-3">
+          <div className="flex flex-col items-center gap-2 border-t border-border px-4 py-3 sm:flex-row sm:justify-between">
             <span className="text-xs text-muted-foreground">
               Página {page} de {totalPages} · {total} en total
             </span>
