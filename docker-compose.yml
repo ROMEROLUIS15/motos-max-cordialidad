@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -14,6 +12,8 @@ services:
       - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - motoworkshop-net
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U motoworkshop']
       interval: 10s
@@ -29,11 +29,40 @@ services:
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
+    networks:
+      - motoworkshop-net
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
+
+  agents:
+    build:
+      context: ./apps/agents
+    container_name: motoworkshop_agents
+    restart: unless-stopped
+    # Shares the repo-root .env.local (JWT_SECRET, DEEPSEEK/GROQ keys, R2, Sentry).
+    env_file:
+      - .env.local
+    environment:
+      # The NestJS API runs on the host (or Render in prod), not in compose.
+      API_BASE_URL: ${AGENTS_API_BASE_URL:-http://host.docker.internal:3001}
+      REDIS_URL: redis://redis:6379
+      TZ: America/Bogota
+    ports:
+      - '8000:8000'
+    depends_on:
+      redis:
+        condition: service_healthy
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - motoworkshop-net
+
+networks:
+  motoworkshop-net:
+    driver: bridge
 
 volumes:
   redis_data:
