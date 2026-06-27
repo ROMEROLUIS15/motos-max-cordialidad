@@ -57,3 +57,48 @@ services:
         sync: false
       - key: SENTRY_DSN
         sync: false
+      # URL of the Python agents service (admin WhatsApp routing). Set in the
+      # dashboard to the agents service's onrender.com URL once it exists.
+      - key: AGENTS_BASE_URL
+        sync: false
+
+  # Fase 2 — Python agents microservice (AgentAdmin, reports, stock alerts).
+  - type: web
+    name: motoworkshop-agents
+    runtime: docker
+    repo: https://github.com/ROMEROLUIS15/motos-max-cordialidad
+    branch: main
+    dockerfilePath: apps/agents/Dockerfile
+    dockerContext: apps/agents
+    region: virginia
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: API_BASE_URL
+        value: https://motoworkshop-api.onrender.com
+      - key: TZ
+        value: America/Bogota
+      - key: SCHEDULER_ENABLED
+        value: 'true'
+      - key: ADMIN_SESSION_TTL_SECONDS
+        value: '7200'
+      # --- Secrets: set these in the Render dashboard ---
+      - key: JWT_SECRET # MUST match the API's JWT_SECRET (service tokens)
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_NAME
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
