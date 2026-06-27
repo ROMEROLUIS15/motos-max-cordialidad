@@ -32,6 +32,7 @@ type SaleOrderRow = {
   financingMonths: number | null;
   status: string;
   notes: string | null;
+  contractR2Key: string | null;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
@@ -57,6 +58,7 @@ export class SaleOrderPrismaRepository implements SaleOrderRepository {
       r.financingMonths,
       r.status as SaleOrderStatus,
       r.notes,
+      r.contractR2Key,
       r.createdBy,
       r.createdAt,
       r.updatedAt,
@@ -129,6 +131,7 @@ export class SaleOrderPrismaRepository implements SaleOrderRepository {
         financingMonths: order.financingMonths,
         status: order.status,
         notes: order.notes,
+        contractR2Key: order.contractR2Key,
         createdBy: order.createdBy,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
@@ -148,6 +151,7 @@ export class SaleOrderPrismaRepository implements SaleOrderRepository {
         financingMonths: order.financingMonths,
         status: order.status,
         notes: order.notes,
+        contractR2Key: order.contractR2Key,
         updatedAt: order.updatedAt,
       },
     });

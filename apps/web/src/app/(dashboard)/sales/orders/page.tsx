@@ -99,6 +99,19 @@ export default function SaleOrdersPage() {
     }
   };
 
+  const downloadContract = async (order: SaleOrderItem) => {
+    setBusyId(order.id);
+    setError(null);
+    try {
+      const { url } = await apiGet<{ url: string }>(`/api/sale-orders/${order.id}/contract`);
+      window.open(url, '_blank', 'noopener');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
@@ -209,9 +222,18 @@ export default function SaleOrdersPage() {
                             </Button>
                           </>
                         ) : o.status === 'CONFIRMED' ? (
-                          <Button variant="ghost" size="sm" onClick={() => void act(o, 'cancel')}>
-                            Anular
-                          </Button>
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => void downloadContract(o)}
+                            >
+                              Contrato
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => void act(o, 'cancel')}>
+                              Anular
+                            </Button>
+                          </>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
