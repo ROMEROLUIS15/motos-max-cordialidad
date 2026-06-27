@@ -86,22 +86,20 @@ function Brand() {
 
   return (
     <Link href="/" className="flex items-center gap-2.5">
-      <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg ring-1 ring-border">
-        {loading ? (
-          <span className="h-full w-full animate-pulse bg-muted" />
-        ) : showFallback ? (
-          <span className="flex h-full w-full items-center justify-center bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-sm ring-highlight">
-            <Bike className="h-[18px] w-[18px]" />
-          </span>
-        ) : (
-          <img
-            src={logoUrl}
-            alt="Motos Max Cordialidad"
-            className="h-full w-full object-contain"
-            onError={() => setLogoError(true)}
-          />
-        )}
-      </span>
+      {loading ? (
+        <span className="h-8 w-8 shrink-0 animate-pulse rounded-lg bg-muted" />
+      ) : showFallback ? (
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-primary to-primary/80 text-primary-foreground shadow-sm ring-highlight">
+          <Bike className="h-[18px] w-[18px]" />
+        </span>
+      ) : (
+        <img
+          src={logoUrl}
+          alt="Motos Max Cordialidad"
+          className="max-h-8 w-auto max-w-[160px] rounded object-contain"
+          onError={() => setLogoError(true)}
+        />
+      )}
       <span className="flex flex-col leading-tight">
         <span className="text-[14px] font-semibold tracking-tight">Motos Max Cordialidad</span>
         <span className="mt-0.5 text-[11px] text-muted-foreground">Panel del taller</span>
