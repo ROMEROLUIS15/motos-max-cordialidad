@@ -1,20 +1,30 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+
+export const runtime = 'edge';
 
 export async function GET(request: Request) {
   try {
-    const cookieStore = await cookies();
+    const cookie = request.headers.get('Cookie') || '';
+    const ac = new AbortController();
+    const apiTimer = setTimeout(() => ac.abort(), 5000);
+
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/settings/logo`, {
-      headers: { Cookie: cookieStore.toString() },
-      signal: AbortSignal.timeout(5000),
+      headers: { Cookie: cookie },
+      signal: ac.signal,
     });
+    clearTimeout(apiTimer);
 
     if (!res.ok) throw new Error('API error');
 
-    const { url } = await res.json();
+    const { url } = (await res.json()) as { url: string | null };
     if (!url) throw new Error('No logo configured');
 
-    const imageRes = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    const imgAc = new AbortController();
+    const imgTimer = setTimeout(() => imgAc.abort(), 8000);
+
+    const imageRes = await fetch(url, { signal: imgAc.signal });
+    clearTimeout(imgTimer);
+
     if (!imageRes.ok) throw new Error('Image fetch failed');
 
     const buffer = await imageRes.arrayBuffer();
@@ -27,6 +37,7 @@ export async function GET(request: Request) {
       },
     });
   } catch {
-    return NextResponse.redirect(new URL('/brand/logo-motos-max.jpeg', request.url));
+    const url = new URL('/brand/logo-motos-max.jpeg', request.url);
+    return NextResponse.redirect(url);
   }
 }
