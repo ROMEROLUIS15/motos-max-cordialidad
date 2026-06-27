@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, BellRing } from 'lucide-react';
 import { apiGet, apiSend } from '@/lib/api';
 import type { PaginatedResponse } from '@/types/api';
 import { cn } from '@/lib/utils';
@@ -73,9 +73,9 @@ export function NotificationBell() {
         size="icon"
         onClick={() => void toggle()}
         aria-label="Notificaciones"
-        className={cn('relative', unread > 0 && 'text-amber-400 [&_svg]:text-amber-400')}
+        className={cn('relative', unread > 0 && 'text-amber-400')}
       >
-        <Bell />
+        {unread > 0 ? <BellRing className="animate-swing" /> : <Bell />}
         {unread > 0 && (
           <span className="absolute right-1.5 top-1.5 flex min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-[14px] text-destructive-foreground ring-2 ring-card">
             {unread > 9 ? '9+' : unread}
