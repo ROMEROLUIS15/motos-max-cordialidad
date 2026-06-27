@@ -228,7 +228,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {current?.label ?? 'Dashboard'}
           </span>
 
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ml-auto flex items-center gap-3 sm:gap-4">
             <button
               type="button"
               className="hidden items-center gap-2 rounded-lg border border-border bg-secondary/40 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary md:flex"
@@ -239,9 +239,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 ⌘K
               </kbd>
             </button>
-            <span className="lg:hidden">
-              <ThemeToggle />
-            </span>
+            <ThemeToggle />
             <NotificationBell />
           </div>
         </header>
