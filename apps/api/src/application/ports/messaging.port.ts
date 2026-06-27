@@ -21,6 +21,8 @@ export interface MessagingPort {
    * Returns false if no phone could be resolved.
    */
   sendOwnerMessage(tenantId: string, content: string): Promise<boolean>;
+  /** Sends a message to an explicit phone number (e.g. a home-service customer). */
+  sendDirectMessage(tenantId: string, phone: string, content: string): Promise<void>;
 }
 
 export const MESSAGING_PORT = Symbol('MessagingPort');

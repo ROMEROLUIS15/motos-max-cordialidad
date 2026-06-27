@@ -30,7 +30,10 @@ import { CreateUserUseCase } from './application/use-cases/identity/create-user.
 import { UpdateUserUseCase } from './application/use-cases/identity/update-user.use-case';
 import { AssignRoleUseCase } from './application/use-cases/identity/assign-role.use-case';
 import { SeedRolesUseCase } from './application/use-cases/identity/seed-roles.use-case';
-import { CreateCustomRoleUseCase, UpdateRolePermissionsUseCase } from './application/use-cases/identity/create-custom-role.use-case';
+import {
+  CreateCustomRoleUseCase,
+  UpdateRolePermissionsUseCase,
+} from './application/use-cases/identity/create-custom-role.use-case';
 import { DeleteRoleUseCase } from './application/use-cases/identity/delete-role.use-case';
 import { AuthenticateUserUseCase } from './application/use-cases/identity/authenticate-user.use-case';
 import { RefreshTokenUseCase } from './application/use-cases/identity/refresh-token.use-case';
@@ -53,7 +56,13 @@ const repositories = [
 
 @Module({
   imports: [PrismaModule],
-  controllers: [AuthController, TenantsController, BranchesController, UsersController, RolesController],
+  controllers: [
+    AuthController,
+    TenantsController,
+    BranchesController,
+    UsersController,
+    RolesController,
+  ],
   providers: [
     ...repositories,
     JwtService,
@@ -82,6 +91,7 @@ const repositories = [
     JwtAuthGuard,
     PermissionGuard,
     TENANT_REPOSITORY,
+    USER_REPOSITORY,
   ],
 })
 export class IdentityModule {}

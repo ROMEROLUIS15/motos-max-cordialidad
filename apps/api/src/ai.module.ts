@@ -7,6 +7,7 @@ import { WorkshopModule } from './workshop.module';
 import { VehiclesModule } from './vehicles.module';
 import { InventoryModule } from './inventory.module';
 import { CommerceModule } from './commerce.module';
+import { HomeServicesModule } from './home-services.module';
 
 // AI infrastructure
 import { DeepSeekAdapter } from './infrastructure/ai/deepseek.adapter';
@@ -38,6 +39,7 @@ import { MessagesController } from './presentation/http/controllers/messages.con
     VehiclesModule,
     InventoryModule,
     CommerceModule,
+    HomeServicesModule,
   ],
   controllers: [WhatsAppWebhookController, MessagesController],
   providers: [
