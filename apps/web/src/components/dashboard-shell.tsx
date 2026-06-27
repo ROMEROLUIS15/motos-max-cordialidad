@@ -19,6 +19,7 @@ import {
   Bike,
   Receipt,
   BarChart3,
+  List,
   Menu,
   X,
   Search,
@@ -65,6 +66,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     label: 'Sistema',
     items: [
       { href: '/settings', label: 'Ajustes', icon: Settings },
+      { href: '/motorcycle-catalog', label: 'Catálogo motos', icon: List },
       { href: '/audit', label: 'Auditoría', icon: ScrollText },
     ],
   },

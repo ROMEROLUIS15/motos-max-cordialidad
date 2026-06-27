@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Loader2, Plus, X, UserPlus, Bike } from 'lucide-react';
-import { apiGet, apiSend } from '@/lib/api';
+import { Search, Loader2, Plus, X, UserPlus, Bike, UploadCloud } from 'lucide-react';
+import { apiGet, apiSend, apiUpload } from '@/lib/api';
 import type { PaginatedResponse } from '@/types/api';
 import { FUEL_LEVELS, FUEL_LABELS, type FuelLevel } from '@/types/workshop';
 import { cn } from '@/lib/utils';
@@ -125,6 +125,7 @@ export default function NewOrderPage() {
   const [odometer, setOdometer] = useState('');
   const [fuel, setFuel] = useState<FuelLevel>('HALF');
   const [damage, setDamage] = useState('');
+  const [photos, setPhotos] = useState<File[]>([]);
 
   useEffect(() => {
     if (!debounced || customer) {
@@ -258,6 +259,15 @@ export default function NewOrderPage() {
         fuelLevel: fuel,
         visibleDamageNotes: damage || undefined,
       });
+
+      // 3b) Reception photos (best-effort; don't block the order on a bad upload)
+      for (const file of photos) {
+        try {
+          await apiUpload(`/api/receptions/${rec.id}/photos`, file);
+        } catch {
+          /* ignore individual photo failures */
+        }
+      }
 
       // 4) Work order
       const wo = await apiSend<{ id: string }>('/api/work-orders', 'POST', {
@@ -616,6 +626,46 @@ export default function NewOrderPage() {
               <FieldLabel label="Daños visibles">
                 <Textarea value={damage} onChange={(e) => setDamage(e.target.value)} rows={2} />
               </FieldLabel>
+              <div className="space-y-1.5">
+                <span className="text-sm font-medium text-foreground/90">
+                  Fotos de ingreso ({photos.length}/10)
+                </span>
+                <label className="flex cursor-pointer flex-col items-center gap-1 rounded-lg border-2 border-dashed border-border bg-background/40 px-4 py-5 text-center text-sm text-muted-foreground hover:border-primary/50">
+                  <UploadCloud className="h-5 w-5" />
+                  Selecciona o arrastra imágenes
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    hidden
+                    onChange={(e) =>
+                      e.target.files &&
+                      setPhotos((p) => [...p, ...Array.from(e.target.files!)].slice(0, 10))
+                    }
+                  />
+                </label>
+                {photos.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {photos.map((f, i) => (
+                      <div key={i} className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={URL.createObjectURL(f)}
+                          alt={f.name}
+                          className="h-16 w-16 rounded-lg border border-border object-cover"
+                        />
+                        <button
+                          onClick={() => setPhotos((p) => p.filter((_, j) => j !== i))}
+                          className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                          aria-label="Quitar foto"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </Step>
