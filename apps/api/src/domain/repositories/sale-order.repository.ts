@@ -1,0 +1,35 @@
+import { SaleOrder } from '../entities/sale-order.entity';
+import { Pagination, PaginatedResult } from '../shared/pagination';
+
+export interface SaleOrderSearchFilters {
+  status?: string;
+  customerId?: string;
+}
+
+export interface SaleOrderListItem {
+  id: string;
+  orderNumber: string;
+  status: string;
+  totalAmount: number;
+  paymentMethod: string;
+  customerId: string;
+  customerName: string;
+  motorcycleUnitId: string;
+  motorcycleLabel: string;
+  createdAt: Date;
+}
+
+export interface SaleOrderRepository {
+  findById(id: string, tenantId: string): Promise<SaleOrder | null>;
+  findActiveByUnit(motorcycleUnitId: string, tenantId: string): Promise<SaleOrder | null>;
+  search(
+    filters: SaleOrderSearchFilters,
+    tenantId: string,
+    pagination: Pagination,
+  ): Promise<PaginatedResult<SaleOrderListItem>>;
+  create(order: SaleOrder): Promise<void>;
+  save(order: SaleOrder): Promise<void>;
+  generateOrderNumber(tenantId: string, year: number): Promise<string>;
+}
+
+export const SALE_ORDER_REPOSITORY = Symbol('SaleOrderRepository');

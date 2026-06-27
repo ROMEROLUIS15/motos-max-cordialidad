@@ -108,4 +108,10 @@ describe('MotorcycleUnit status machine', () => {
     expect(() => u.changeStatus('AVAILABLE')).not.toThrow();
     expect(u.status).toBe('AVAILABLE');
   });
+
+  it('releaseToInventory reverses a SOLD unit (sale cancellation)', () => {
+    const u = makeUnit({ status: 'SOLD' });
+    u.releaseToInventory();
+    expect(u.status).toBe('AVAILABLE');
+  });
 });

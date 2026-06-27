@@ -44,6 +44,7 @@ model Tenant {
   homeServiceRequests HomeServiceRequest[]
   purchaseOrderDrafts PurchaseOrderDraft[]
   motorcycleUnits     MotorcycleUnit[]
+  saleOrders          SaleOrder[]
 
   @@map("tenants")
 }
@@ -66,6 +67,7 @@ model Branch {
   vehicleReceptions VehicleReception[]
   homeServiceRequests HomeServiceRequest[]
   motorcycleUnits   MotorcycleUnit[]
+  saleOrders        SaleOrder[]
 
   @@unique([tenantId, name])
   @@index([tenantId], name: "idx_branches_tenant")
@@ -200,6 +202,7 @@ model Customer {
   ownedVehicles    VehicleOwnershipHistory[] @relation("PreviousOwner")
   newVehicles      VehicleOwnershipHistory[] @relation("NewOwner")
   homeServiceRequests HomeServiceRequest[]
+  saleOrders       SaleOrder[]
 
   @@unique([tenantId, documentNumber])
   @@index([tenantId, deletedAt], name: "idx_customers_tenant")
@@ -751,11 +754,42 @@ model MotorcycleUnit {
   createdAt     DateTime @default(now()) @db.Timestamptz()
   updatedAt     DateTime @updatedAt @db.Timestamptz()
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-  branch Branch @relation(fields: [branchId], references: [id])
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  branch     Branch      @relation(fields: [branchId], references: [id])
+  saleOrders SaleOrder[]
 
   @@unique([tenantId, vin])
   @@index([tenantId, status], name: "idx_moto_units_status")
   @@index([branchId, status], name: "idx_moto_units_branch")
   @@map("motorcycle_units")
+}
+
+model SaleOrder {
+  id               String   @id @default(uuid())
+  tenantId         String
+  branchId         String
+  customerId       String
+  motorcycleUnitId String
+  orderNumber      String   @db.VarChar(30)
+  salePrice        Decimal  @db.Decimal(12, 2)
+  discount         Decimal  @default(0) @db.Decimal(12, 2)
+  totalAmount      Decimal  @db.Decimal(12, 2)
+  paymentMethod    String   @default("CASH") @db.VarChar(20)
+  downPayment      Decimal  @default(0) @db.Decimal(12, 2)
+  financingMonths  Int?     @db.SmallInt
+  status           String   @default("DRAFT") @db.VarChar(20)
+  notes            String?  @db.Text
+  createdBy        String   @db.VarChar(100)
+  createdAt        DateTime @default(now()) @db.Timestamptz()
+  updatedAt        DateTime @updatedAt @db.Timestamptz()
+
+  tenant         Tenant         @relation(fields: [tenantId], references: [id])
+  branch         Branch         @relation(fields: [branchId], references: [id])
+  customer       Customer       @relation(fields: [customerId], references: [id])
+  motorcycleUnit MotorcycleUnit @relation(fields: [motorcycleUnitId], references: [id])
+
+  @@unique([tenantId, orderNumber])
+  @@index([tenantId, status, createdAt(sort: Desc)], name: "idx_sale_orders_status")
+  @@index([customerId], name: "idx_sale_orders_customer")
+  @@map("sale_orders")
 }
