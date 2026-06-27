@@ -45,6 +45,10 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
+    label: 'Ventas',
+    items: [{ href: '/sales', label: 'Motos', icon: Bike }],
+  },
+  {
     label: 'Gestión',
     items: [
       { href: '/reports', label: 'Reportes', icon: FileBarChart },
