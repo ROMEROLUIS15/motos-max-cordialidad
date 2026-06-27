@@ -22,6 +22,13 @@ export class UserPrismaRepository implements UserRepository {
     return records.map((r) => this.toDomain(r));
   }
 
+  async findOwnerByWhatsappPhone(phone: string, tenantId: string): Promise<User | null> {
+    const r = await this.prisma.user.findFirst({
+      where: { tenantId, whatsappPhone: phone, isActive: true, role: { name: 'OWNER' } },
+    });
+    return r ? this.toDomain(r) : null;
+  }
+
   async save(user: User): Promise<void> {
     await this.prisma.user.update({
       where: { id: user.id },
@@ -56,11 +63,30 @@ export class UserPrismaRepository implements UserRepository {
   }
 
   private toDomain(r: {
-    id: string; tenantId: string; branchId: string | null; roleId: string;
-    email: string; passwordHash: string; fullName: string; isActive: boolean;
-    lastLoginAt: Date | null; createdAt: Date; updatedAt: Date;
+    id: string;
+    tenantId: string;
+    branchId: string | null;
+    roleId: string;
+    email: string;
+    passwordHash: string;
+    fullName: string;
+    isActive: boolean;
+    lastLoginAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
   }): User {
-    return new User(r.id, r.tenantId, r.branchId, r.roleId, r.email,
-      r.passwordHash, r.fullName, r.isActive, r.lastLoginAt, r.createdAt, r.updatedAt);
+    return new User(
+      r.id,
+      r.tenantId,
+      r.branchId,
+      r.roleId,
+      r.email,
+      r.passwordHash,
+      r.fullName,
+      r.isActive,
+      r.lastLoginAt,
+      r.createdAt,
+      r.updatedAt,
+    );
   }
 }

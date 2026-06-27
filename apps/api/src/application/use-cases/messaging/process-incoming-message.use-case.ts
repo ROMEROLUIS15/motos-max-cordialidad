@@ -8,6 +8,8 @@ import {
 import { NotificationPort, NOTIFICATION_PORT } from '../../ports/notification.port';
 import { RouterAgent } from '../../../infrastructure/ai/router-agent';
 import { WhatsAppCloudAdapter } from '../../../infrastructure/messaging/whatsapp-cloud.adapter';
+import { AgentsServiceClient } from '../../../infrastructure/agents/agents-service.client';
+import { UserRepository, USER_REPOSITORY } from '../../../domain/repositories/user.repository';
 import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma.service';
 
 const UNANSWERED_MINUTES = 5;
@@ -26,8 +28,10 @@ export class ProcessIncomingMessageUseCase {
   constructor(
     @Inject(WHATSAPP_REPOSITORY) private readonly whatsappRepo: WhatsAppRepository,
     @Inject(NOTIFICATION_PORT) private readonly notification: NotificationPort,
+    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     private readonly routerAgent: RouterAgent,
     private readonly whatsapp: WhatsAppCloudAdapter,
+    private readonly agents: AgentsServiceClient,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -73,12 +77,44 @@ export class ProcessIncomingMessageUseCase {
     });
     await this.whatsappRepo.touchSession(session.id, new Date());
 
+    // Admin (OWNER) chats route to the Python AgentAdmin, not the customer agent.
+    const owner = await this.users.findOwnerByWhatsappPhone(input.from, input.tenantId);
+    if (owner) {
+      await this.routeToAdminAgent(input);
+      return;
+    }
+
     if (await this.shouldActivateAgent(input.tenantId, session)) {
       await this.runAgent(input, session, customer?.id ?? null, null);
     }
   }
 
-  private async shouldActivateAgent(tenantId: string, session: WhatsAppSessionRecord): Promise<boolean> {
+  private async routeToAdminAgent(input: ProcessIncomingMessageInput): Promise<void> {
+    const accepted = await this.agents.routeAdminMessage({
+      tenantId: input.tenantId,
+      phoneNumber: input.from,
+      message: input.content,
+    });
+    if (accepted) return;
+    // Agents service unavailable → the admin must not be left without a reply.
+    this.logger.warn(`AgentAdmin unavailable for ${input.from} — escalating`);
+    await this.notification.notifyAdmins(input.tenantId, {
+      type: 'WHATSAPP_AGENT_ERROR',
+      phone: input.from,
+    });
+    await this.whatsapp.sendToPhone(
+      input.tenantId,
+      input.from,
+      null,
+      'No pude procesar tu consulta en este momento. Un miembro del equipo te responderá pronto.',
+      null,
+    );
+  }
+
+  private async shouldActivateAgent(
+    tenantId: string,
+    session: WhatsAppSessionRecord,
+  ): Promise<boolean> {
     const recentlyAnswered = await this.whatsappRepo.lastInboundRespondedWithin(
       session.id,
       UNANSWERED_MINUTES,
@@ -96,7 +132,9 @@ export class ProcessIncomingMessageUseCase {
     if (!businessHours || typeof businessHours !== 'object') return true;
     const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
     const now = new Date();
-    const cfg = (businessHours as Record<string, { open: string; close: string }>)[days[now.getDay()]];
+    const cfg = (businessHours as Record<string, { open: string; close: string }>)[
+      days[now.getDay()]
+    ];
     if (!cfg) return false;
     const current = now.getHours() * 60 + now.getMinutes();
     const [oh, om] = cfg.open.split(':').map(Number);
@@ -120,7 +158,13 @@ export class ProcessIncomingMessageUseCase {
         history: [],
       });
 
-      await this.whatsapp.sendToPhone(input.tenantId, input.from, customerId, result.response, null);
+      await this.whatsapp.sendToPhone(
+        input.tenantId,
+        input.from,
+        customerId,
+        result.response,
+        null,
+      );
 
       if (result.escalated) {
         await this.notification.notifyAdmins(input.tenantId, {
