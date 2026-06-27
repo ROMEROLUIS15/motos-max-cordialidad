@@ -21,11 +21,8 @@ export const metadata: Metadata = {
     title: 'Motos Max',
   },
   icons: {
-    icon: [
-      { url: '/icons/icon.svg', type: 'image/svg+xml' },
-      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-    ],
-    apple: '/icons/apple-touch-icon.png',
+    icon: '/brand/logo-motos-max.jpeg',
+    apple: '/brand/logo-motos-max.jpeg',
   },
 };
 

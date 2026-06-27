@@ -1,11 +1,23 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BellRing } from 'lucide-react';
 import { apiGet, apiSend } from '@/lib/api';
 import type { PaginatedResponse } from '@/types/api';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+
+function BellSolid({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={cn('h-5 w-5', className)}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" />
+    </svg>
+  );
+}
 
 interface Notification {
   id: string;
@@ -75,7 +87,7 @@ export function NotificationBell() {
         aria-label="Notificaciones"
         className="relative text-amber-400"
       >
-        <BellRing className={unread > 0 ? 'animate-swing' : ''} />
+        <BellSolid className={unread > 0 ? 'animate-swing' : ''} />
         {unread > 0 && (
           <span className="absolute right-1.5 top-1.5 flex min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-[14px] text-destructive-foreground ring-2 ring-card">
             {unread > 9 ? '9+' : unread}
