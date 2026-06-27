@@ -193,7 +193,7 @@ export default function InventoryPage() {
         </div>
 
         {!loading && !error && parts.length > 0 && (
-          <div className="flex items-center justify-between border-t border-border px-4 py-3">
+          <div className="flex flex-col items-center gap-2 border-t border-border px-4 py-3 sm:flex-row sm:justify-between">
             <span className="text-xs text-muted-foreground">
               Página {page} de {totalPages} · {total} en total
             </span>
@@ -448,7 +448,7 @@ function NewPartModal({ onClose, onDone }: { onClose: () => void; onDone: () => 
         </>
       }
     >
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input placeholder="SKU" value={form.sku} onChange={set('sku')} />
         <Input placeholder="Categoría" value={form.category} onChange={set('category')} />
         <Input

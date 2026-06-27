@@ -161,7 +161,7 @@ export default function CustomersPage() {
         </div>
 
         {!loading && !error && customers.length > 0 && (
-          <div className="flex items-center justify-between border-t border-border px-4 py-3">
+          <div className="flex flex-col items-center gap-2 border-t border-border px-4 py-3 sm:flex-row sm:justify-between">
             <span className="text-xs text-muted-foreground">
               Página {page} de {totalPages} · {total} en total
             </span>
