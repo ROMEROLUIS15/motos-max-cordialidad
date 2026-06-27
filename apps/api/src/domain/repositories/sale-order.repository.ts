@@ -19,6 +19,20 @@ export interface SaleOrderListItem {
   createdAt: Date;
 }
 
+export interface SalesSummary {
+  period: { from: string; to: string };
+  sales: {
+    confirmedCount: number;
+    confirmedRevenue: number;
+    draftCount: number;
+    cancelledCount: number;
+    avgTicket: number;
+  };
+  inventory: { available: number; reserved: number; sold: number };
+  topBrands: { brand: string; units: number; revenue: number }[];
+  monthlyTrend: { month: string; count: number; revenue: number }[];
+}
+
 export interface SaleOrderRepository {
   findById(id: string, tenantId: string): Promise<SaleOrder | null>;
   findActiveByUnit(motorcycleUnitId: string, tenantId: string): Promise<SaleOrder | null>;
@@ -30,6 +44,7 @@ export interface SaleOrderRepository {
   create(order: SaleOrder): Promise<void>;
   save(order: SaleOrder): Promise<void>;
   generateOrderNumber(tenantId: string, year: number): Promise<string>;
+  summary(tenantId: string, from: Date, to: Date): Promise<SalesSummary>;
 }
 
 export const SALE_ORDER_REPOSITORY = Symbol('SaleOrderRepository');

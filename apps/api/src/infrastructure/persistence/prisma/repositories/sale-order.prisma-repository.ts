@@ -5,6 +5,7 @@ import {
   SaleOrderRepository,
   SaleOrderSearchFilters,
   SaleOrderListItem,
+  SalesSummary,
 } from '../../../../domain/repositories/sale-order.repository';
 import {
   SaleOrder,
@@ -163,5 +164,69 @@ export class SaleOrderPrismaRepository implements SaleOrderRepository {
       where: { tenantId, orderNumber: { startsWith: prefix } },
     });
     return `${prefix}${(count + 1).toString().padStart(6, '0')}`;
+  }
+
+  async summary(tenantId: string, from: Date, to: Date): Promise<SalesSummary> {
+    const [byStatus, inventory, topBrands, monthlyTrend] = await Promise.all([
+      this.prisma.saleOrder.groupBy({
+        by: ['status'],
+        where: { tenantId, createdAt: { gte: from, lte: to } },
+        _count: { _all: true },
+        _sum: { totalAmount: true },
+      }),
+      this.prisma.motorcycleUnit.groupBy({
+        by: ['status'],
+        where: { tenantId },
+        _count: { _all: true },
+      }),
+      this.prisma.$queryRaw<{ brand: string; units: number; revenue: number }[]>`
+        SELECT mu.brand AS brand, COUNT(*)::int AS units,
+               COALESCE(SUM(so."totalAmount"), 0)::float AS revenue
+        FROM sale_orders so
+        JOIN motorcycle_units mu ON mu.id = so."motorcycleUnitId"
+        WHERE so."tenantId" = ${tenantId} AND so.status = 'CONFIRMED'
+          AND so."createdAt" BETWEEN ${from} AND ${to}
+        GROUP BY mu.brand ORDER BY units DESC, revenue DESC LIMIT 5`,
+      this.prisma.$queryRaw<{ month: string; count: number; revenue: number }[]>`
+        SELECT to_char(date_trunc('month', "createdAt"), 'YYYY-MM') AS month,
+               COUNT(*)::int AS count,
+               COALESCE(SUM("totalAmount"), 0)::float AS revenue
+        FROM sale_orders
+        WHERE "tenantId" = ${tenantId} AND status = 'CONFIRMED'
+          AND "createdAt" >= ${from}
+        GROUP BY 1 ORDER BY 1`,
+    ]);
+
+    const stat = (s: string) => byStatus.find((r) => r.status === s);
+    const confirmed = stat('CONFIRMED');
+    const confirmedCount = confirmed?._count._all ?? 0;
+    const confirmedRevenue = Number(confirmed?._sum.totalAmount ?? 0);
+    const invStat = (s: string) => inventory.find((r) => r.status === s)?._count._all ?? 0;
+
+    return {
+      period: { from: from.toISOString(), to: to.toISOString() },
+      sales: {
+        confirmedCount,
+        confirmedRevenue,
+        draftCount: stat('DRAFT')?._count._all ?? 0,
+        cancelledCount: stat('CANCELLED')?._count._all ?? 0,
+        avgTicket: confirmedCount > 0 ? Math.round(confirmedRevenue / confirmedCount) : 0,
+      },
+      inventory: {
+        available: invStat('AVAILABLE'),
+        reserved: invStat('RESERVED'),
+        sold: invStat('SOLD'),
+      },
+      topBrands: topBrands.map((b) => ({
+        brand: b.brand,
+        units: Number(b.units),
+        revenue: Number(b.revenue),
+      })),
+      monthlyTrend: monthlyTrend.map((m) => ({
+        month: m.month,
+        count: Number(m.count),
+        revenue: Number(m.revenue),
+      })),
+    };
   }
 }

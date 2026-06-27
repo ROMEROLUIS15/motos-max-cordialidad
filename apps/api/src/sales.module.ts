@@ -25,6 +25,7 @@ import {
   SearchSaleOrdersUseCase,
   GetSaleOrderDetailUseCase,
   GetSaleContractUrlUseCase,
+  GetSalesSummaryUseCase,
 } from './application/use-cases/sales/sale-orders.use-case';
 
 import { MotorcycleUnitsController } from './presentation/http/controllers/motorcycle-units.controller';
@@ -48,6 +49,7 @@ import { SaleOrdersController } from './presentation/http/controllers/sale-order
     SearchSaleOrdersUseCase,
     GetSaleOrderDetailUseCase,
     GetSaleContractUrlUseCase,
+    GetSalesSummaryUseCase,
   ],
   exports: [MOTORCYCLE_UNIT_REPOSITORY, SALE_ORDER_REPOSITORY],
 })
