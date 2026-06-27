@@ -50,6 +50,10 @@ services:
       API_BASE_URL: ${AGENTS_API_BASE_URL:-http://host.docker.internal:3001}
       REDIS_URL: redis://redis:6379
       TZ: America/Bogota
+      # The shared .env.local sets PORT=3001 (the NestJS API's port); override it
+      # so uvicorn binds the port this service actually exposes. Render injects
+      # its own $PORT, so this only matters for local compose.
+      PORT: 8000
     ports:
       - '8000:8000'
     depends_on:
