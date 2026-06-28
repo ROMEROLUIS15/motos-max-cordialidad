@@ -154,7 +154,7 @@ export default function WorkOrdersPage() {
           <div className="relative w-full sm:w-64">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <input
-              type="search"
+              type="text"
               aria-label="Buscar por cliente, moto o N.º de orden"
               placeholder="Buscar cliente, moto o N.º…"
               value={searchInput}
