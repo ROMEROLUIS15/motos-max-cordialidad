@@ -112,14 +112,14 @@ function Brand({ compact }: { compact?: boolean }) {
           onError={() => setLogoError(true)}
         />
       )}
-      <span className="flex flex-col leading-tight">
-        <span className="whitespace-nowrap text-[13px] font-semibold tracking-tight sm:text-[14px]">
-          Motos Max Cordialidad
-        </span>
-        {!compact && (
+      {!compact && (
+        <span className="flex min-w-0 flex-col leading-tight">
+          <span className="truncate text-[14px] font-semibold tracking-tight">
+            Motos Max Cordialidad
+          </span>
           <span className="mt-0.5 text-[11px] text-muted-foreground">Panel del taller</span>
-        )}
-      </span>
+        </span>
+      )}
     </Link>
   );
 }
