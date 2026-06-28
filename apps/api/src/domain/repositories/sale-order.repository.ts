@@ -33,8 +33,28 @@ export interface SalesSummary {
   monthlyTrend: { month: string; count: number; revenue: number }[];
 }
 
+export interface SaleOrderDetailView {
+  id: string;
+  orderNumber: string;
+  status: string;
+  salePrice: number;
+  discount: number;
+  totalAmount: number;
+  paymentMethod: string;
+  downPayment: number;
+  financingMonths: number | null;
+  contractR2Key: string | null;
+  notes: string | null;
+  createdAt: Date;
+  customerId: string;
+  customerName: string;
+  motorcycleUnitId: string;
+  motorcycleLabel: string;
+}
+
 export interface SaleOrderRepository {
   findById(id: string, tenantId: string): Promise<SaleOrder | null>;
+  findDetailById(id: string, tenantId: string): Promise<SaleOrderDetailView | null>;
   findActiveByUnit(motorcycleUnitId: string, tenantId: string): Promise<SaleOrder | null>;
   search(
     filters: SaleOrderSearchFilters,

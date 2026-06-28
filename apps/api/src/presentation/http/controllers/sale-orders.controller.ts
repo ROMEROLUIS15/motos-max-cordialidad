@@ -14,6 +14,11 @@ import {
   GetSalesSummaryUseCase,
   CreateSaleOrderInput,
 } from '../../../application/use-cases/sales/sale-orders.use-case';
+import {
+  RecordSalePaymentUseCase,
+  ListSalePaymentsUseCase,
+} from '../../../application/use-cases/sales/sale-payments.use-case';
+import { SalePaymentMethod } from '../../../domain/entities/sale-payment.entity';
 
 @Controller('sale-orders')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -26,6 +31,8 @@ export class SaleOrdersController {
     private readonly getDetail: GetSaleOrderDetailUseCase,
     private readonly contractUrl: GetSaleContractUrlUseCase,
     private readonly salesSummary: GetSalesSummaryUseCase,
+    private readonly recordPayment: RecordSalePaymentUseCase,
+    private readonly listPayments: ListSalePaymentsUseCase,
   ) {}
 
   @Get()
@@ -85,6 +92,38 @@ export class SaleOrdersController {
   @RequirePermission('sales:READ')
   async contract(@Param('id') id: string, @CurrentUser() user: JWTPayload) {
     return this.contractUrl.execute(id, user.tenantId);
+  }
+
+  @Get(':id/payments')
+  @RequirePermission('sales:READ')
+  async payments(@Param('id') id: string, @CurrentUser() user: JWTPayload) {
+    return this.listPayments.execute(id, user.tenantId);
+  }
+
+  @Post(':id/payments')
+  @RequirePermission('sales:UPDATE')
+  async addPayment(
+    @Param('id') id: string,
+    @CurrentUser() user: JWTPayload,
+    @Body()
+    body: {
+      amount: number;
+      method: SalePaymentMethod;
+      reference?: string | null;
+      notes?: string | null;
+      paidAt?: string;
+    },
+  ) {
+    return this.recordPayment.execute({
+      tenantId: user.tenantId,
+      saleOrderId: id,
+      createdBy: user.sub,
+      amount: body.amount,
+      method: body.method,
+      reference: body.reference,
+      notes: body.notes,
+      paidAt: body.paidAt ? new Date(body.paidAt) : undefined,
+    });
   }
 
   @Post(':id/confirm')

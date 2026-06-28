@@ -5,6 +5,7 @@ import {
   SaleOrderRepository,
   SaleOrderSearchFilters,
   SaleOrderListItem,
+  SaleOrderDetailView,
   SalesSummary,
 } from '../../../../domain/repositories/sale-order.repository';
 import {
@@ -69,6 +70,35 @@ export class SaleOrderPrismaRepository implements SaleOrderRepository {
   async findById(id: string, tenantId: string): Promise<SaleOrder | null> {
     const r = await this.prisma.saleOrder.findFirst({ where: { id, tenantId } });
     return r ? this.toDomain(r) : null;
+  }
+
+  async findDetailById(id: string, tenantId: string): Promise<SaleOrderDetailView | null> {
+    const r = await this.prisma.saleOrder.findFirst({
+      where: { id, tenantId },
+      include: {
+        customer: { select: { fullName: true } },
+        motorcycleUnit: { select: { brand: true, model: true, vin: true } },
+      },
+    });
+    if (!r) return null;
+    return {
+      id: r.id,
+      orderNumber: r.orderNumber,
+      status: r.status,
+      salePrice: Number(r.salePrice),
+      discount: Number(r.discount),
+      totalAmount: Number(r.totalAmount),
+      paymentMethod: r.paymentMethod,
+      downPayment: Number(r.downPayment),
+      financingMonths: r.financingMonths,
+      contractR2Key: r.contractR2Key,
+      notes: r.notes,
+      createdAt: r.createdAt,
+      customerId: r.customerId,
+      customerName: r.customer.fullName,
+      motorcycleUnitId: r.motorcycleUnitId,
+      motorcycleLabel: `${r.motorcycleUnit.brand} ${r.motorcycleUnit.model} · ${r.motorcycleUnit.vin}`,
+    };
   }
 
   async findActiveByUnit(motorcycleUnitId: string, tenantId: string): Promise<SaleOrder | null> {

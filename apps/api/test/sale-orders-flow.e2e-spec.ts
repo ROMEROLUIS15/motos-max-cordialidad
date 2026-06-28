@@ -146,6 +146,27 @@ describeIfDb('Sale orders flow (e2e)', () => {
     expect(unit.body.status).toBe('SOLD');
   });
 
+  it('registra un pago y calcula el saldo', async () => {
+    await http
+      .post(`/api/sale-orders/${orderId}/payments`)
+      .set(auth())
+      .send({ amount: 5000000, method: 'CASH' })
+      .expect(201);
+    const res = await http.get(`/api/sale-orders/${orderId}/payments`).set(auth()).expect(200);
+    expect(res.body.total).toBe(9500000);
+    expect(res.body.paid).toBe(5000000);
+    expect(res.body.balance).toBe(4500000);
+    expect(res.body.payments).toHaveLength(1);
+  });
+
+  it('rechaza un pago que excede el saldo (422)', async () => {
+    await http
+      .post(`/api/sale-orders/${orderId}/payments`)
+      .set(auth())
+      .send({ amount: 9000000, method: 'CASH' })
+      .expect(422);
+  });
+
   it('expone el resumen de ventas con la venta confirmada', async () => {
     const res = await http.get('/api/sale-orders/summary').set(auth()).expect(200);
     expect(res.body.sales.confirmedCount).toBeGreaterThanOrEqual(1);

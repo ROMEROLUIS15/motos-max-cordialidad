@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { Plus, Receipt, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { apiGet, apiSend } from '@/lib/api';
@@ -192,8 +193,10 @@ export default function SaleOrdersPage() {
                     key={o.id}
                     className="border-b border-border/60 last:border-0 hover:bg-secondary/40"
                   >
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                      {o.orderNumber}
+                    <td className="px-4 py-3 font-mono text-xs">
+                      <Link href={`/sales/orders/${o.id}`} className="text-primary hover:underline">
+                        {o.orderNumber}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 font-medium text-foreground">{o.customerName}</td>
                     <td className="px-4 py-3 text-muted-foreground">{o.motorcycleLabel}</td>
