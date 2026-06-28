@@ -18,7 +18,7 @@ interface VehicleHistory {
     plate: string;
     brand: string;
     model: string;
-    year: number;
+    year: number | null;
     color: string;
     engineNumber: string;
     currentOdometer: number | null;
@@ -96,7 +96,8 @@ export default function VehicleDetailPage() {
         <div className="flex flex-wrap items-baseline gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">{vehicle.plate}</h1>
           <span className="text-muted-foreground">
-            {vehicle.brand} {vehicle.model} · {vehicle.year}
+            {vehicle.brand} {vehicle.model}
+            {vehicle.year ? ` · ${vehicle.year}` : ''}
           </span>
         </div>
       </div>
@@ -112,7 +113,7 @@ export default function VehicleDetailPage() {
               <Detail label="Marca / Modelo">
                 {vehicle.brand} {vehicle.model}
               </Detail>
-              <Detail label="Año">{vehicle.year}</Detail>
+              <Detail label="Año">{vehicle.year ?? '—'}</Detail>
               <Detail label="Color">{vehicle.color}</Detail>
               <Detail label="Motor">{vehicle.engineNumber}</Detail>
               {vehicle.currentOdometer != null && (

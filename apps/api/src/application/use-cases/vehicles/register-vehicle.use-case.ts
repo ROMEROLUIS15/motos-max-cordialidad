@@ -1,15 +1,21 @@
 import { Inject, Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Vehicle } from '../../../domain/entities/vehicle.entity';
-import { VehicleRepository, VEHICLE_REPOSITORY } from '../../../domain/repositories/vehicle.repository';
-import { CustomerRepository, CUSTOMER_REPOSITORY } from '../../../domain/repositories/customer.repository';
+import {
+  VehicleRepository,
+  VEHICLE_REPOSITORY,
+} from '../../../domain/repositories/vehicle.repository';
+import {
+  CustomerRepository,
+  CUSTOMER_REPOSITORY,
+} from '../../../domain/repositories/customer.repository';
 
 export interface RegisterVehicleInput {
   tenantId: string;
   plate: string;
   brand: string;
   model: string;
-  year: number;
+  year?: number | null;
   color: string;
   engineNumber: string;
   currentOwnerId: string;
@@ -36,11 +42,23 @@ export class RegisterVehicleUseCase {
 
     const now = new Date();
     const vehicle = new Vehicle(
-      randomUUID(), input.tenantId, input.plate, input.brand, input.model,
-      input.year, input.color, input.engineNumber,
-      input.chassisNumber ?? null, input.displacement ?? null,
-      input.fuelType ?? null, input.currentOdometer ?? null,
-      input.observations ?? null, input.currentOwnerId, null, now, now,
+      randomUUID(),
+      input.tenantId,
+      input.plate,
+      input.brand,
+      input.model,
+      input.year ?? null,
+      input.color,
+      input.engineNumber,
+      input.chassisNumber ?? null,
+      input.displacement ?? null,
+      input.fuelType ?? null,
+      input.currentOdometer ?? null,
+      input.observations ?? null,
+      input.currentOwnerId,
+      null,
+      now,
+      now,
     );
     await this.vehicleRepo.create(vehicle);
     return vehicle;
