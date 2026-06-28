@@ -111,8 +111,25 @@ export interface StatusHistoryEntry {
   changedAt: string;
 }
 
+export interface WorkOrderCustomerSummary {
+  id: string;
+  fullName: string;
+  documentNumber: string;
+  phone: string;
+}
+
+export interface WorkOrderVehicleSummary {
+  id: string;
+  plate: string;
+  brand: string;
+  model: string;
+  year: number | null;
+}
+
 export interface WorkOrderDetail {
   workOrder: WorkOrder;
+  customer: WorkOrderCustomerSummary | null;
+  vehicle: WorkOrderVehicleSummary | null;
   lines: WorkOrderLine[];
   parts: WorkOrderPart[];
   statusHistory: StatusHistoryEntry[];

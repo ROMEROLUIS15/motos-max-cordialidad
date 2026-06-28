@@ -79,6 +79,8 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
         lines: { orderBy: { createdAt: 'asc' } },
         parts: { include: { part: true }, orderBy: { createdAt: 'asc' } },
         statusHistory: { orderBy: { changedAt: 'asc' } },
+        customer: { select: { id: true, fullName: true, documentNumber: true, phone: true } },
+        vehicle: { select: { id: true, plate: true, brand: true, model: true, year: true } },
       },
     });
     if (!r) return null;
@@ -115,6 +117,23 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
 
     return {
       workOrder: this.toDomain(r),
+      customer: r.customer
+        ? {
+            id: r.customer.id,
+            fullName: r.customer.fullName,
+            documentNumber: r.customer.documentNumber,
+            phone: r.customer.phone,
+          }
+        : null,
+      vehicle: r.vehicle
+        ? {
+            id: r.vehicle.id,
+            plate: r.vehicle.plate,
+            brand: r.vehicle.brand,
+            model: r.vehicle.model,
+            year: r.vehicle.year,
+          }
+        : null,
       lines,
       parts,
       statusHistory,
