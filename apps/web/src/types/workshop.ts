@@ -64,6 +64,24 @@ export interface WorkOrder {
   createdAt: string;
 }
 
+/** Fila del listado de órdenes: incluye el resumen de cliente y moto para mostrar/buscar. */
+export interface WorkOrderListItem {
+  id: string;
+  orderNumber: string;
+  branchId: string;
+  vehicleId: string;
+  customerId: string;
+  technicianId: string;
+  serviceType: string;
+  status: WorkOrderStatus;
+  promisedDeliveryAt: string;
+  createdAt: string;
+  customerName: string;
+  vehiclePlate: string;
+  vehicleBrand: string;
+  vehicleModel: string;
+}
+
 export interface WorkOrderLine {
   id: string;
   workOrderId: string;

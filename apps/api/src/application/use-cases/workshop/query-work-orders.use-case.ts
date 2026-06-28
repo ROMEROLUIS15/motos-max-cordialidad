@@ -4,15 +4,13 @@ import {
   WORK_ORDER_REPOSITORY,
   WorkOrderFilters,
   WorkOrderWithDetails,
+  WorkOrderListItem,
 } from '../../../domain/repositories/work-order.repository';
-import { WorkOrder } from '../../../domain/entities/work-order.entity';
 import { Pagination, PaginatedResult } from '../../../domain/shared/pagination';
 
 @Injectable()
 export class GetWorkOrderDetailUseCase {
-  constructor(
-    @Inject(WORK_ORDER_REPOSITORY) private readonly workOrderRepo: WorkOrderRepository,
-  ) {}
+  constructor(@Inject(WORK_ORDER_REPOSITORY) private readonly workOrderRepo: WorkOrderRepository) {}
 
   async execute(id: string, tenantId: string): Promise<WorkOrderWithDetails> {
     const details = await this.workOrderRepo.findByIdWithDetails(id, tenantId);
@@ -32,17 +30,16 @@ export interface ListWorkOrdersInput extends WorkOrderFilters {
 
 @Injectable()
 export class ListWorkOrdersUseCase {
-  constructor(
-    @Inject(WORK_ORDER_REPOSITORY) private readonly workOrderRepo: WorkOrderRepository,
-  ) {}
+  constructor(@Inject(WORK_ORDER_REPOSITORY) private readonly workOrderRepo: WorkOrderRepository) {}
 
-  async execute(input: ListWorkOrdersInput): Promise<PaginatedResult<WorkOrder>> {
+  async execute(input: ListWorkOrdersInput): Promise<PaginatedResult<WorkOrderListItem>> {
     const pagination: Pagination = { page: input.page ?? 1, pageSize: input.pageSize ?? 20 };
     const filters: WorkOrderFilters = {
       status: input.status,
       technicianId: input.technicianId,
       from: input.from,
       to: input.to,
+      search: input.search,
     };
 
     if (input.restrictToTechnicianId) {

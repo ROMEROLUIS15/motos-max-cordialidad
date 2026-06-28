@@ -11,13 +11,15 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCw,
+  Search,
+  X,
 } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import type { PaginatedResponse } from '@/types/api';
 import {
   WORK_ORDER_STATUSES,
   STATUS_LABELS,
-  type WorkOrder,
+  type WorkOrderListItem,
   type WorkOrderStatus,
 } from '@/types/workshop';
 import { cn } from '@/lib/utils';
@@ -59,14 +61,25 @@ function humanDeadline(s: string): string {
 
 export default function WorkOrdersPage() {
   const router = useRouter();
-  const [orders, setOrders] = useState<WorkOrder[]>([]);
+  const [orders, setOrders] = useState<WorkOrderListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<WorkOrderStatus | ''>('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Debounce de la búsqueda: espera a que el usuario deje de teclear.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -76,7 +89,8 @@ export default function WorkOrdersPage() {
       if (status) params.set('status', status);
       if (from) params.set('from', from);
       if (to) params.set('to', to);
-      const data = await apiGet<PaginatedResponse<WorkOrder>>(`/api/work-orders?${params}`);
+      if (search) params.set('search', search);
+      const data = await apiGet<PaginatedResponse<WorkOrderListItem>>(`/api/work-orders?${params}`);
       setOrders(data.items);
       setTotal(data.total);
     } catch (e) {
@@ -84,7 +98,7 @@ export default function WorkOrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, status, from, to]);
+  }, [page, status, from, to, search]);
 
   useEffect(() => {
     void load();
@@ -137,6 +151,27 @@ export default function WorkOrdersPage() {
         </div>
 
         <div className="flex flex-col gap-2 pb-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              aria-label="Buscar por cliente, moto o N.º de orden"
+              placeholder="Buscar cliente, moto o N.º…"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className={cn(fieldBase, 'h-8 w-full pl-8 pr-7 text-xs')}
+            />
+            {searchInput && (
+              <button
+                type="button"
+                aria-label="Limpiar búsqueda"
+                onClick={() => setSearchInput('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
           <input
             type="date"
             aria-label="Desde"
@@ -177,15 +212,23 @@ export default function WorkOrdersPage() {
       {/* Tabla */}
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="rtable w-full min-w-[640px] text-sm">
+          <table className="rtable w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-border text-left">
-                {['N.º Orden', 'Servicio', 'Estado', 'Entrega prometida', ''].map((h, i) => (
+                {[
+                  'N.º Orden',
+                  'Cliente',
+                  'Moto',
+                  'Servicio',
+                  'Estado',
+                  'Entrega prometida',
+                  '',
+                ].map((h, i) => (
                   <th
                     key={h || i}
                     className={cn(
                       'px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground',
-                      i === 4 && 'text-right',
+                      i === 6 && 'text-right',
                     )}
                   >
                     {h}
@@ -197,11 +240,11 @@ export default function WorkOrdersPage() {
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i} className="border-b border-border/60">
-                    {Array.from({ length: 5 }).map((__, j) => (
+                    {Array.from({ length: 7 }).map((__, j) => (
                       <td key={j} className="px-4 py-3.5">
                         <Skeleton
                           className="h-4"
-                          style={{ width: `${[40, 70, 50, 80, 30][j]}%` }}
+                          style={{ width: `${[40, 70, 60, 55, 50, 80, 30][j]}%` }}
                         />
                       </td>
                     ))}
@@ -209,7 +252,7 @@ export default function WorkOrdersPage() {
                 ))
               ) : error ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-14">
+                  <td colSpan={7} className="px-4 py-14">
                     <div className="mx-auto flex max-w-sm flex-col items-center gap-3 text-center">
                       <span className="flex h-11 w-11 items-center justify-center rounded-full bg-destructive/10 text-destructive">
                         <AlertTriangle className="h-5 w-5" />
@@ -224,22 +267,24 @@ export default function WorkOrdersPage() {
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-14">
+                  <td colSpan={7} className="px-4 py-14">
                     <div className="mx-auto flex max-w-sm flex-col items-center gap-3 text-center">
                       <span className="flex h-11 w-11 items-center justify-center rounded-full bg-secondary text-muted-foreground">
                         <ClipboardList className="h-5 w-5" />
                       </span>
                       <p className="text-sm font-medium">
-                        {status || hasDateFilter
+                        {status || hasDateFilter || search
                           ? 'Sin órdenes para este filtro'
                           : 'Aún no hay órdenes'}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {status || hasDateFilter
-                          ? 'Prueba con otro estado o limpia las fechas.'
-                          : 'Crea la primera desde una recepción.'}
+                        {search
+                          ? `Ninguna orden coincide con “${search}”.`
+                          : status || hasDateFilter
+                            ? 'Prueba con otro estado o limpia las fechas.'
+                            : 'Crea la primera desde una recepción.'}
                       </p>
-                      {!status && !hasDateFilter && (
+                      {!status && !hasDateFilter && !search && (
                         <Link
                           href="/receptions/new"
                           className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
@@ -261,6 +306,25 @@ export default function WorkOrdersPage() {
                     >
                       <td data-label="N.º Orden" className="px-4 py-3 font-medium text-primary">
                         {o.orderNumber}
+                      </td>
+                      <td data-label="Cliente" className="px-4 py-3 text-foreground/90">
+                        {o.customerName || '—'}
+                      </td>
+                      <td data-label="Moto" className="px-4 py-3 text-muted-foreground">
+                        {o.vehiclePlate || o.vehicleBrand ? (
+                          <span className="inline-flex flex-col leading-tight">
+                            <span className="font-medium text-foreground/90">
+                              {o.vehiclePlate || '—'}
+                            </span>
+                            {(o.vehicleBrand || o.vehicleModel) && (
+                              <span className="text-xs text-muted-foreground">
+                                {`${o.vehicleBrand} ${o.vehicleModel}`.trim()}
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
                       </td>
                       <td data-label="Servicio" className="px-4 py-3 text-muted-foreground">
                         {o.serviceType}

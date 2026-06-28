@@ -82,6 +82,7 @@ export class WorkOrdersController {
     @Query('mine') mine?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
@@ -93,6 +94,7 @@ export class WorkOrdersController {
       restrictToTechnicianId: mine === 'true' ? user.sub : undefined,
       from: from ? new Date(from) : undefined,
       to: to ? new Date(to) : undefined,
+      search: search?.trim() || undefined,
       page: page ? parseInt(page, 10) : 1,
       pageSize: pageSize ? parseInt(pageSize, 10) : 20,
     });
