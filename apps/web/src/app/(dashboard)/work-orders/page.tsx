@@ -112,7 +112,7 @@ export default function WorkOrdersPage() {
 
       {/* Tabs de estado (estilo GitHub) + filtro de fechas */}
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border">
-        <div className="flex w-full flex-wrap items-center gap-1.5 pb-2 sm:w-auto">
+        <div className="flex w-full flex-wrap items-center justify-center gap-1.5 pb-2 sm:w-auto sm:justify-start">
           {STATUS_TABS.map((t) => {
             const active = status === t.value;
             return (
