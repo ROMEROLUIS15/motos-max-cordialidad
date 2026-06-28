@@ -74,9 +74,25 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
 
 const ALL_ITEMS = GROUPS.flatMap((g) => g.items);
 
+// Títulos para rutas que no tienen una entrada propia en el menú (sub-flujos).
+const EXTRA_TITLES: { prefix: string; label: string }[] = [
+  { prefix: '/receptions', label: 'Nueva orden' },
+  { prefix: '/vehicles', label: 'Vehículo' },
+];
+
 function isActive(pathname: string, href: string) {
   if (href === '/') return pathname === '/';
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/** Título de la página actual: la entrada de menú más específica que coincida,
+ * o un título de respaldo para sub-flujos sin entrada propia. */
+function pageTitle(pathname: string): string {
+  const match = ALL_ITEMS.filter((i) => isActive(pathname, i.href)).sort(
+    (a, b) => b.href.length - a.href.length,
+  )[0];
+  if (match) return match.label;
+  return EXTRA_TITLES.find((e) => pathname.startsWith(e.prefix))?.label ?? 'Panel';
 }
 
 function Brand({ compact }: { compact?: boolean }) {
@@ -188,7 +204,7 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const pathname = usePathname();
-  const current = ALL_ITEMS.find((i) => isActive(pathname, i.href));
+  const title = pageTitle(pathname);
 
   return (
     <div className="relative z-10 min-h-screen">
@@ -233,7 +249,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <Menu />
           </Button>
           <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground lg:flex-none lg:font-medium">
-            {current?.label ?? 'Dashboard'}
+            {title}
           </span>
 
           <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
