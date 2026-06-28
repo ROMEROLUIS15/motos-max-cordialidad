@@ -232,10 +232,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           >
             <Menu />
           </Button>
-          <div className="min-w-0 lg:hidden">
-            <Brand compact />
-          </div>
-          <span className="hidden text-sm font-medium text-foreground lg:block">
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground lg:flex-none lg:font-medium">
             {current?.label ?? 'Dashboard'}
           </span>
 
