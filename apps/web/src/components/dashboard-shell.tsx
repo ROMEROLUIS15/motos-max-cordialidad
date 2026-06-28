@@ -178,7 +178,6 @@ function SidebarInner({ onNavigate }: { onNavigate?: () => void }) {
           <span className="text-xs text-muted-foreground">Operativo</span>
         </div>
         <div className="flex items-center">
-          <ThemeToggle />
           <LogoutButton />
         </div>
       </div>
@@ -240,7 +239,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             {current?.label ?? 'Dashboard'}
           </span>
 
-          <div className="ml-auto flex items-center gap-3 sm:gap-4">
+          <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
             <button
               type="button"
               className="hidden items-center gap-2 rounded-lg border border-border bg-secondary/40 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary md:flex"
