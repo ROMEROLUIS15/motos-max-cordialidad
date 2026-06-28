@@ -210,7 +210,7 @@ export default function NewOrderPage() {
     (newCustomer && cForm.fullName && cForm.documentNumber && cForm.phone && cForm.city);
   const vehicleReady =
     (!!vehicleId && !newVehicle) ||
-    (newVehicle && vForm.brand && vForm.model && vForm.year && vForm.plate && vForm.color);
+    (newVehicle && vForm.brand && vForm.model && vForm.plate && vForm.color);
 
   const save = async () => {
     if (!customerReady) {
@@ -218,7 +218,9 @@ export default function NewOrderPage() {
       return;
     }
     if (!vehicleReady) {
-      setError('Completa la moto: marca, modelo, año, placa y color (o elige una existente).');
+      setError(
+        'Completa la moto: marca, modelo, placa y color (o elige una existente). El año es opcional.',
+      );
       return;
     }
     if (!technicianId) {
@@ -249,7 +251,7 @@ export default function NewOrderPage() {
           plate: vForm.plate.trim().toUpperCase(),
           brand: vForm.brand.trim(),
           model: vForm.model.trim(),
-          year: Number(vForm.year),
+          year: vForm.year ? Number(vForm.year) : undefined,
           color: vForm.color.trim(),
           engineNumber: vForm.engineNumber.trim(),
           displacement: vForm.displacement ? Number(vForm.displacement) : undefined,
@@ -455,12 +457,22 @@ export default function NewOrderPage() {
                   value={vForm.model}
                   onChange={(e) => setVForm((f) => ({ ...f, model: e.target.value }))}
                 />
-                <Input
-                  placeholder="Año"
-                  type="number"
+                <select
+                  aria-label="Año (opcional)"
                   value={vForm.year}
                   onChange={(e) => setVForm((f) => ({ ...f, year: e.target.value }))}
-                />
+                  className={cn(fieldBase, 'cursor-pointer')}
+                >
+                  <option value="">Año (opcional)</option>
+                  {Array.from(
+                    { length: new Date().getFullYear() + 1 - 1960 + 1 },
+                    (_, i) => new Date().getFullYear() + 1 - i,
+                  ).map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
                 <Input
                   placeholder="Placa"
                   value={vForm.plate}

@@ -220,7 +220,7 @@ model Vehicle {
   plate           String    @db.VarChar(20)
   brand           String    @db.VarChar(100)
   model           String    @db.VarChar(100)
-  year            Int       @db.SmallInt
+  year            Int?      @db.SmallInt
   color           String    @db.VarChar(50)
   engineNumber    String    @db.VarChar(100)
   chassisNumber   String?   @db.VarChar(100)

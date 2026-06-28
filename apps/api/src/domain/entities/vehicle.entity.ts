@@ -5,7 +5,7 @@ export class Vehicle {
     public plate: string,
     public brand: string,
     public model: string,
-    public year: number,
+    public year: number | null,
     public color: string,
     public engineNumber: string,
     public chassisNumber: string | null,
@@ -19,9 +19,11 @@ export class Vehicle {
     public updatedAt: Date,
   ) {
     if (!plate || plate.trim().length === 0) throw new Error('plate cannot be empty');
-    const currentYear = new Date().getFullYear();
-    if (year < 1950 || year > currentYear + 1) {
-      throw new Error(`year must be between 1950 and ${currentYear + 1}`);
+    if (year !== null) {
+      const currentYear = new Date().getFullYear();
+      if (year < 1950 || year > currentYear + 1) {
+        throw new Error(`year must be between 1950 and ${currentYear + 1}`);
+      }
     }
   }
 

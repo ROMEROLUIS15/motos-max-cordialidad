@@ -34,7 +34,7 @@ interface CustomerProfile {
     plate: string;
     brand: string;
     model: string;
-    year: number;
+    year: number | null;
     color: string;
   }>;
   recentWorkOrders: Array<{
@@ -140,7 +140,8 @@ export default function CustomerDetailPage() {
                       <Bike className="h-4 w-4 text-muted-foreground" /> {v.plate}
                     </span>
                     <span className="text-muted-foreground">
-                      {v.brand} {v.model} · {v.year}
+                      {v.brand} {v.model}
+                      {v.year ? ` · ${v.year}` : ''}
                     </span>
                   </li>
                 ))}

@@ -28,7 +28,9 @@ export class VehiclePrismaRepository implements VehicleRepository {
   async hasActiveWorkOrder(vehicleId: string, tenantId: string): Promise<boolean> {
     const count = await this.prisma.workOrder.count({
       where: {
-        vehicleId, tenantId, deletedAt: null,
+        vehicleId,
+        tenantId,
+        deletedAt: null,
         status: { in: ['PENDING', 'IN_PROGRESS', 'WAITING_PARTS'] },
       },
     });
@@ -39,12 +41,20 @@ export class VehiclePrismaRepository implements VehicleRepository {
     await this.prisma.vehicle.update({
       where: { id: vehicle.id },
       data: {
-        plate: vehicle.plate, brand: vehicle.brand, model: vehicle.model,
-        year: vehicle.year, color: vehicle.color, engineNumber: vehicle.engineNumber,
-        chassisNumber: vehicle.chassisNumber, displacement: vehicle.displacement,
-        fuelType: vehicle.fuelType, currentOdometer: vehicle.currentOdometer,
-        observations: vehicle.observations, currentOwnerId: vehicle.currentOwnerId,
-        deletedAt: vehicle.deletedAt, updatedAt: vehicle.updatedAt,
+        plate: vehicle.plate,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        year: vehicle.year,
+        color: vehicle.color,
+        engineNumber: vehicle.engineNumber,
+        chassisNumber: vehicle.chassisNumber,
+        displacement: vehicle.displacement,
+        fuelType: vehicle.fuelType,
+        currentOdometer: vehicle.currentOdometer,
+        observations: vehicle.observations,
+        currentOwnerId: vehicle.currentOwnerId,
+        deletedAt: vehicle.deletedAt,
+        updatedAt: vehicle.updatedAt,
       },
     });
   }
@@ -52,29 +62,64 @@ export class VehiclePrismaRepository implements VehicleRepository {
   async create(vehicle: Vehicle): Promise<void> {
     await this.prisma.vehicle.create({
       data: {
-        id: vehicle.id, tenantId: vehicle.tenantId, plate: vehicle.plate,
-        brand: vehicle.brand, model: vehicle.model, year: vehicle.year,
-        color: vehicle.color, engineNumber: vehicle.engineNumber,
-        chassisNumber: vehicle.chassisNumber, displacement: vehicle.displacement,
-        fuelType: vehicle.fuelType, currentOdometer: vehicle.currentOdometer,
-        observations: vehicle.observations, currentOwnerId: vehicle.currentOwnerId,
-        deletedAt: vehicle.deletedAt, createdAt: vehicle.createdAt, updatedAt: vehicle.updatedAt,
+        id: vehicle.id,
+        tenantId: vehicle.tenantId,
+        plate: vehicle.plate,
+        brand: vehicle.brand,
+        model: vehicle.model,
+        year: vehicle.year,
+        color: vehicle.color,
+        engineNumber: vehicle.engineNumber,
+        chassisNumber: vehicle.chassisNumber,
+        displacement: vehicle.displacement,
+        fuelType: vehicle.fuelType,
+        currentOdometer: vehicle.currentOdometer,
+        observations: vehicle.observations,
+        currentOwnerId: vehicle.currentOwnerId,
+        deletedAt: vehicle.deletedAt,
+        createdAt: vehicle.createdAt,
+        updatedAt: vehicle.updatedAt,
       },
     });
   }
 
   private toDomain(r: {
-    id: string; tenantId: string; plate: string; brand: string; model: string;
-    year: number; color: string; engineNumber: string; chassisNumber: string | null;
-    displacement: number | null; fuelType: string | null; currentOdometer: number | null;
-    observations: string | null; currentOwnerId: string;
-    deletedAt: Date | null; createdAt: Date; updatedAt: Date;
+    id: string;
+    tenantId: string;
+    plate: string;
+    brand: string;
+    model: string;
+    year: number | null;
+    color: string;
+    engineNumber: string;
+    chassisNumber: string | null;
+    displacement: number | null;
+    fuelType: string | null;
+    currentOdometer: number | null;
+    observations: string | null;
+    currentOwnerId: string;
+    deletedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
   }): Vehicle {
     return new Vehicle(
-      r.id, r.tenantId, r.plate, r.brand, r.model, r.year, r.color,
-      r.engineNumber, r.chassisNumber, r.displacement, r.fuelType,
-      r.currentOdometer, r.observations, r.currentOwnerId, r.deletedAt,
-      r.createdAt, r.updatedAt,
+      r.id,
+      r.tenantId,
+      r.plate,
+      r.brand,
+      r.model,
+      r.year,
+      r.color,
+      r.engineNumber,
+      r.chassisNumber,
+      r.displacement,
+      r.fuelType,
+      r.currentOdometer,
+      r.observations,
+      r.currentOwnerId,
+      r.deletedAt,
+      r.createdAt,
+      r.updatedAt,
     );
   }
 }
