@@ -9,7 +9,7 @@
      ============================================================ */
   :root,
   .dark {
-    --background: 198 30% 8%; /* dark teal elegante (matiz cian de marca) */
+    --background: 196 40% 9%; /* dark teal elegante (matiz cian de marca, un poco más presente) */
     --foreground: 210 31% 93%; /* #e6edf3 */
 
     --card: 215 21% 11%; /* #161b22 */
@@ -108,7 +108,7 @@
        que toda la plataforma comparta ese tono sin restar contraste. */
     background-image: radial-gradient(
       1200px 700px at 50% -10%,
-      hsl(var(--primary) / 0.12),
+      hsl(var(--primary) / 0.15),
       transparent 70%
     );
     background-attachment: fixed;
