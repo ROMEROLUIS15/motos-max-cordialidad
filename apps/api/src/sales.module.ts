@@ -10,6 +10,8 @@ import { MOTORCYCLE_UNIT_REPOSITORY } from './domain/repositories/motorcycle-uni
 import { MotorcycleUnitPrismaRepository } from './infrastructure/persistence/prisma/repositories/motorcycle-unit.prisma-repository';
 import { SALE_ORDER_REPOSITORY } from './domain/repositories/sale-order.repository';
 import { SaleOrderPrismaRepository } from './infrastructure/persistence/prisma/repositories/sale-order.prisma-repository';
+import { SALE_PAYMENT_REPOSITORY } from './domain/repositories/sale-payment.repository';
+import { SalePaymentPrismaRepository } from './infrastructure/persistence/prisma/repositories/sale-payment.prisma-repository';
 
 import {
   RegisterMotorcycleUnitUseCase,
@@ -27,6 +29,10 @@ import {
   GetSaleContractUrlUseCase,
   GetSalesSummaryUseCase,
 } from './application/use-cases/sales/sale-orders.use-case';
+import {
+  RecordSalePaymentUseCase,
+  ListSalePaymentsUseCase,
+} from './application/use-cases/sales/sale-payments.use-case';
 
 import { MotorcycleUnitsController } from './presentation/http/controllers/motorcycle-units.controller';
 import { SaleOrdersController } from './presentation/http/controllers/sale-orders.controller';
@@ -37,6 +43,7 @@ import { SaleOrdersController } from './presentation/http/controllers/sale-order
   providers: [
     { provide: MOTORCYCLE_UNIT_REPOSITORY, useClass: MotorcycleUnitPrismaRepository },
     { provide: SALE_ORDER_REPOSITORY, useClass: SaleOrderPrismaRepository },
+    { provide: SALE_PAYMENT_REPOSITORY, useClass: SalePaymentPrismaRepository },
     { provide: PDF_GENERATOR_PORT, useClass: ReactPdfAdapter },
     RegisterMotorcycleUnitUseCase,
     UpdateMotorcycleUnitUseCase,
@@ -50,6 +57,8 @@ import { SaleOrdersController } from './presentation/http/controllers/sale-order
     GetSaleOrderDetailUseCase,
     GetSaleContractUrlUseCase,
     GetSalesSummaryUseCase,
+    RecordSalePaymentUseCase,
+    ListSalePaymentsUseCase,
   ],
   exports: [MOTORCYCLE_UNIT_REPOSITORY, SALE_ORDER_REPOSITORY],
 })
