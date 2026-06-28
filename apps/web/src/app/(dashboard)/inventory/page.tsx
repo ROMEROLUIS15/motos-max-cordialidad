@@ -125,7 +125,7 @@ export default function InventoryPage() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="rtable w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 {['SKU', 'Nombre', 'Categoría', 'Disponible', 'Físico', 'Reservado', ''].map(
@@ -172,15 +172,28 @@ export default function InventoryPage() {
                     key={p.id}
                     className="border-b border-border/60 last:border-0 hover:bg-secondary/40"
                   >
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.sku}</td>
-                    <td className="px-4 py-3 font-medium text-foreground">{p.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{p.category}</td>
-                    <td className="px-4 py-3">
+                    <td
+                      data-label="SKU"
+                      className="px-4 py-3 font-mono text-xs text-muted-foreground"
+                    >
+                      {p.sku}
+                    </td>
+                    <td data-label="Nombre" className="px-4 py-3 font-medium text-foreground">
+                      {p.name}
+                    </td>
+                    <td data-label="Categoría" className="px-4 py-3 text-muted-foreground">
+                      {p.category}
+                    </td>
+                    <td data-label="Disponible" className="px-4 py-3">
                       <StockCell part={p} />
                     </td>
-                    <td className="tnum px-4 py-3 text-muted-foreground">{p.stockFisico}</td>
-                    <td className="tnum px-4 py-3 text-muted-foreground">{p.stockReservado}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td data-label="Físico" className="tnum px-4 py-3 text-muted-foreground">
+                      {p.stockFisico}
+                    </td>
+                    <td data-label="Reservado" className="tnum px-4 py-3 text-muted-foreground">
+                      {p.stockReservado}
+                    </td>
+                    <td data-label="" className="px-4 py-3 text-right">
                       <Button variant="outline" size="sm" onClick={() => setMovePart(p)}>
                         Movimiento
                       </Button>

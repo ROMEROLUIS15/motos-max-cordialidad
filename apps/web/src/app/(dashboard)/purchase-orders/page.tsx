@@ -78,7 +78,7 @@ export default function PurchaseOrdersPage() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="rtable w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 {['Fecha', 'Ítems', 'Notas', 'Estado', 'Acciones'].map((h) => (
@@ -116,22 +116,28 @@ export default function PurchaseOrdersPage() {
                     key={d.id}
                     className="border-b border-border/60 last:border-0 align-top hover:bg-secondary/40"
                   >
-                    <td className="tnum whitespace-nowrap px-4 py-2.5 text-muted-foreground">
+                    <td
+                      data-label="Fecha"
+                      className="tnum whitespace-nowrap px-4 py-2.5 text-muted-foreground"
+                    >
                       {new Date(d.createdAt).toLocaleDateString('es-CO')}
                     </td>
-                    <td className="px-4 py-2.5 text-foreground/90">
+                    <td data-label="Ítems" className="px-4 py-2.5 text-foreground/90">
                       {d.items.length} repuesto{d.items.length === 1 ? '' : 's'}
                       <span className="ml-1 text-xs text-muted-foreground">
                         ({d.items.reduce((n, i) => n + i.quantity, 0)} uds)
                       </span>
                     </td>
-                    <td className="max-w-[220px] px-4 py-2.5 text-muted-foreground">
+                    <td
+                      data-label="Notas"
+                      className="max-w-[220px] px-4 py-2.5 text-muted-foreground"
+                    >
                       {d.notes ?? '—'}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td data-label="Estado" className="px-4 py-2.5">
                       <Badge variant={STATUS_VARIANT[d.status] ?? 'secondary'}>{d.status}</Badge>
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td data-label="" className="px-4 py-2.5">
                       {d.status === 'DRAFT' ? (
                         <div className="flex items-center gap-2">
                           <Button

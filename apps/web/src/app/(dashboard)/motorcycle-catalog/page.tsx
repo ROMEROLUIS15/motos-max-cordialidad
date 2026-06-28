@@ -126,7 +126,7 @@ export default function MotorcycleCatalogPage() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px] text-sm">
+          <table className="rtable w-full min-w-[480px] text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 {['Marca', 'Modelo', 'Años', ''].map((h, i) => (
@@ -167,12 +167,16 @@ export default function MotorcycleCatalogPage() {
                     key={m.id}
                     className="border-b border-border/60 last:border-0 hover:bg-secondary/40"
                   >
-                    <td className="px-4 py-3 font-medium text-foreground">{m.brand}</td>
-                    <td className="px-4 py-3 text-foreground/90">{m.model}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td data-label="Marca" className="px-4 py-3 font-medium text-foreground">
+                      {m.brand}
+                    </td>
+                    <td data-label="Modelo" className="px-4 py-3 text-foreground/90">
+                      {m.model}
+                    </td>
+                    <td data-label="Años" className="px-4 py-3 text-muted-foreground">
                       {m.yearFrom}–{m.yearTo ?? 'hoy'}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td data-label="" className="px-4 py-3 text-right">
                       <button
                         disabled={busy}
                         onClick={() => void remove(m.id)}

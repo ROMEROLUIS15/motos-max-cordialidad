@@ -95,7 +95,7 @@ export default function AuditPage() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
+          <table className="rtable w-full min-w-[760px] text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 {['Fecha', 'Acción', 'Entidad', 'ID', 'Usuario', 'IP'].map((h) => (
@@ -133,20 +133,33 @@ export default function AuditPage() {
                     key={e.id}
                     className="border-b border-border/60 last:border-0 hover:bg-secondary/40"
                   >
-                    <td className="tnum whitespace-nowrap px-4 py-2.5 text-muted-foreground">
+                    <td
+                      data-label="Fecha"
+                      className="tnum whitespace-nowrap px-4 py-2.5 text-muted-foreground"
+                    >
                       {new Date(e.createdAt).toLocaleString('es-CO')}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td data-label="Acción" className="px-4 py-2.5">
                       <Badge variant={ACTION_VARIANT[e.action] ?? 'secondary'}>{e.action}</Badge>
                     </td>
-                    <td className="px-4 py-2.5 text-foreground/90">{e.entityType}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground/70">
+                    <td data-label="Entidad" className="px-4 py-2.5 text-foreground/90">
+                      {e.entityType}
+                    </td>
+                    <td
+                      data-label="ID"
+                      className="px-4 py-2.5 font-mono text-xs text-muted-foreground/70"
+                    >
                       {e.entityId}
                     </td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground/70">
+                    <td
+                      data-label="Usuario"
+                      className="px-4 py-2.5 font-mono text-xs text-muted-foreground/70"
+                    >
                       {e.actorUserId ?? '—'}
                     </td>
-                    <td className="tnum px-4 py-2.5 text-muted-foreground">{e.ipAddress ?? '—'}</td>
+                    <td data-label="IP" className="tnum px-4 py-2.5 text-muted-foreground">
+                      {e.ipAddress ?? '—'}
+                    </td>
                   </tr>
                 ))
               )}

@@ -98,7 +98,7 @@ export default function CustomersPage() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-sm">
+          <table className="rtable w-full min-w-[680px] text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 {['Nombre', 'Documento', 'Teléfono', 'Ciudad', 'Visitas', 'Estado'].map((h) => (
@@ -141,14 +141,22 @@ export default function CustomersPage() {
                     onClick={() => router.push(`/customers/${c.id}`)}
                     className="group cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-secondary/50"
                   >
-                    <td className="px-4 py-3 font-medium text-foreground">{c.fullName}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td data-label="Nombre" className="px-4 py-3 font-medium text-foreground">
+                      {c.fullName}
+                    </td>
+                    <td data-label="Documento" className="px-4 py-3 text-muted-foreground">
                       {c.documentType} {c.documentNumber}
                     </td>
-                    <td className="tnum px-4 py-3 text-muted-foreground">{c.phone}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{c.city}</td>
-                    <td className="tnum px-4 py-3 text-muted-foreground">{c.visitCount}</td>
-                    <td className="px-4 py-3">
+                    <td data-label="Teléfono" className="tnum px-4 py-3 text-muted-foreground">
+                      {c.phone}
+                    </td>
+                    <td data-label="Ciudad" className="px-4 py-3 text-muted-foreground">
+                      {c.city}
+                    </td>
+                    <td data-label="Visitas" className="tnum px-4 py-3 text-muted-foreground">
+                      {c.visitCount}
+                    </td>
+                    <td data-label="Estado" className="px-4 py-3">
                       <Badge variant={c.isActive ? 'success' : 'secondary'}>
                         {c.isActive ? 'Activo' : 'Inactivo'}
                       </Badge>

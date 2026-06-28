@@ -79,7 +79,7 @@ export default function ServiceCatalogPage() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-sm">
+          <table className="rtable w-full min-w-[680px] text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 {['Nombre', 'Tipo', 'Horas est.', 'Precio sugerido', 'Estado', ''].map((h, i) => (
@@ -117,18 +117,24 @@ export default function ServiceCatalogPage() {
                     key={it.id}
                     className="border-b border-border/60 last:border-0 hover:bg-secondary/40"
                   >
-                    <td className="px-4 py-3 font-medium text-foreground">{it.name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{it.serviceType}</td>
-                    <td className="tnum px-4 py-3 text-muted-foreground">{it.estimatedHours} h</td>
-                    <td className="tnum px-4 py-3 text-foreground/90">
+                    <td data-label="Nombre" className="px-4 py-3 font-medium text-foreground">
+                      {it.name}
+                    </td>
+                    <td data-label="Tipo" className="px-4 py-3 text-muted-foreground">
+                      {it.serviceType}
+                    </td>
+                    <td data-label="Horas est." className="tnum px-4 py-3 text-muted-foreground">
+                      {it.estimatedHours} h
+                    </td>
+                    <td data-label="Precio" className="tnum px-4 py-3 text-foreground/90">
                       {money(it.suggestedPrice)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td data-label="Estado" className="px-4 py-3">
                       <Badge variant={it.isActive ? 'success' : 'secondary'}>
                         {it.isActive ? 'Activo' : 'Inactivo'}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td data-label="" className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
