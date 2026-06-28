@@ -23,6 +23,7 @@ import {
   Menu,
   X,
   Search,
+  UserCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -65,6 +66,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: 'Sistema',
     items: [
+      { href: '/users', label: 'Usuarios', icon: UserCog },
       { href: '/settings', label: 'Ajustes', icon: Settings },
       { href: '/motorcycle-catalog', label: 'Catálogo motos', icon: List },
       { href: '/audit', label: 'Auditoría', icon: ScrollText },
