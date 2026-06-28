@@ -43,7 +43,10 @@ export class CreateWorkOrderUseCase {
       reception.vehicleId,
       input.tenantId,
     );
-    if (hasActive) throw new VehicleHasActiveOrderException(reception.vehicleId);
+    if (hasActive) {
+      const vehicle = await this.vehicleRepo.findById(reception.vehicleId, input.tenantId);
+      throw new VehicleHasActiveOrderException(vehicle?.plate);
+    }
 
     const year = new Date().getFullYear();
     const orderNumber = await this.workOrderRepo.generateOrderNumber(input.tenantId, year);

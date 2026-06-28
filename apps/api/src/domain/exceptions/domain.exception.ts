@@ -23,9 +23,11 @@ export class WorkOrderInvalidTransitionException extends DomainException {
 }
 
 export class VehicleHasActiveOrderException extends DomainException {
-  constructor(vehicleId: string) {
+  /** `plate` is shown to the user when available; never expose internal IDs. */
+  constructor(plate?: string | null) {
+    const who = plate ? `La moto ${plate}` : 'Esta moto';
     super(
-      `El vehículo ${vehicleId} ya tiene una orden de trabajo activa`,
+      `${who} ya tiene una orden de trabajo activa. Debes completarla o cancelarla antes de crear una nueva.`,
       'VEHICLE_HAS_ACTIVE_ORDER',
     );
   }
