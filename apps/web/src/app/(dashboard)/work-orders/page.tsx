@@ -178,7 +178,7 @@ export default function WorkOrdersPage() {
       {/* Tabla */}
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="rtable w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 {['N.º Orden', 'Servicio', 'Estado', 'Entrega prometida', ''].map((h, i) => (
@@ -260,12 +260,16 @@ export default function WorkOrdersPage() {
                       onClick={() => router.push(`/work-orders/${o.id}`)}
                       className="group cursor-pointer border-b border-border/60 transition-colors last:border-0 hover:bg-secondary/50"
                     >
-                      <td className="px-4 py-3 font-medium text-primary">{o.orderNumber}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{o.serviceType}</td>
-                      <td className="px-4 py-3">
+                      <td data-label="N.º Orden" className="px-4 py-3 font-medium text-primary">
+                        {o.orderNumber}
+                      </td>
+                      <td data-label="Servicio" className="px-4 py-3 text-muted-foreground">
+                        {o.serviceType}
+                      </td>
+                      <td data-label="Estado" className="px-4 py-3">
                         <StatusBadge status={o.status} />
                       </td>
-                      <td className="px-4 py-3">
+                      <td data-label="Entrega" className="px-4 py-3">
                         <span
                           className={cn(
                             'tnum inline-flex items-center gap-1.5',
@@ -276,7 +280,7 @@ export default function WorkOrdersPage() {
                           {humanDeadline(o.promisedDeliveryAt)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td data-label="" className="px-4 py-3 text-right">
                         <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground/50 transition-colors group-hover:text-foreground" />
                       </td>
                     </tr>

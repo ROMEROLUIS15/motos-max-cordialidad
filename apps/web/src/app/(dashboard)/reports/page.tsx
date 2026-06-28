@@ -73,7 +73,7 @@ export default function ReportsPage() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-sm">
+          <table className="rtable w-full min-w-[680px] text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 {['Tipo', 'Período', 'Estado', 'Generado', ''].map((h) => (
@@ -111,19 +111,25 @@ export default function ReportsPage() {
                     key={r.id}
                     className="border-b border-border/60 last:border-0 hover:bg-secondary/40"
                   >
-                    <td className="px-4 py-2.5 text-foreground/90">
+                    <td data-label="Tipo" className="px-4 py-2.5 text-foreground/90">
                       {r.type === 'MONTHLY' ? 'Mensual' : 'Semanal'}
                     </td>
-                    <td className="tnum whitespace-nowrap px-4 py-2.5 text-muted-foreground">
+                    <td
+                      data-label="Período"
+                      className="tnum whitespace-nowrap px-4 py-2.5 text-muted-foreground"
+                    >
                       {r.periodStart} — {r.periodEnd}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td data-label="Estado" className="px-4 py-2.5">
                       <Badge variant={STATUS_VARIANT[r.status] ?? 'secondary'}>{r.status}</Badge>
                     </td>
-                    <td className="tnum whitespace-nowrap px-4 py-2.5 text-muted-foreground">
+                    <td
+                      data-label="Generado"
+                      className="tnum whitespace-nowrap px-4 py-2.5 text-muted-foreground"
+                    >
                       {r.generatedAt ? new Date(r.generatedAt).toLocaleString('es-CO') : '—'}
                     </td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td data-label="" className="px-4 py-2.5 text-right">
                       <Button
                         variant="outline"
                         size="sm"

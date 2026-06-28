@@ -106,7 +106,7 @@ export default function HomeServicesPage() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] text-sm">
+          <table className="rtable w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 {['Cliente', 'Dirección', 'Tipo', 'Estado', 'Mecánico', 'Acciones'].map((h) => (
@@ -144,17 +144,26 @@ export default function HomeServicesPage() {
                     key={s.id}
                     className="border-b border-border/60 last:border-0 align-top hover:bg-secondary/40"
                   >
-                    <td className="px-4 py-2.5">
+                    <td data-label="Cliente" className="px-4 py-2.5">
                       <div className="text-foreground/90">{s.customerName}</div>
                       <div className="text-xs text-muted-foreground">{s.customerPhone}</div>
                     </td>
-                    <td className="max-w-[220px] px-4 py-2.5 text-muted-foreground">{s.address}</td>
-                    <td className="px-4 py-2.5 text-foreground/90">{s.serviceType}</td>
-                    <td className="px-4 py-2.5">
+                    <td
+                      data-label="Dirección"
+                      className="max-w-[220px] px-4 py-2.5 text-muted-foreground"
+                    >
+                      {s.address}
+                    </td>
+                    <td data-label="Tipo" className="px-4 py-2.5 text-foreground/90">
+                      {s.serviceType}
+                    </td>
+                    <td data-label="Estado" className="px-4 py-2.5">
                       <Badge variant={STATUS_VARIANT[s.status] ?? 'secondary'}>{s.status}</Badge>
                     </td>
-                    <td className="px-4 py-2.5 text-muted-foreground">{nameOf(s.assignedTo)}</td>
-                    <td className="px-4 py-2.5">
+                    <td data-label="Mecánico" className="px-4 py-2.5 text-muted-foreground">
+                      {nameOf(s.assignedTo)}
+                    </td>
+                    <td data-label="" className="px-4 py-2.5">
                       <div className="flex flex-wrap items-center gap-2">
                         <select
                           defaultValue=""
