@@ -166,7 +166,7 @@ export default function SalesPage() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-sm">
+          <table className="rtable w-full min-w-[820px] text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 {['Moto', 'VIN', 'Año', 'Condición', 'Precio', 'Estado', ''].map((h, i) => (
@@ -215,28 +215,35 @@ export default function SalesPage() {
                     key={u.id}
                     className="border-b border-border/60 last:border-0 hover:bg-secondary/40"
                   >
-                    <td className="px-4 py-3 font-medium text-foreground">
+                    <td data-label="Moto" className="px-4 py-3 font-medium text-foreground">
                       {u.brand} {u.model}
                       {u.color ? <span className="text-muted-foreground"> · {u.color}</span> : null}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{u.vin}</td>
-                    <td className="tnum px-4 py-3 text-muted-foreground">{u.year}</td>
-                    <td className="px-4 py-3">
+                    <td
+                      data-label="VIN"
+                      className="px-4 py-3 font-mono text-xs text-muted-foreground"
+                    >
+                      {u.vin}
+                    </td>
+                    <td data-label="Año" className="tnum px-4 py-3 text-muted-foreground">
+                      {u.year}
+                    </td>
+                    <td data-label="Condición" className="px-4 py-3">
                       <Badge variant={u.condition === 'NEW' ? 'default' : 'outline'}>
                         {u.condition === 'NEW'
                           ? 'Nueva'
                           : `Usada · ${u.mileage.toLocaleString('es-CO')} km`}
                       </Badge>
                     </td>
-                    <td className="tnum px-4 py-3 font-medium text-foreground">
+                    <td data-label="Precio" className="tnum px-4 py-3 font-medium text-foreground">
                       {cop.format(u.salePrice)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td data-label="Estado" className="px-4 py-3">
                       <Badge variant={STATUS_META[u.status].variant}>
                         {STATUS_META[u.status].label}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td data-label="" className="px-4 py-3 text-right">
                       <div className="inline-flex justify-end gap-2">
                         {busyId === u.id ? (
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />

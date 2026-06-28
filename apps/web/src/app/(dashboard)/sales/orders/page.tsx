@@ -148,7 +148,7 @@ export default function SaleOrdersPage() {
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-sm">
+          <table className="rtable w-full min-w-[820px] text-sm">
             <thead>
               <tr className="border-b border-border text-left">
                 {['N°', 'Cliente', 'Moto', 'Total', 'Pago', 'Estado', ''].map((h, i) => (
@@ -193,25 +193,29 @@ export default function SaleOrdersPage() {
                     key={o.id}
                     className="border-b border-border/60 last:border-0 hover:bg-secondary/40"
                   >
-                    <td className="px-4 py-3 font-mono text-xs">
+                    <td data-label="N°" className="px-4 py-3 font-mono text-xs">
                       <Link href={`/sales/orders/${o.id}`} className="text-primary hover:underline">
                         {o.orderNumber}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 font-medium text-foreground">{o.customerName}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{o.motorcycleLabel}</td>
-                    <td className="tnum px-4 py-3 font-medium text-foreground">
+                    <td data-label="Cliente" className="px-4 py-3 font-medium text-foreground">
+                      {o.customerName}
+                    </td>
+                    <td data-label="Moto" className="px-4 py-3 text-muted-foreground">
+                      {o.motorcycleLabel}
+                    </td>
+                    <td data-label="Total" className="tnum px-4 py-3 font-medium text-foreground">
                       {cop.format(o.totalAmount)}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td data-label="Pago" className="px-4 py-3 text-muted-foreground">
                       {o.paymentMethod === 'FINANCED' ? 'Financiado' : 'Contado'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td data-label="Estado" className="px-4 py-3">
                       <Badge variant={STATUS_META[o.status].variant}>
                         {STATUS_META[o.status].label}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td data-label="" className="px-4 py-3 text-right">
                       <div className="inline-flex justify-end gap-2">
                         {busyId === o.id ? (
                           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
