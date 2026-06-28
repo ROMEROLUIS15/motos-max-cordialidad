@@ -112,7 +112,7 @@ export default function WorkOrdersPage() {
 
       {/* Tabs de estado (estilo GitHub) + filtro de fechas */}
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border">
-        <div className="-mb-px flex items-center gap-1 overflow-x-auto">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-2">
           {STATUS_TABS.map((t) => {
             const active = status === t.value;
             return (
@@ -124,14 +124,13 @@ export default function WorkOrdersPage() {
                   setPage(1);
                 }}
                 className={cn(
-                  'relative whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors',
-                  active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                  'whitespace-nowrap rounded-full border px-3 py-1 text-xs font-medium transition-all hover:shadow-sm',
+                  active
+                    ? 'border-primary/40 bg-primary/10 text-primary'
+                    : 'border-border bg-card/40 text-muted-foreground hover:border-primary/30 hover:bg-secondary hover:text-foreground',
                 )}
               >
                 {t.label}
-                {active && (
-                  <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary" />
-                )}
               </button>
             );
           })}
