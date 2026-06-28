@@ -217,9 +217,22 @@ export default function NewOrderPage() {
       vForm.plate &&
       vForm.color &&
       vForm.engineNumber);
-  const canSave = !!customerReady && !!vehicleReady && !!technicianId && !busy;
 
   const save = async () => {
+    if (!customerReady) {
+      setError('Selecciona un cliente existente o completa los datos del cliente nuevo.');
+      return;
+    }
+    if (!vehicleReady) {
+      setError(
+        'Completa la moto: marca, modelo, año, placa, color y N° de motor (o elige una existente).',
+      );
+      return;
+    }
+    if (!technicianId) {
+      setError('Selecciona el mecánico que atiende.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -672,7 +685,7 @@ export default function NewOrderPage() {
       )}
 
       <div className="flex justify-end">
-        <Button disabled={!canSave} onClick={() => void save()}>
+        <Button disabled={busy} onClick={() => void save()}>
           {busy && <Loader2 className="h-4 w-4 animate-spin" />}
           <Plus className="h-4 w-4" /> Guardar orden
         </Button>
