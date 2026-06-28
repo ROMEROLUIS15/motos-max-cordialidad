@@ -45,11 +45,11 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'relative z-10 w-full max-w-md overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl ring-highlight animate-in-up',
+          'relative z-10 flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl ring-highlight animate-in-up',
           className,
         )}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-5 py-4">
           <div>
             <h2 className="text-base font-semibold tracking-tight">{title}</h2>
             {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
@@ -64,9 +64,11 @@ export function Modal({
             <X />
           </Button>
         </div>
-        <div className="px-5 py-4">{children}</div>
+        <div className="overflow-y-auto px-5 py-4">{children}</div>
         {footer && (
-          <div className="flex justify-end gap-2 border-t border-border px-5 py-3.5">{footer}</div>
+          <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border px-5 py-3.5">
+            {footer}
+          </div>
         )}
       </div>
     </div>
