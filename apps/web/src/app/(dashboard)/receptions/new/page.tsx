@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Loader2, Plus, X, UserPlus, Bike, UploadCloud } from 'lucide-react';
+import Link from 'next/link';
+import { Search, Loader2, Plus, X, UserPlus, Bike, UploadCloud, AlertTriangle } from 'lucide-react';
 import { apiGet, apiSend, apiUpload } from '@/lib/api';
 import type { PaginatedResponse } from '@/types/api';
 import { FUEL_LEVELS, FUEL_LABELS, type FuelLevel } from '@/types/workshop';
@@ -98,6 +99,7 @@ export default function NewOrderPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleId, setVehicleId] = useState('');
   const [newVehicle, setNewVehicle] = useState(false);
+  const [activeOrder, setActiveOrder] = useState<{ id: string; orderNumber: string } | null>(null);
   const [vForm, setVForm] = useState({
     brand: '',
     model: '',
@@ -169,6 +171,31 @@ export default function NewOrderPage() {
     return () => clearTimeout(t);
   }, [svcQuery]);
 
+  // Aviso temprano: si la moto elegida ya tiene una orden activa, no dejar crear otra.
+  useEffect(() => {
+    if (newVehicle || !vehicleId) {
+      setActiveOrder(null);
+      return;
+    }
+    let cancelled = false;
+    apiGet<{ workOrders: Array<{ id: string; orderNumber: string; status: string }> }>(
+      `/api/vehicles/${vehicleId}/history`,
+    )
+      .then((h) => {
+        if (cancelled) return;
+        const active = h.workOrders.find(
+          (w) => !['COMPLETED', 'DELIVERED', 'CANCELLED'].includes(w.status),
+        );
+        setActiveOrder(active ? { id: active.id, orderNumber: active.orderNumber } : null);
+      })
+      .catch(() => {
+        if (!cancelled) setActiveOrder(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [vehicleId, newVehicle]);
+
   const selectCustomer = async (c: Customer) => {
     setCustomer(c);
     setNewCustomer(false);
@@ -209,12 +236,18 @@ export default function NewOrderPage() {
     !!customer ||
     (newCustomer && cForm.fullName && cForm.documentNumber && cForm.phone && cForm.city);
   const vehicleReady =
-    (!!vehicleId && !newVehicle) ||
+    (!!vehicleId && !newVehicle && !activeOrder) ||
     (newVehicle && vForm.brand && vForm.model && vForm.plate && vForm.color);
 
   const save = async () => {
     if (!customerReady) {
       setError('Selecciona un cliente existente o completa los datos del cliente nuevo.');
+      return;
+    }
+    if (activeOrder && !newVehicle) {
+      setError(
+        `Esta moto ya tiene la orden ${activeOrder.orderNumber} activa. Complétala o cancélala antes de crear otra.`,
+      );
       return;
     }
     if (!vehicleReady) {
@@ -410,6 +443,19 @@ export default function NewOrderPage() {
                 </option>
               ))}
             </select>
+          )}
+
+          {activeOrder && !newVehicle && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-warning/25 bg-warning/10 px-3.5 py-2.5 text-sm text-warning">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>
+                Esta moto ya tiene una orden activa (
+                <Link href={`/work-orders/${activeOrder.id}`} className="font-semibold underline">
+                  {activeOrder.orderNumber}
+                </Link>
+                ). Complétala o cancélala antes de crear otra.
+              </span>
+            </div>
           )}
 
           {!newVehicle ? (
