@@ -8,6 +8,26 @@ export interface WorkOrderFilters {
   technicianId?: string;
   from?: Date;
   to?: Date;
+  /** Free-text search across order number, customer name and vehicle (plate/brand/model). */
+  search?: string;
+}
+
+/** Row shape for the orders listing: the order plus its customer/vehicle summary. */
+export interface WorkOrderListItem {
+  id: string;
+  orderNumber: string;
+  branchId: string;
+  vehicleId: string;
+  customerId: string;
+  technicianId: string;
+  serviceType: string;
+  status: WorkOrderStatus;
+  promisedDeliveryAt: Date;
+  createdAt: Date;
+  customerName: string;
+  vehiclePlate: string;
+  vehicleBrand: string;
+  vehicleModel: string;
 }
 
 export interface StatusHistoryEntry {
@@ -55,13 +75,13 @@ export interface WorkOrderRepository {
     tenantId: string,
     filters: WorkOrderFilters,
     pagination: Pagination,
-  ): Promise<PaginatedResult<WorkOrder>>;
+  ): Promise<PaginatedResult<WorkOrderListItem>>;
   findByTechnician(
     technicianId: string,
     tenantId: string,
     filters: WorkOrderFilters,
     pagination: Pagination,
-  ): Promise<PaginatedResult<WorkOrder>>;
+  ): Promise<PaginatedResult<WorkOrderListItem>>;
   findNearingDeadline(
     thresholdHours: number,
     tenantId: string,

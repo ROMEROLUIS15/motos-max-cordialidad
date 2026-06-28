@@ -8,6 +8,7 @@ import {
   WorkOrderLineRecord,
   WorkOrderPartRecord,
   WorkOrderWithDetails,
+  WorkOrderListItem,
 } from '../../../../domain/repositories/work-order.repository';
 import { WorkOrder } from '../../../../domain/entities/work-order.entity';
 import {
@@ -135,24 +136,55 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
       if (filters.from) (where.createdAt as Prisma.DateTimeFilter).gte = filters.from;
       if (filters.to) (where.createdAt as Prisma.DateTimeFilter).lte = filters.to;
     }
+    const search = filters.search?.trim();
+    if (search) {
+      const contains = { contains: search, mode: 'insensitive' as const };
+      where.OR = [
+        { orderNumber: contains },
+        { customer: { fullName: contains } },
+        { vehicle: { plate: contains } },
+        { vehicle: { brand: contains } },
+        { vehicle: { model: contains } },
+      ];
+    }
     return where;
   }
 
   private async paginate(
     where: Prisma.WorkOrderWhereInput,
     pagination: Pagination,
-  ): Promise<PaginatedResult<WorkOrder>> {
+  ): Promise<PaginatedResult<WorkOrderListItem>> {
     const { skip, take } = paginationToSkipTake(pagination);
     const [rows, total] = await Promise.all([
-      this.prisma.workOrder.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take }),
+      this.prisma.workOrder.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        include: {
+          customer: { select: { fullName: true } },
+          vehicle: { select: { plate: true, brand: true, model: true } },
+        },
+      }),
       this.prisma.workOrder.count({ where }),
     ]);
-    return {
-      items: rows.map((r) => this.toDomain(r)),
-      total,
-      page: pagination.page,
-      pageSize: pagination.pageSize,
-    };
+    const items: WorkOrderListItem[] = rows.map((r) => ({
+      id: r.id,
+      orderNumber: r.orderNumber,
+      branchId: r.branchId,
+      vehicleId: r.vehicleId,
+      customerId: r.customerId,
+      technicianId: r.technicianId,
+      serviceType: r.serviceType,
+      status: r.status as WorkOrderStatus,
+      promisedDeliveryAt: r.promisedDeliveryAt,
+      createdAt: r.createdAt,
+      customerName: r.customer?.fullName ?? '',
+      vehiclePlate: r.vehicle?.plate ?? '',
+      vehicleBrand: r.vehicle?.brand ?? '',
+      vehicleModel: r.vehicle?.model ?? '',
+    }));
+    return { items, total, page: pagination.page, pageSize: pagination.pageSize };
   }
 
   async findByBranch(
@@ -160,7 +192,7 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
     tenantId: string,
     filters: WorkOrderFilters,
     pagination: Pagination,
-  ): Promise<PaginatedResult<WorkOrder>> {
+  ): Promise<PaginatedResult<WorkOrderListItem>> {
     return this.paginate(this.buildWhere(tenantId, filters, { branchId }), pagination);
   }
 
@@ -169,7 +201,7 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
     tenantId: string,
     filters: WorkOrderFilters,
     pagination: Pagination,
-  ): Promise<PaginatedResult<WorkOrder>> {
+  ): Promise<PaginatedResult<WorkOrderListItem>> {
     return this.paginate(this.buildWhere(tenantId, filters, { technicianId }), pagination);
   }
 
