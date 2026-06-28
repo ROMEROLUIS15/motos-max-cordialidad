@@ -95,7 +95,7 @@ export function NotificationBell() {
         )}
       </Button>
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-card-hover animate-in-up">
+        <div className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-card-hover animate-in-up">
           <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
             <span className="text-sm font-semibold">Notificaciones</span>
             <button
@@ -105,7 +105,7 @@ export function NotificationBell() {
               Marcar todas leídas
             </button>
           </div>
-          <ul className="max-h-80 overflow-y-auto">
+          <ul className="max-h-[60vh] overflow-y-auto overscroll-contain">
             {items.length === 0 ? (
               <li className="px-4 py-8 text-center text-sm text-muted-foreground">
                 Sin notificaciones
@@ -119,8 +119,8 @@ export function NotificationBell() {
                     n.isRead ? '' : 'bg-primary/5',
                   )}
                 >
-                  <p className="text-sm font-medium text-foreground">{n.title}</p>
-                  <p className="text-xs text-muted-foreground">{n.body}</p>
+                  <p className="break-words text-sm font-medium text-foreground">{n.title}</p>
+                  <p className="break-words text-xs text-muted-foreground">{n.body}</p>
                   <span className="text-[10px] text-muted-foreground/70">
                     {new Date(n.createdAt).toLocaleString('es-CO')}
                   </span>
