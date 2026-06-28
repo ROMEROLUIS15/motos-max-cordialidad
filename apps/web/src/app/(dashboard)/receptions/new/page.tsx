@@ -210,13 +210,7 @@ export default function NewOrderPage() {
     (newCustomer && cForm.fullName && cForm.documentNumber && cForm.phone && cForm.city);
   const vehicleReady =
     (!!vehicleId && !newVehicle) ||
-    (newVehicle &&
-      vForm.brand &&
-      vForm.model &&
-      vForm.year &&
-      vForm.plate &&
-      vForm.color &&
-      vForm.engineNumber);
+    (newVehicle && vForm.brand && vForm.model && vForm.year && vForm.plate && vForm.color);
 
   const save = async () => {
     if (!customerReady) {
@@ -224,9 +218,7 @@ export default function NewOrderPage() {
       return;
     }
     if (!vehicleReady) {
-      setError(
-        'Completa la moto: marca, modelo, año, placa, color y N° de motor (o elige una existente).',
-      );
+      setError('Completa la moto: marca, modelo, año, placa y color (o elige una existente).');
       return;
     }
     if (!technicianId) {
@@ -480,7 +472,7 @@ export default function NewOrderPage() {
                   onChange={(e) => setVForm((f) => ({ ...f, color: e.target.value }))}
                 />
                 <Input
-                  placeholder="N° de motor"
+                  placeholder="N° de motor (opcional)"
                   value={vForm.engineNumber}
                   onChange={(e) => setVForm((f) => ({ ...f, engineNumber: e.target.value }))}
                 />
