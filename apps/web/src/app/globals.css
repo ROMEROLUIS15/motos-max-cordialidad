@@ -104,6 +104,15 @@
   body {
     margin: 0;
     background-color: hsl(var(--background));
+    /* Tinte de marca (cian del primary, como el login) muy sutil y fijo, para
+       que toda la plataforma comparta ese tono sin restar contraste. */
+    background-image: radial-gradient(
+      1100px 620px at 50% -8%,
+      hsl(var(--primary) / 0.07),
+      transparent 68%
+    );
+    background-attachment: fixed;
+    background-repeat: no-repeat;
     color: hsl(var(--foreground));
     font-feature-settings: 'cv11' 1, 'ss01' 1;
     -webkit-font-smoothing: antialiased;
