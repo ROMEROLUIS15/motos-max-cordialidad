@@ -59,8 +59,25 @@ export interface WorkOrderPartRecord {
   unitPriceAtSale: number;
 }
 
+export interface WorkOrderCustomerSummary {
+  id: string;
+  fullName: string;
+  documentNumber: string;
+  phone: string;
+}
+
+export interface WorkOrderVehicleSummary {
+  id: string;
+  plate: string;
+  brand: string;
+  model: string;
+  year: number | null;
+}
+
 export interface WorkOrderWithDetails {
   workOrder: WorkOrder;
+  customer: WorkOrderCustomerSummary | null;
+  vehicle: WorkOrderVehicleSummary | null;
   lines: WorkOrderLineRecord[];
   parts: WorkOrderPartRecord[];
   statusHistory: StatusHistoryEntry[];
