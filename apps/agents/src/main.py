@@ -18,6 +18,8 @@ from .agents.shared.llm_factory import LLMFactory
 from .api.admin_handler import AdminHandler
 from .config import get_settings
 from .health import build_health
+from .reports.report_generator import ReportGenerator
+from .reports.uploader import R2Uploader
 from .saas_client import SaasClient
 from .schedulers.scheduler import build_scheduler
 
@@ -37,7 +39,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     llm = LLMFactory(settings)
     agent = AdminAgent(llm=llm, client=app.state.saas)
     sessions = AdminSessionStore(app.state.redis, settings.ADMIN_SESSION_TTL_SECONDS)
-    app.state.admin_handler = AdminHandler(agent, sessions, app.state.saas)
+    uploader = R2Uploader(settings)
+    generator = ReportGenerator(app.state.saas, uploader)
+    app.state.admin_handler = AdminHandler(agent, sessions, app.state.saas, generator)
 
     scheduler = None
     if settings.SCHEDULER_ENABLED:

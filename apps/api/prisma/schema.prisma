@@ -47,6 +47,7 @@ model Tenant {
   saleOrders          SaleOrder[]
   salePayments        SalePayment[]
   customMotorcycleModels CustomMotorcycleModel[]
+  appointments           Appointment[]
 
   @@map("tenants")
 }
@@ -205,6 +206,7 @@ model Customer {
   newVehicles      VehicleOwnershipHistory[] @relation("NewOwner")
   homeServiceRequests HomeServiceRequest[]
   saleOrders       SaleOrder[]
+  appointments     Appointment[]
 
   @@unique([tenantId, documentNumber])
   @@index([tenantId, deletedAt], name: "idx_customers_tenant")
@@ -212,6 +214,26 @@ model Customer {
   @@index([tenantId, phone], name: "idx_customers_phone")
   @@index([tenantId, whatsappPhone], name: "idx_customers_whatsapp")
   @@map("customers")
+}
+
+// ─── APPOINTMENTS (pre-agendamiento desde WhatsApp) ─────────────────────────────
+
+model Appointment {
+  id            String   @id @default(uuid())
+  tenantId      String
+  customerId    String?
+  customerPhone String?  @db.VarChar(50)
+  requestedAt   DateTime @db.Timestamptz()
+  serviceType   String   @db.VarChar(100)
+  notes         String?  @db.Text
+  status        String   @default("PENDING") @db.VarChar(20)
+  createdAt     DateTime @default(now()) @db.Timestamptz()
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  customer Customer? @relation(fields: [customerId], references: [id])
+
+  @@index([tenantId, requestedAt], name: "idx_appointments_tenant")
+  @@map("appointments")
 }
 
 model Vehicle {
