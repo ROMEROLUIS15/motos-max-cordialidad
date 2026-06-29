@@ -1,0 +1,7 @@
+{
+  "spec": {
+    "title": "Audit Fixes — Seguridad, Rendimiento y Refactor Estructural",
+    "description": "Correcciones de la auditoría técnica del 2026-06-28. 3 fases: seguridad crítica, rendimiento/UX, refactor estructural.",
+    "version": "1.0.0"
+  }
+}
