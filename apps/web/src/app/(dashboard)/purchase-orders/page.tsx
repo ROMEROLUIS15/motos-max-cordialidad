@@ -36,6 +36,7 @@ export default function PurchaseOrdersPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -63,7 +64,7 @@ export default function PurchaseOrdersPage() {
       await apiSend(`/api/purchase-orders/${id}/${action}`, 'PATCH');
       await load();
     } catch (e) {
-      alert((e as Error).message);
+      setActionError((e as Error).message);
     } finally {
       setBusy(null);
     }
@@ -71,6 +72,7 @@ export default function PurchaseOrdersPage() {
 
   return (
     <div className="space-y-5">
+      {actionError && <p className="text-sm text-destructive">{actionError}</p>}
       <PageHeader
         title="Órdenes de compra"
         description="Borradores sugeridos por el agente de inventario"

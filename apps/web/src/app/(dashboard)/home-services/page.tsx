@@ -69,7 +69,7 @@ export default function HomeServicesPage() {
       await apiSend(`/api/home-services/${id}/assign`, 'PATCH', { assignedTo: userId });
       await load();
     } catch (e) {
-      alert((e as Error).message);
+      setError((e as Error).message);
     }
   }
 
@@ -78,7 +78,7 @@ export default function HomeServicesPage() {
       await apiSend(`/api/home-services/${id}/status`, 'PATCH', { status: newStatus });
       await load();
     } catch (e) {
-      alert((e as Error).message);
+      setError((e as Error).message);
     }
   }
 
