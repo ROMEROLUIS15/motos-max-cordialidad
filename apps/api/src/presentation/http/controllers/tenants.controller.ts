@@ -1,10 +1,18 @@
 import { Body, Controller, Get, Inject, Post, Put, UseGuards } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { JWTPayload } from '../../../application/ports/jwt.port';
-import { CreateTenantUseCase, CreateTenantInput } from '../../../application/use-cases/identity/create-tenant.use-case';
+import {
+  CreateTenantUseCase,
+  CreateTenantInput,
+} from '../../../application/use-cases/identity/create-tenant.use-case';
 import { UpdateTenantConfigUseCase } from '../../../application/use-cases/identity/update-tenant-config.use-case';
-import { TenantRepository, TENANT_REPOSITORY } from '../../../domain/repositories/tenant.repository';
+import {
+  TenantRepository,
+  TENANT_REPOSITORY,
+} from '../../../domain/repositories/tenant.repository';
+import { UpdateTenantConfigDto } from '../dtos/update-tenant-config.dto';
 
 @Controller('tenants')
 export class TenantsController {
@@ -15,6 +23,8 @@ export class TenantsController {
   ) {}
 
   @Post()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 3, ttl: 300000 } })
   async create(@Body() body: CreateTenantInput) {
     return this.createTenantUseCase.execute(body);
   }
@@ -31,11 +41,10 @@ export class TenantsController {
 
   @Put('me')
   @UseGuards(JwtAuthGuard)
-  async updateMe(
-    @CurrentUser() user: JWTPayload,
-    @Body() body: Record<string, unknown>,
-  ) {
-    await this.updateTenantConfigUseCase.execute({ tenantId: user.tenantId, ...body } as Parameters<UpdateTenantConfigUseCase['execute']>[0]);
+  async updateMe(@CurrentUser() user: JWTPayload, @Body() body: UpdateTenantConfigDto) {
+    await this.updateTenantConfigUseCase.execute({ tenantId: user.tenantId, ...body } as Parameters<
+      UpdateTenantConfigUseCase['execute']
+    >[0]);
     return { success: true };
   }
 }

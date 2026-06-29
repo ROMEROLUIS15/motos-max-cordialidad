@@ -12,7 +12,7 @@ interface PermissionCacheEntry {
 @Injectable()
 export class PermissionGuard implements CanActivate {
   private readonly cache = new Map<string, PermissionCacheEntry>();
-  private readonly TTL_MS = 5 * 60 * 1000; // 5 minutes
+  private readonly TTL_MS = 30 * 1000; // 30 seconds — short TTL because in-memory cache is not shared across replicas; migrate to Redis when multiple instances are deployed
 
   constructor(
     private readonly reflector: Reflector,
