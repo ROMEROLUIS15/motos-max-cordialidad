@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { MessagingPort } from '../../application/ports/messaging.port';
+import { WhatsAppSenderPort } from '../../application/ports/whatsapp-sender.port';
 import {
   WhatsAppRepository,
   WHATSAPP_REPOSITORY,
@@ -14,7 +15,7 @@ import { PrismaService } from '../persistence/prisma/prisma.service';
  * worker performs the actual Meta API call. Replaces MessagingStubAdapter.
  */
 @Injectable()
-export class WhatsAppCloudAdapter implements MessagingPort {
+export class WhatsAppCloudAdapter implements MessagingPort, WhatsAppSenderPort {
   private readonly logger = new Logger(WhatsAppCloudAdapter.name);
 
   constructor(

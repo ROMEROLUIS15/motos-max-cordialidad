@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { AgentsServicePort } from '../../application/ports/agents-service.port';
 
 /**
  * Thin client to the Python agents microservice (Fase 2C). Used to forward
@@ -7,7 +8,7 @@ import { Injectable, Logger } from '@nestjs/common';
  * only need to know the request was accepted. Any failure → caller escalates.
  */
 @Injectable()
-export class AgentsServiceClient {
+export class AgentsServiceClient implements AgentsServicePort {
   private readonly logger = new Logger(AgentsServiceClient.name);
   private readonly baseUrl = process.env['AGENTS_BASE_URL'] ?? 'http://localhost:8000';
   private readonly timeoutMs = 8000;

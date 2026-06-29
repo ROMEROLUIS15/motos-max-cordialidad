@@ -6,11 +6,18 @@ import {
   WhatsAppSessionRecord,
 } from '../../../domain/repositories/whatsapp.repository';
 import { NotificationPort, NOTIFICATION_PORT } from '../../ports/notification.port';
-import { RouterAgent } from '../../../infrastructure/ai/router-agent';
-import { WhatsAppCloudAdapter } from '../../../infrastructure/messaging/whatsapp-cloud.adapter';
-import { AgentsServiceClient } from '../../../infrastructure/agents/agents-service.client';
+import { RouterAgentPort, ROUTER_AGENT_PORT } from '../../ports/router-agent.port';
+import { WhatsAppSenderPort, WHATSAPP_SENDER_PORT } from '../../ports/whatsapp-sender.port';
+import { AgentsServicePort, AGENTS_SERVICE_PORT } from '../../ports/agents-service.port';
 import { UserRepository, USER_REPOSITORY } from '../../../domain/repositories/user.repository';
-import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma.service';
+import {
+  CustomerRepository,
+  CUSTOMER_REPOSITORY,
+} from '../../../domain/repositories/customer.repository';
+import {
+  TenantRepository,
+  TENANT_REPOSITORY,
+} from '../../../domain/repositories/tenant.repository';
 
 const UNANSWERED_MINUTES = 5;
 
@@ -29,34 +36,29 @@ export class ProcessIncomingMessageUseCase {
     @Inject(WHATSAPP_REPOSITORY) private readonly whatsappRepo: WhatsAppRepository,
     @Inject(NOTIFICATION_PORT) private readonly notification: NotificationPort,
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
-    private readonly routerAgent: RouterAgent,
-    private readonly whatsapp: WhatsAppCloudAdapter,
-    private readonly agents: AgentsServiceClient,
-    private readonly prisma: PrismaService,
+    @Inject(ROUTER_AGENT_PORT) private readonly routerAgent: RouterAgentPort,
+    @Inject(WHATSAPP_SENDER_PORT) private readonly whatsapp: WhatsAppSenderPort,
+    @Inject(AGENTS_SERVICE_PORT) private readonly agents: AgentsServicePort,
+    @Inject(CUSTOMER_REPOSITORY) private readonly customerRepo: CustomerRepository,
+    @Inject(TENANT_REPOSITORY) private readonly tenantRepo: TenantRepository,
   ) {}
 
   async execute(input: ProcessIncomingMessageInput): Promise<void> {
-    const customer = await this.prisma.customer.findFirst({
-      where: {
-        tenantId: input.tenantId,
-        OR: [{ phone: input.from }, { whatsappPhone: input.from }],
-      },
-      select: { id: true },
-    });
+    const customerId = await this.customerRepo.findIdByPhone(input.tenantId, input.from);
 
     let session = await this.whatsappRepo.findSessionByPhone(input.from, input.tenantId);
     if (!session) {
       session = {
         id: randomUUID(),
         tenantId: input.tenantId,
-        customerId: customer?.id ?? null,
+        customerId: customerId,
         phoneNumber: input.from,
-        isAnonymous: !customer,
+        isAnonymous: customerId === null,
         lastMessageAt: new Date(),
         createdAt: new Date(),
       };
       await this.whatsappRepo.createSession(session);
-      if (!customer) {
+      if (!customerId) {
         await this.notification.notifyAdmins(input.tenantId, {
           type: 'WHATSAPP_UNKNOWN_NUMBER',
           phone: input.from,
@@ -85,7 +87,7 @@ export class ProcessIncomingMessageUseCase {
     }
 
     if (await this.shouldActivateAgent(input.tenantId, session)) {
-      await this.runAgent(input, session, customer?.id ?? null, null);
+      await this.runAgent(input, session, customerId, null);
     }
   }
 
@@ -120,10 +122,7 @@ export class ProcessIncomingMessageUseCase {
       UNANSWERED_MINUTES,
     );
     if (recentlyAnswered) return false;
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { businessHours: true },
-    });
+    const tenant = await this.tenantRepo.findById(tenantId);
     return this.isWithinBusinessHours(tenant?.businessHours);
   }
 

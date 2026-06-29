@@ -3,7 +3,15 @@ import { LLMProviderFactory } from './llm-provider.factory';
 import { ToolRegistry } from './tools/tool-registry';
 import { ToolExecutor } from './tool-executor';
 import { ExecutionContext, toLLMToolDefinition } from '../../application/ai/agent-tool';
-import { LLMMessage, AllLLMProvidersFailedException } from '../../application/ports/llm-provider.port';
+import {
+  LLMMessage,
+  AllLLMProvidersFailedException,
+} from '../../application/ports/llm-provider.port';
+import {
+  RouterAgentPort,
+  RouterAgentInput,
+  RouterAgentResult,
+} from '../../application/ports/router-agent.port';
 
 const MAX_TOOL_CALLS = 5;
 const MAX_ATTEMPTS = 3;
@@ -11,23 +19,8 @@ const FALLBACK_MESSAGE =
   'Gracias por tu mensaje. En este momento no puedo resolver tu consulta automáticamente; ' +
   'un miembro de nuestro equipo te atenderá lo antes posible.';
 
-export interface RouterAgentInput {
-  tenantId: string;
-  branchId: string | null;
-  customerId: string | null;
-  isRegistered: boolean;
-  message: string;
-  history: LLMMessage[];
-}
-
-export interface RouterAgentResult {
-  response: string;
-  escalated: boolean;
-  toolCalls: number;
-}
-
 @Injectable()
-export class RouterAgent {
+export class RouterAgent implements RouterAgentPort {
   private readonly logger = new Logger(RouterAgent.name);
 
   constructor(
@@ -68,7 +61,11 @@ export class RouterAgent {
         });
 
         if (!result.requiresTool) {
-          return { response: result.response ?? FALLBACK_MESSAGE, escalated: false, toolCalls: ctx.callCount };
+          return {
+            response: result.response ?? FALLBACK_MESSAGE,
+            escalated: false,
+            toolCalls: ctx.callCount,
+          };
         }
 
         if (ctx.callCount >= MAX_TOOL_CALLS) {
