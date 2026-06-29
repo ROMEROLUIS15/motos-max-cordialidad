@@ -30,12 +30,23 @@ export interface WhatsAppRepository {
   findSessionById(id: string, tenantId: string): Promise<WhatsAppSessionRecord | null>;
   createSession(session: WhatsAppSessionRecord): Promise<void>;
   touchSession(sessionId: string, at: Date): Promise<void>;
-  listSessions(tenantId: string, pagination: Pagination): Promise<PaginatedResult<WhatsAppSessionRecord>>;
+  listSessions(
+    tenantId: string,
+    pagination: Pagination,
+  ): Promise<PaginatedResult<WhatsAppSessionRecord>>;
 
   createMessage(message: MessageRecord): Promise<void>;
   listMessages(sessionId: string, pagination: Pagination): Promise<PaginatedResult<MessageRecord>>;
-  updateMessageStatus(messageId: string, status: MessageStatus, waMessageId?: string): Promise<void>;
+  updateMessageStatus(
+    messageId: string,
+    status: MessageStatus,
+    waMessageId?: string,
+  ): Promise<void>;
   lastInboundRespondedWithin(sessionId: string, minutes: number): Promise<boolean>;
+  findRecentMessages(
+    sessionId: string,
+    limit: number,
+  ): Promise<Array<{ direction: 'INBOUND' | 'OUTBOUND'; content: string }>>;
 }
 
 export const WHATSAPP_REPOSITORY = Symbol('WhatsAppRepository');

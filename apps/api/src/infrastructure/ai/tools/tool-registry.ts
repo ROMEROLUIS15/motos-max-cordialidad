@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { AgentTool } from '../../../application/ai/agent-tool';
 import { GetWorkOrderDetailUseCase } from '../../../application/use-cases/workshop/query-work-orders.use-case';
@@ -167,12 +166,25 @@ export class ToolRegistry {
         required: ['customerId', 'requestedDate', 'serviceType'],
       },
       execute: async (args, ctx) => {
-        const { requestedDate } = args as { requestedDate: string };
+        const { requestedDate, serviceType, notes } = args as {
+          customerId: string;
+          requestedDate: string;
+          serviceType: string;
+          notes?: string;
+        };
         const tenant = await this.tenantRepo.findById(ctx.tenantId);
-        // Fase 1: appointment is acknowledged but not persisted as a reception
-        // (a reception requires an attending user + vehicle inspection on arrival).
+        const appt = await this.prisma.appointment.create({
+          data: {
+            tenantId: ctx.tenantId,
+            customerId: ctx.customerId ?? undefined,
+            requestedAt: new Date(requestedDate),
+            serviceType,
+            notes,
+            status: 'PENDING',
+          },
+        });
         return {
-          receptionId: randomUUID(),
+          appointmentId: appt.id,
           confirmedAt: requestedDate,
           branchAddress: tenant?.address ?? 'Consultar dirección con recepción',
         };

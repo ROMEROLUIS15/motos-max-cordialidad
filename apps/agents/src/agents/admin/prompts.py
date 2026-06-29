@@ -18,9 +18,14 @@ CLASSIFY_PROMPT = (
     "- SALES_QUERY: preguntas sobre ventas, ingresos, facturación, ticket promedio.\n"
     "- INVENTORY_QUERY: preguntas sobre stock, repuestos, inventario, reabastecer.\n"
     "- REPORT_REQUEST: pide generar o enviar un reporte (semanal/mensual).\n"
+    "- PURCHASE_ORDER_REQUEST: el administrador pide crear una orden de compra"
+    " o reabastecer repuestos.\n"
+    "- PURCHASE_ORDER_CONFIRM: el administrador confirma generar el borrador"
+    " (ej. confirmar, sí, adelante, dale).\n"
     "- GENERAL: saludo, agradecimiento o cualquier otra cosa.\n"
-    "Responde SOLO con la etiqueta exacta (SALES_QUERY, INVENTORY_QUERY, "
-    "REPORT_REQUEST o GENERAL), sin explicación.\n\n"
+    "Responde SOLO con la etiqueta exacta (SALES_QUERY, INVENTORY_QUERY,"
+    " REPORT_REQUEST, PURCHASE_ORDER_REQUEST, PURCHASE_ORDER_CONFIRM"
+    " o GENERAL), sin explicación.\n\n"
     "Mensaje: {message}"
 )
 
@@ -31,7 +36,11 @@ RESPONSE_PROMPT = (
     "Redacta una respuesta breve y útil en español colombiano para WhatsApp "
     "(máximo 300 palabras). Resume lo importante con cifras concretas. "
     "Si los datos incluyen un reporte generado, menciona que está disponible en "
-    "la plataforma. No inventes nada que no esté en los datos."
+    "la plataforma. Si los datos contienen inventario con stock bajo y el contexto "
+    "es una solicitud de orden de compra, lista los repuestos críticos con su "
+    "partId y stock actual, y pídele al administrador que responda "
+    "\"confirmar\" para generar el borrador de orden de compra. "
+    "No inventes nada que no esté en los datos."
 )
 
 FALLBACK_MESSAGE = (
