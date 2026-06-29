@@ -73,6 +73,3 @@ class StockAlertJob:
                     failed += 1
         logger.info("stock-alert pass: sent=%d skipped=%d failed=%d", sent, skipped, failed)
         return {"sent": sent, "skipped": skipped, "failed": failed, "tenants": len(tenants)}
-
-
-

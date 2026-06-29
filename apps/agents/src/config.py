@@ -60,12 +60,13 @@ class Settings(BaseSettings):
     ADMIN_SESSION_TTL_SECONDS: int = 7200  # 2 hours
     SCHEDULER_ENABLED: bool = True  # disable for a second instance or local runs
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def _check_prod_secrets(self) -> Settings:
-        if os.getenv('NODE_ENV') == 'production' or os.getenv('ENV') == 'production':
-            if self.JWT_SECRET == 'dev-secret-change-in-production':
-                raise ValueError('JWT_SECRET must be set in production')
+        if os.getenv("NODE_ENV") == "production" or os.getenv("ENV") == "production":
+            if self.JWT_SECRET == "dev-secret-change-in-production":
+                raise ValueError("JWT_SECRET must be set in production")
         return self
+
 
 @lru_cache
 def get_settings() -> Settings:
