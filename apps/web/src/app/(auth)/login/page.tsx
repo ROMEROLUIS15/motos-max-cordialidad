@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Link from 'next/link';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -160,6 +161,13 @@ export default function LoginPage() {
                 <p className="text-xs text-destructive">{errors.password.message}</p>
               )}
             </div>
+
+            <Link
+              href="/forgot-password"
+              className="block text-right text-sm text-muted-foreground hover:text-foreground"
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
 
             {serverError && (
               <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5">
