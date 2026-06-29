@@ -235,7 +235,7 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
         tenantId,
         deletedAt: null,
         ...(branchId ? { branchId } : {}),
-        status: { in: ACTIVE_STATUSES as unknown as string[] },
+        status: { in: ACTIVE_STATUSES as readonly string[] as string[] },
         promisedDeliveryAt: { lte: threshold },
       },
       orderBy: { promisedDeliveryAt: 'asc' },
@@ -250,7 +250,7 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
         tenantId,
         branchId,
         deletedAt: null,
-        status: { in: ACTIVE_STATUSES as unknown as string[] },
+        status: { in: ACTIVE_STATUSES as readonly string[] as string[] },
       },
       _count: { _all: true },
     });
@@ -335,7 +335,7 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
         tenantId,
         deletedAt: null,
         ...(branchId ? { branchId } : {}),
-        status: { in: ACTIVE_STATUSES as unknown as string[] },
+        status: { in: ACTIVE_STATUSES as readonly string[] as string[] },
       },
       orderBy: { promisedDeliveryAt: 'asc' },
     });
@@ -397,10 +397,13 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
 
   async generateOrderNumber(tenantId: string, year: number): Promise<string> {
     const prefix = `WO-${year}-`;
-    const count = await this.prisma.workOrder.count({
-      where: { tenantId, orderNumber: { startsWith: prefix } },
-    });
-    const next = (count + 1).toString().padStart(6, '0');
+    const result = await this.prisma.$queryRaw<[{ nextval: bigint }]>`
+      SELECT COALESCE(MAX(CAST(SUBSTRING("orderNumber" FROM LENGTH(${prefix}) + 1) AS INTEGER)), 0) + 1 AS nextval
+      FROM "work_orders"
+      WHERE "tenantId" = ${tenantId}
+        AND "orderNumber" LIKE ${prefix + '%'}
+    `;
+    const next = Number(result[0].nextval).toString().padStart(6, '0');
     return `${prefix}${next}`;
   }
 

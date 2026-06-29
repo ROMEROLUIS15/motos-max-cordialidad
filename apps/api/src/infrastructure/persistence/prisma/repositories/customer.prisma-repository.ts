@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
-import { CustomerRepository, CustomerSearchParams, PaginatedResult } from '../../../../domain/repositories/customer.repository';
+import {
+  CustomerRepository,
+  CustomerSearchParams,
+  PaginatedResult,
+} from '../../../../domain/repositories/customer.repository';
 import { Customer, DocumentType } from '../../../../domain/entities/customer.entity';
 
 @Injectable()
@@ -22,6 +26,17 @@ export class CustomerPrismaRepository implements CustomerRepository {
     return r ? this.toDomain(r) : null;
   }
 
+  async findIdByPhone(tenantId: string, phone: string): Promise<string | null> {
+    const r = await this.prisma.customer.findFirst({
+      where: {
+        tenantId,
+        OR: [{ phone }, { whatsappPhone: phone }],
+      },
+      select: { id: true },
+    });
+    return r?.id ?? null;
+  }
+
   async search(params: CustomerSearchParams, tenantId: string): Promise<PaginatedResult<Customer>> {
     const { query, page, pageSize } = params;
     const skip = (page - 1) * pageSize;
@@ -39,7 +54,12 @@ export class CustomerPrismaRepository implements CustomerRepository {
     };
 
     const [items, total] = await Promise.all([
-      this.prisma.customer.findMany({ where, skip, take: pageSize, orderBy: { createdAt: 'desc' } }),
+      this.prisma.customer.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: 'desc' },
+      }),
       this.prisma.customer.count({ where }),
     ]);
 
@@ -95,18 +115,46 @@ export class CustomerPrismaRepository implements CustomerRepository {
   }
 
   private toDomain(r: {
-    id: string; tenantId: string; fullName: string; documentType: string;
-    documentNumber: string; phone: string; whatsappPhone: string | null;
-    email: string | null; address: string | null; city: string;
-    birthDate: Date | null; observations: string | null; isActive: boolean;
-    firstVisitAt: Date | null; lastVisitAt: Date | null; visitCount: number;
-    deletedAt: Date | null; createdAt: Date; updatedAt: Date;
+    id: string;
+    tenantId: string;
+    fullName: string;
+    documentType: string;
+    documentNumber: string;
+    phone: string;
+    whatsappPhone: string | null;
+    email: string | null;
+    address: string | null;
+    city: string;
+    birthDate: Date | null;
+    observations: string | null;
+    isActive: boolean;
+    firstVisitAt: Date | null;
+    lastVisitAt: Date | null;
+    visitCount: number;
+    deletedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
   }): Customer {
     return new Customer(
-      r.id, r.tenantId, r.fullName, r.documentType as DocumentType,
-      r.documentNumber, r.phone, r.whatsappPhone, r.email, r.address,
-      r.city, r.birthDate, r.observations, r.isActive, r.firstVisitAt,
-      r.lastVisitAt, r.visitCount, r.deletedAt, r.createdAt, r.updatedAt,
+      r.id,
+      r.tenantId,
+      r.fullName,
+      r.documentType as DocumentType,
+      r.documentNumber,
+      r.phone,
+      r.whatsappPhone,
+      r.email,
+      r.address,
+      r.city,
+      r.birthDate,
+      r.observations,
+      r.isActive,
+      r.firstVisitAt,
+      r.lastVisitAt,
+      r.visitCount,
+      r.deletedAt,
+      r.createdAt,
+      r.updatedAt,
     );
   }
 }
