@@ -7,7 +7,9 @@ class FakeAgent:
     def __init__(self) -> None:
         self.last_count: int | None = None
 
-    async def answer(self, message, tenant_id, admin_phone, session_id, tool_call_count=0, history=None):  # type: ignore[no-untyped-def]  # noqa: E501
+    async def answer(
+        self, message, tenant_id, admin_phone, session_id, tool_call_count=0, history=None
+    ):  # type: ignore[no-untyped-def]  # noqa: E501
         self.last_count = tool_call_count
         return f"respuesta a: {message}", "GENERAL"
 

@@ -39,7 +39,7 @@ RESPONSE_PROMPT = (
     "la plataforma. Si los datos contienen inventario con stock bajo y el contexto "
     "es una solicitud de orden de compra, lista los repuestos críticos con su "
     "partId y stock actual, y pídele al administrador que responda "
-    "\"confirmar\" para generar el borrador de orden de compra. "
+    '"confirmar" para generar el borrador de orden de compra. '
     "No inventes nada que no esté en los datos."
 )
 
