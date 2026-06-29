@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Put,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { PermissionGuard } from '../guards/permission.guard';
 import { RequirePermission } from '../decorators/require-permission.decorator';
@@ -19,6 +10,7 @@ import {
   DeactivateServiceCatalogItemUseCase,
   ListServiceCatalogItemsUseCase,
 } from '../../../application/use-cases/inventory/service-catalog.use-case';
+import { UpdateServiceCatalogItemDto } from '../dtos/update-service-catalog-item.dto';
 
 @Controller('service-catalog')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -55,7 +47,13 @@ export class ServiceCatalogController {
   async create(
     @CurrentUser() user: JWTPayload,
     @Body()
-    body: { name: string; description?: string; estimatedHours: number; suggestedPrice: number; serviceType: string },
+    body: {
+      name: string;
+      description?: string;
+      estimatedHours: number;
+      suggestedPrice: number;
+      serviceType: string;
+    },
   ) {
     return this.createItem.execute({ tenantId: user.tenantId, ...body });
   }
@@ -73,7 +71,7 @@ export class ServiceCatalogController {
   async update(
     @Param('id') id: string,
     @CurrentUser() user: JWTPayload,
-    @Body() body: Record<string, unknown>,
+    @Body() body: UpdateServiceCatalogItemDto,
   ) {
     await this.updateItem.execute({ id, tenantId: user.tenantId, ...body });
     return { success: true };

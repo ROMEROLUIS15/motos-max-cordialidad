@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -86,14 +87,20 @@ export class WorkOrdersController {
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
   ) {
+    const parseDate = (s?: string): Date | undefined => {
+      if (!s) return undefined;
+      const d = new Date(s);
+      if (isNaN(d.getTime())) throw new BadRequestException(`Invalid date: ${s}`);
+      return d;
+    };
     return this.listWorkOrders.execute({
       tenantId: user.tenantId,
       branchId: branchId ?? user.branchId ?? '',
       status: status ? (status as WorkOrderStatus) : undefined,
       technicianId,
       restrictToTechnicianId: mine === 'true' ? user.sub : undefined,
-      from: from ? new Date(from) : undefined,
-      to: to ? new Date(to) : undefined,
+      from: parseDate(from),
+      to: parseDate(to),
       search: search?.trim() || undefined,
       page: page ? parseInt(page, 10) : 1,
       pageSize: pageSize ? parseInt(pageSize, 10) : 20,

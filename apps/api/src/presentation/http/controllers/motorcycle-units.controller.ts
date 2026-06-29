@@ -12,6 +12,7 @@ import {
   GetMotorcycleUnitDetailUseCase,
   RegisterMotorcycleUnitInput,
 } from '../../../application/use-cases/sales/motorcycle-units.use-case';
+import { UpdateMotorcycleUnitDto } from '../dtos/update-motorcycle-unit.dto';
 import { MotorcycleStatus } from '../../../domain/entities/motorcycle-unit.entity';
 
 @Controller('motorcycle-units')
@@ -72,7 +73,7 @@ export class MotorcycleUnitsController {
   async update(
     @Param('id') id: string,
     @CurrentUser() user: JWTPayload,
-    @Body() body: Record<string, unknown>,
+    @Body() body: UpdateMotorcycleUnitDto,
   ) {
     await this.updateUnit.execute({ unitId: id, tenantId: user.tenantId, ...body });
     return { success: true };

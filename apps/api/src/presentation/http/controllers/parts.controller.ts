@@ -23,6 +23,7 @@ import {
   GetPartDetailUseCase,
   RegisterPartInput,
 } from '../../../application/use-cases/inventory/parts.use-case';
+import { UpdatePartDto } from '../dtos/update-part.dto';
 
 @Controller('parts')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -83,7 +84,7 @@ export class PartsController {
   async update(
     @Param('id') id: string,
     @CurrentUser() user: JWTPayload,
-    @Body() body: Record<string, unknown>,
+    @Body() body: UpdatePartDto,
   ) {
     await this.updatePart.execute({ partId: id, tenantId: user.tenantId, ...body });
     return { success: true };
