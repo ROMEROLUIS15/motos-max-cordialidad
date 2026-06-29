@@ -22,7 +22,6 @@ import {
   List,
   Menu,
   X,
-  Search,
   UserCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -101,7 +100,6 @@ function Brand({ compact }: { compact?: boolean }) {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoError, setLogoError] = useState(false);
   const [loading, setLoading] = useState(true);
-  const pathname = usePathname();
 
   useEffect(() => {
     setLoading(true);
@@ -110,7 +108,7 @@ function Brand({ compact }: { compact?: boolean }) {
       .then(({ url }) => setLogoUrl(url))
       .catch(() => setLogoUrl(null))
       .finally(() => setLoading(false));
-  }, [pathname]);
+  }, []);
 
   const showFallback = !logoUrl || logoError;
 
@@ -255,16 +253,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </span>
 
           <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
-            <button
-              type="button"
-              className="hidden items-center gap-2 rounded-lg border border-border bg-secondary/40 px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary md:flex"
-            >
-              <Search className="h-3.5 w-3.5" />
-              Buscar
-              <kbd className="rounded border border-border bg-background px-1 font-mono text-[10px]">
-                ⌘K
-              </kbd>
-            </button>
             <ThemeToggle />
             <NotificationBell />
           </div>
