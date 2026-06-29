@@ -7,13 +7,20 @@ import {
   MessageStatus,
   MessageDirection,
 } from '../../../../domain/repositories/whatsapp.repository';
-import { Pagination, PaginatedResult, paginationToSkipTake } from '../../../../domain/shared/pagination';
+import {
+  Pagination,
+  PaginatedResult,
+  paginationToSkipTake,
+} from '../../../../domain/shared/pagination';
 
 @Injectable()
 export class WhatsAppPrismaRepository implements WhatsAppRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findSessionByPhone(phoneNumber: string, tenantId: string): Promise<WhatsAppSessionRecord | null> {
+  async findSessionByPhone(
+    phoneNumber: string,
+    tenantId: string,
+  ): Promise<WhatsAppSessionRecord | null> {
     return this.prisma.whatsAppSession.findFirst({ where: { phoneNumber, tenantId } });
   }
 
@@ -26,10 +33,16 @@ export class WhatsAppPrismaRepository implements WhatsAppRepository {
   }
 
   async touchSession(sessionId: string, at: Date): Promise<void> {
-    await this.prisma.whatsAppSession.update({ where: { id: sessionId }, data: { lastMessageAt: at } });
+    await this.prisma.whatsAppSession.update({
+      where: { id: sessionId },
+      data: { lastMessageAt: at },
+    });
   }
 
-  async listSessions(tenantId: string, pagination: Pagination): Promise<PaginatedResult<WhatsAppSessionRecord>> {
+  async listSessions(
+    tenantId: string,
+    pagination: Pagination,
+  ): Promise<PaginatedResult<WhatsAppSessionRecord>> {
     const { skip, take } = paginationToSkipTake(pagination);
     const [items, total] = await Promise.all([
       this.prisma.whatsAppSession.findMany({
@@ -47,7 +60,10 @@ export class WhatsAppPrismaRepository implements WhatsAppRepository {
     await this.prisma.message.create({ data: message });
   }
 
-  async listMessages(sessionId: string, pagination: Pagination): Promise<PaginatedResult<MessageRecord>> {
+  async listMessages(
+    sessionId: string,
+    pagination: Pagination,
+  ): Promise<PaginatedResult<MessageRecord>> {
     const { skip, take } = paginationToSkipTake(pagination);
     const [rows, total] = await Promise.all([
       this.prisma.message.findMany({
@@ -70,7 +86,11 @@ export class WhatsAppPrismaRepository implements WhatsAppRepository {
     };
   }
 
-  async updateMessageStatus(messageId: string, status: MessageStatus, waMessageId?: string): Promise<void> {
+  async updateMessageStatus(
+    messageId: string,
+    status: MessageStatus,
+    waMessageId?: string,
+  ): Promise<void> {
     await this.prisma.message.update({
       where: { id: messageId },
       data: { status, ...(waMessageId ? { waMessageId } : {}) },
@@ -84,5 +104,23 @@ export class WhatsAppPrismaRepository implements WhatsAppRepository {
       orderBy: { createdAt: 'desc' },
     });
     return outbound !== null;
+  }
+
+  async findRecentMessages(
+    sessionId: string,
+    limit: number,
+  ): Promise<Array<{ direction: 'INBOUND' | 'OUTBOUND'; content: string }>> {
+    const messages = await this.prisma.message.findMany({
+      where: { sessionId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: { direction: true, content: true },
+    });
+    return messages
+      .map((m) => ({
+        direction: m.direction as 'INBOUND' | 'OUTBOUND',
+        content: m.content,
+      }))
+      .reverse();
   }
 }

@@ -26,7 +26,14 @@ from .state import AdminAgentState
 logger = logging.getLogger(__name__)
 
 MAX_TOOL_CALLS = 5
-VALID_INTENTS = {"SALES_QUERY", "INVENTORY_QUERY", "REPORT_REQUEST", "GENERAL"}
+VALID_INTENTS = {
+    "SALES_QUERY",
+    "INVENTORY_QUERY",
+    "REPORT_REQUEST",
+    "PURCHASE_ORDER_REQUEST",
+    "PURCHASE_ORDER_CONFIRM",
+    "GENERAL",
+}
 
 
 def _last_user_text(state: AdminAgentState) -> str:
@@ -144,10 +151,20 @@ class AdminAgent:
         admin_phone: str,
         session_id: str,
         tool_call_count: int = 0,
-    ) -> str:
-        """Run one turn and return the natural-language reply."""
+        history: list[dict[str, str]] | None = None,
+    ) -> tuple[str, str]:
+        """Run one turn and return (natural-language reply, detected intent)."""
+        messages: list[Any] = []
+        if history:
+            recent = history[-20:]
+            for entry in recent:
+                if entry.get("role") == "user":
+                    messages.append(HumanMessage(content=entry["content"]))
+                elif entry.get("role") == "assistant":
+                    messages.append(AIMessage(content=entry["content"]))
+        messages.append(HumanMessage(content=message))
         initial: AdminAgentState = {
-            "messages": [HumanMessage(content=message)],
+            "messages": messages,
             "tenant_id": tenant_id,
             "admin_phone": admin_phone,
             "session_id": session_id,
@@ -155,4 +172,6 @@ class AdminAgent:
         }
         config = {"configurable": {"thread_id": session_id}}
         final: AdminAgentState = await self._graph.ainvoke(initial, config=config)
-        return final.get("final_response") or prompts.FALLBACK_MESSAGE
+        reply = final.get("final_response") or prompts.FALLBACK_MESSAGE
+        intent = final.get("intent", "GENERAL")
+        return reply, intent
