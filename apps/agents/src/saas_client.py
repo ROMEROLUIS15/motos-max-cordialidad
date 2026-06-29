@@ -77,7 +77,8 @@ class SaasClient:
                 last_exc = exc
                 if attempt < _RETRY_ATTEMPTS:
                     await asyncio.sleep(_RETRY_BACKOFF_SECONDS * (attempt + 1))
-        assert last_exc is not None
+        if last_exc is None:
+            raise RuntimeError("Retry loop exited without exception")
         logger.warning("Request %s %s failed after retries: %s", method, url, last_exc)
         raise last_exc
 

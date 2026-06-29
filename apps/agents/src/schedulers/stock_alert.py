@@ -50,7 +50,9 @@ class StockAlertJob:
                 failed += 1
                 continue
             for item in inventory.get("items", []):
-                part_id = item["partId"]
+                part_id = item.get("partId")
+                if part_id is None:
+                    continue
                 if await self._is_throttled(tenant_id, part_id):
                     skipped += 1
                     continue
@@ -73,6 +75,4 @@ class StockAlertJob:
         return {"sent": sent, "skipped": skipped, "failed": failed, "tenants": len(tenants)}
 
 
-def register_hourly(scheduler: Any, job: StockAlertJob) -> None:
-    """Attach the job to an APScheduler instance (hourly)."""
-    scheduler.add_job(job.run_once, "interval", hours=1, id="stock_alert", replace_existing=True)
+
