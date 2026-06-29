@@ -1,0 +1,19 @@
+schema: spec-driven
+
+context: |
+  Monorepo (pnpm workspaces): apps/api (NestJS + Prisma + PostgreSQL/Neon),
+  apps/web (Next.js), apps/agents (Python FastAPI + LangGraph).
+  API: NestJS v10, Prisma ORM, bcryptjs, JWT (access + refresh tokens),
+  @nestjs/throttler para rate limiting. Frontend: Next.js, fetch API directo.
+  Convención: conventional commits, TypeScript estricto, sin any implícito.
+
+rules:
+  proposal:
+    - Incluir sección "Non-goals" (lo que NO cubre el cambio)
+    - Incluir sección "Security & Rate limiting"
+  spec:
+    - Definir contratos Zod para inputs/outputs
+    - Especificar códigos HTTP exactos (200, 201, 400, 401, 404, 429)
+  tasks:
+    - Separar backend (NestJS) de frontend (Next.js) en tasks distintas
+    - Incluir migración Prisma como task explícita
