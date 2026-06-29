@@ -16,6 +16,7 @@ export interface PaginatedResult<T> {
 export interface CustomerRepository {
   findById(id: string, tenantId: string): Promise<Customer | null>;
   findByDocument(documentNumber: string, tenantId: string): Promise<Customer | null>;
+  findIdByPhone(tenantId: string, phone: string): Promise<string | null>;
   search(params: CustomerSearchParams, tenantId: string): Promise<PaginatedResult<Customer>>;
   save(customer: Customer): Promise<void>;
   create(customer: Customer): Promise<void>;
