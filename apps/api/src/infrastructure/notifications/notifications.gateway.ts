@@ -1,9 +1,5 @@
 import { Logger } from '@nestjs/common';
-import {
-  OnGatewayConnection,
-  WebSocketGateway,
-  WebSocketServer,
-} from '@nestjs/websockets';
+import { OnGatewayConnection, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '../auth/jwt.service';
 
@@ -12,7 +8,12 @@ import { JwtService } from '../auth/jwt.service';
  * provide a JWT (handshake auth.token); the socket then joins its user and
  * tenant rooms.
  */
-@WebSocketGateway({ namespace: '/notifications', cors: { origin: '*' } })
+const origins =
+  process.env['NODE_ENV'] !== 'production'
+    ? true
+    : (process.env['ALLOWED_ORIGINS']?.split(',').map((s) => s.trim()) ?? []);
+
+@WebSocketGateway({ namespace: '/notifications', cors: { origin: origins } })
 export class NotificationsGateway implements OnGatewayConnection {
   private readonly logger = new Logger(NotificationsGateway.name);
 
