@@ -33,6 +33,7 @@ export default function ReportsPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -58,7 +59,7 @@ export default function ReportsPage() {
       const { url } = await apiGet<{ url: string }>(`/api/reports/${id}/download`);
       window.open(url, '_blank', 'noopener');
     } catch (e) {
-      alert((e as Error).message);
+      setDownloadError((e as Error).message);
     } finally {
       setDownloading(null);
     }
@@ -66,6 +67,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-5">
+      {downloadError && <p className="text-sm text-destructive">{downloadError}</p>}
       <PageHeader
         title="Reportes"
         description="Reportes semanales y mensuales generados por el agente"

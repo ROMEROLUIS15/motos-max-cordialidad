@@ -60,13 +60,20 @@ export default function CustomerDetailPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     apiGet<CustomerProfile>(`/api/customers/${id}`)
       .then(setProfile)
-      .catch(() => router.push('/customers'))
+      .catch((e: unknown) => {
+        setFetchError((e as Error).message ?? 'No se pudo cargar el cliente');
+      })
       .finally(() => setLoading(false));
-  }, [id, router]);
+  }, [id]);
+
+  if (fetchError) {
+    return <p className="text-sm text-destructive p-4">{fetchError}</p>;
+  }
 
   if (loading) {
     return (

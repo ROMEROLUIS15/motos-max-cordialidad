@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState, ErrorState, TableRowsSkeleton } from '@/components/ui/states';
+import { useDebounce } from '@/hooks/use-debounce';
 
 interface Customer {
   id: string;
@@ -26,15 +27,6 @@ interface Customer {
 }
 
 const PAGE_SIZE = 20;
-
-function useDebounce<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return debounced;
-}
 
 export default function CustomersPage() {
   const router = useRouter();

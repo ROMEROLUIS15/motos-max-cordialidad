@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Modal } from '@/components/ui/modal';
 import { PageHeader } from '@/components/ui/page-header';
 import { EmptyState, ErrorState, TableRowsSkeleton } from '@/components/ui/states';
+import { useDebounce } from '@/hooks/use-debounce';
 
 type MotorcycleStatus = 'AVAILABLE' | 'RESERVED' | 'SOLD';
 type MotorcycleCondition = 'NEW' | 'USED';
@@ -48,15 +49,6 @@ const cop = new Intl.NumberFormat('es-CO', {
   currency: 'COP',
   maximumFractionDigits: 0,
 });
-
-function useDebounce<T>(value: T, delay: number): T {
-  const [v, setV] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setV(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return v;
-}
 
 export default function SalesPage() {
   const [units, setUnits] = useState<MotorcycleUnit[]>([]);
