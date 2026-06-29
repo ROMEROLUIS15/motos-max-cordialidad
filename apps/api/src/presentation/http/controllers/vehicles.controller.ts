@@ -1,15 +1,34 @@
-import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { PermissionGuard } from '../guards/permission.guard';
 import { RequirePermission } from '../decorators/require-permission.decorator';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { JWTPayload } from '../../../application/ports/jwt.port';
-import { RegisterVehicleUseCase, RegisterVehicleInput } from '../../../application/use-cases/vehicles/register-vehicle.use-case';
+import {
+  RegisterVehicleUseCase,
+  RegisterVehicleInput,
+} from '../../../application/use-cases/vehicles/register-vehicle.use-case';
 import { UpdateVehicleUseCase } from '../../../application/use-cases/vehicles/update-vehicle.use-case';
+import { UpdateVehicleDto } from '../dtos/update-vehicle.dto';
 import { DeactivateVehicleUseCase } from '../../../application/use-cases/vehicles/deactivate-vehicle.use-case';
 import { TransferVehicleOwnershipUseCase } from '../../../application/use-cases/vehicles/transfer-vehicle-ownership.use-case';
 import { GetVehicleHistoryUseCase } from '../../../application/use-cases/vehicles/get-vehicle-history.use-case';
-import { VehicleRepository, VEHICLE_REPOSITORY } from '../../../domain/repositories/vehicle.repository';
+import {
+  VehicleRepository,
+  VEHICLE_REPOSITORY,
+} from '../../../domain/repositories/vehicle.repository';
 
 @Controller('vehicles')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -25,17 +44,17 @@ export class VehiclesController {
 
   @Get()
   @RequirePermission('vehicles:READ')
-  async findAll(
-    @CurrentUser() user: JWTPayload,
-    @Query('customerId') customerId?: string,
-  ) {
+  async findAll(@CurrentUser() user: JWTPayload, @Query('customerId') customerId?: string) {
     if (customerId) return this.vehicleRepo.findByCustomer(customerId, user.tenantId);
     return [];
   }
 
   @Post()
   @RequirePermission('vehicles:CREATE')
-  async create(@CurrentUser() user: JWTPayload, @Body() body: Omit<RegisterVehicleInput, 'tenantId'>) {
+  async create(
+    @CurrentUser() user: JWTPayload,
+    @Body() body: Omit<RegisterVehicleInput, 'tenantId'>,
+  ) {
     return this.registerVehicle.execute({ ...body, tenantId: user.tenantId });
   }
 
@@ -47,8 +66,12 @@ export class VehiclesController {
 
   @Put(':id')
   @RequirePermission('vehicles:UPDATE')
-  async update(@Param('id') id: string, @CurrentUser() user: JWTPayload, @Body() body: Record<string, unknown>) {
-    await this.updateVehicle.execute({ vehicleId: id, tenantId: user.tenantId, ...body } as Parameters<UpdateVehicleUseCase['execute']>[0]);
+  async update(
+    @Param('id') id: string,
+    @CurrentUser() user: JWTPayload,
+    @Body() body: UpdateVehicleDto,
+  ) {
+    await this.updateVehicle.execute({ vehicleId: id, tenantId: user.tenantId, ...body });
     return { success: true };
   }
 
@@ -67,8 +90,10 @@ export class VehiclesController {
     @Body() body: { newOwnerId: string },
   ) {
     await this.transferOwnership.execute({
-      vehicleId: id, tenantId: user.tenantId,
-      newOwnerId: body.newOwnerId, transferredBy: user.sub,
+      vehicleId: id,
+      tenantId: user.tenantId,
+      newOwnerId: body.newOwnerId,
+      transferredBy: user.sub,
     });
     return { success: true };
   }

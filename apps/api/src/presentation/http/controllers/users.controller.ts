@@ -10,6 +10,7 @@ import {
 } from '../../../application/use-cases/identity/create-user.use-case';
 import { UpdateUserUseCase } from '../../../application/use-cases/identity/update-user.use-case';
 import { AssignRoleUseCase } from '../../../application/use-cases/identity/assign-role.use-case';
+import { UpdateUserDto } from '../dtos/update-user.dto';
 import { UserRepository, USER_REPOSITORY } from '../../../domain/repositories/user.repository';
 
 @Controller('users')
@@ -42,16 +43,12 @@ export class UsersController {
   async update(
     @Param('id') id: string,
     @CurrentUser() user: JWTPayload,
-    @Body() body: Record<string, unknown>,
+    @Body() body: UpdateUserDto,
   ) {
     await this.updateUserUseCase.execute({
       userId: id,
       tenantId: user.tenantId,
-      fullName: body['fullName'] as string | undefined,
-      branchId: body['branchId'] as string | null | undefined,
-      isActive: body['isActive'] as boolean | undefined,
-      email: body['email'] as string | undefined,
-      password: body['password'] as string | undefined,
+      ...body,
     });
     return { success: true };
   }

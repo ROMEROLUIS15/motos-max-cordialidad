@@ -2,8 +2,15 @@ import { Body, Controller, Get, Inject, Param, Post, Put, UseGuards } from '@nes
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { JWTPayload } from '../../../application/ports/jwt.port';
-import { CreateBranchUseCase, CreateBranchInput } from '../../../application/use-cases/identity/create-branch.use-case';
-import { BranchRepository, BRANCH_REPOSITORY } from '../../../domain/repositories/branch.repository';
+import {
+  CreateBranchUseCase,
+  CreateBranchInput,
+} from '../../../application/use-cases/identity/create-branch.use-case';
+import {
+  BranchRepository,
+  BRANCH_REPOSITORY,
+} from '../../../domain/repositories/branch.repository';
+import { UpdateBranchDto } from '../dtos/update-branch.dto';
 
 @Controller('branches')
 @UseGuards(JwtAuthGuard)
@@ -19,10 +26,7 @@ export class BranchesController {
   }
 
   @Post()
-  async create(
-    @CurrentUser() user: JWTPayload,
-    @Body() body: Omit<CreateBranchInput, 'tenantId'>,
-  ) {
+  async create(@CurrentUser() user: JWTPayload, @Body() body: Omit<CreateBranchInput, 'tenantId'>) {
     return this.createBranchUseCase.execute({ ...body, tenantId: user.tenantId });
   }
 
@@ -30,14 +34,14 @@ export class BranchesController {
   async update(
     @Param('id') id: string,
     @CurrentUser() user: JWTPayload,
-    @Body() body: Record<string, unknown>,
+    @Body() body: UpdateBranchDto,
   ) {
     const branch = await this.branchRepo.findById(id, user.tenantId);
     if (!branch) return null;
-    if (body['isActive'] === false) branch.deactivate();
-    if (body['isActive'] === true) branch.activate();
-    if (typeof body['name'] === 'string') branch.name = body['name'];
-    if (typeof body['address'] === 'string') branch.address = body['address'];
+    if (body.isActive === false) branch.deactivate();
+    if (body.isActive === true) branch.activate();
+    if (body.name !== undefined) branch.name = body.name;
+    if (body.address !== undefined) branch.address = body.address;
     await this.branchRepo.save(branch);
     return branch;
   }
