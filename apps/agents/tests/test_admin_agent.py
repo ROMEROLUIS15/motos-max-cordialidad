@@ -41,37 +41,36 @@ def _agent(llm: Any, client: Any) -> AdminAgent:
 async def test_general_intent_skips_tools() -> None:
     client = FakeClient()
     agent = _agent(FakeLLM(classify="GENERAL", reply="¡Hola! Soy tu asistente."), client)
-    out = await agent.answer("hola", "t1", "+57300", "sess-1")
-    assert "asistente" in out
+    reply, intent = await agent.answer("hola", "t1", "+57300", "sess-1")
+    assert "asistente" in reply
     assert client.inventory_called is False
 
 
 async def test_sales_intent_calls_dashboard_and_responds() -> None:
     client = FakeClient()
     agent = _agent(FakeLLM(classify="SALES_QUERY", reply="Vendiste $1.000"), client)
-    out = await agent.answer("cuánto vendí?", "t1", "+57300", "sess-2")
+    reply, intent = await agent.answer("cuánto vendí?", "t1", "+57300", "sess-2")
     assert client.sales_called is True
-    assert out == "Vendiste $1.000"
+    assert reply == "Vendiste $1.000"
 
 
 async def test_inventory_intent_calls_inventory() -> None:
     client = FakeClient()
     agent = _agent(FakeLLM(classify="INVENTORY_QUERY", reply="2 repuestos críticos"), client)
-    out = await agent.answer("cómo está el stock?", "t1", "+57300", "sess-3")
+    reply, intent = await agent.answer("cómo está el stock?", "t1", "+57300", "sess-3")
     assert client.inventory_called is True
-    assert "crítico" in out
+    assert "crítico" in reply
 
 
 async def test_llm_failure_routes_to_fallback() -> None:
     agent = _agent(FakeLLM(classify="GENERAL", fail=True), FakeClient())
-    out = await agent.answer("hola", "t1", "+57300", "sess-4")
-    assert "No pude completar" in out
+    reply, intent = await agent.answer("hola", "t1", "+57300", "sess-4")
+    assert "No pude completar" in reply
 
 
 async def test_tool_budget_exhausted_skips_tool() -> None:
     client = FakeClient()
     agent = _agent(FakeLLM(classify="SALES_QUERY", reply="ok"), client)
-    out = await agent.answer("ventas?", "t1", "+57300", "sess-5", tool_call_count=5)
-    # Budget reached → goes straight to respond, no tool call.
+    reply, intent = await agent.answer("ventas?", "t1", "+57300", "sess-5", tool_call_count=5)
     assert client.sales_called is False
-    assert out == "ok"
+    assert reply == "ok"

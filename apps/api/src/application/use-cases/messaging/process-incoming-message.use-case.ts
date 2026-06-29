@@ -5,6 +5,7 @@ import {
   WHATSAPP_REPOSITORY,
   WhatsAppSessionRecord,
 } from '../../../domain/repositories/whatsapp.repository';
+import { LLMMessage } from '../../ports/llm-provider.port';
 import { NotificationPort, NOTIFICATION_PORT } from '../../ports/notification.port';
 import { RouterAgentPort, ROUTER_AGENT_PORT } from '../../ports/router-agent.port';
 import { WhatsAppSenderPort, WHATSAPP_SENDER_PORT } from '../../ports/whatsapp-sender.port';
@@ -148,13 +149,18 @@ export class ProcessIncomingMessageUseCase {
     branchId: string | null,
   ): Promise<void> {
     try {
+      const recentMessages = await this.whatsappRepo.findRecentMessages(session.id, 11);
+      const history: LLMMessage[] = recentMessages.slice(0, 10).map((m) => ({
+        role: m.direction === 'INBOUND' ? 'user' : 'assistant',
+        content: m.content,
+      }));
       const result = await this.routerAgent.process({
         tenantId: input.tenantId,
         branchId,
         customerId,
         isRegistered: customerId !== null,
         message: input.content,
-        history: [],
+        history,
       });
 
       await this.whatsapp.sendToPhone(
