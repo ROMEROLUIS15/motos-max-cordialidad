@@ -1,6 +1,7 @@
 import { Body, Controller, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { z } from 'zod';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { JWTPayload } from '../../../application/ports/jwt.port';
@@ -8,9 +9,20 @@ import {
   AuthenticateUserUseCase,
   AuthenticateUserInput,
 } from '../../../application/use-cases/identity/authenticate-user.use-case';
+import { ForgotPasswordUseCase } from '../../../application/use-cases/identity/forgot-password.use-case';
 import { RefreshTokenUseCase } from '../../../application/use-cases/identity/refresh-token.use-case';
+import { ResetPasswordUseCase } from '../../../application/use-cases/identity/reset-password.use-case';
 import { RevokeTokenUseCase } from '../../../application/use-cases/identity/revoke-token.use-case';
 import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma.service';
+
+const forgotPasswordSchema = z.object({
+  email: z.string().email('Email inválido'),
+});
+
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Token requerido'),
+  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+});
 
 @Controller('auth')
 export class AuthController {
@@ -18,6 +30,8 @@ export class AuthController {
     private readonly authenticateUserUseCase: AuthenticateUserUseCase,
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly revokeTokenUseCase: RevokeTokenUseCase,
+    private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
+    private readonly resetPasswordUseCase: ResetPasswordUseCase,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -29,7 +43,6 @@ export class AuthController {
     try {
       return await this.authenticateUserUseCase.execute(body);
     } catch (error) {
-      // Log auth failure
       await this.prisma.authFailureLog
         .create({
           data: {
@@ -59,5 +72,21 @@ export class AuthController {
     if (body.refreshToken) {
       await this.revokeTokenUseCase.execute({ refreshToken: body.refreshToken });
     }
+  }
+
+  @Post('forgot-password')
+  @HttpCode(200)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 3, ttl: 3600000 } })
+  async forgotPassword(@Body() body: unknown) {
+    const { email } = forgotPasswordSchema.parse(body);
+    return this.forgotPasswordUseCase.execute(email);
+  }
+
+  @Post('reset-password')
+  @HttpCode(200)
+  async resetPassword(@Body() body: unknown) {
+    const { token, password } = resetPasswordSchema.parse(body);
+    return this.resetPasswordUseCase.execute(token, password);
   }
 }

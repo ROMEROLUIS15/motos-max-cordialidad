@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MailModule } from './infrastructure/mail/mail.module';
 import { PrismaModule } from './infrastructure/persistence/prisma/prisma.module';
 
 // Infrastructure
@@ -36,7 +37,9 @@ import {
 } from './application/use-cases/identity/create-custom-role.use-case';
 import { DeleteRoleUseCase } from './application/use-cases/identity/delete-role.use-case';
 import { AuthenticateUserUseCase } from './application/use-cases/identity/authenticate-user.use-case';
+import { ForgotPasswordUseCase } from './application/use-cases/identity/forgot-password.use-case';
 import { RefreshTokenUseCase } from './application/use-cases/identity/refresh-token.use-case';
+import { ResetPasswordUseCase } from './application/use-cases/identity/reset-password.use-case';
 import { RevokeTokenUseCase } from './application/use-cases/identity/revoke-token.use-case';
 
 // Controllers
@@ -55,7 +58,7 @@ const repositories = [
 ];
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, MailModule],
   controllers: [
     AuthController,
     TenantsController,
@@ -81,7 +84,9 @@ const repositories = [
     UpdateRolePermissionsUseCase,
     DeleteRoleUseCase,
     AuthenticateUserUseCase,
+    ForgotPasswordUseCase,
     RefreshTokenUseCase,
+    ResetPasswordUseCase,
     RevokeTokenUseCase,
   ],
   exports: [

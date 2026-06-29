@@ -20,6 +20,7 @@ import { AuditModule } from './audit.module';
 import { SettingsModule } from './settings.module';
 import { AgentsModule } from './agents.module';
 import { HomeServicesModule } from './home-services.module';
+import { MailModule } from './infrastructure/mail/mail.module';
 import { SalesModule } from './sales.module';
 import { ReferenceModule } from './reference.module';
 import { DomainExceptionFilter } from './presentation/http/filters/domain-exception.filter';
@@ -44,6 +45,7 @@ import { SentryExceptionFilter } from './presentation/http/filters/sentry-except
     SettingsModule,
     AgentsModule,
     HomeServicesModule,
+    MailModule,
     SalesModule,
     ReferenceModule,
   ],
