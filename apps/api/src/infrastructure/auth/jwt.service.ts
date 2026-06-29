@@ -8,6 +8,12 @@ export class JwtService implements JwtPort {
   private readonly expiresIn: string;
 
   constructor() {
+    if (!process.env['JWT_SECRET']) {
+      if (process.env['NODE_ENV'] === 'production') {
+        throw new Error('JWT_SECRET is required in production');
+      }
+      console.warn('[JwtService] JWT_SECRET not set, using dev fallback');
+    }
     this.secret = process.env['JWT_SECRET'] ?? 'dev-secret-change-in-production';
     this.expiresIn = process.env['JWT_EXPIRES_IN'] ?? '15m';
   }
