@@ -10,7 +10,7 @@ name: Keep services awake
 # while the instance is running.
 on:
   schedule:
-    - cron: '*/10 * * * *' # every 10 minutes
+    - cron: '*/5 * * * *' # every 5 minutes
   workflow_dispatch:
 
 jobs:
