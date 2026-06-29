@@ -4,7 +4,10 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { JWTPayload } from '../../../application/ports/jwt.port';
-import { AuthenticateUserUseCase, AuthenticateUserInput } from '../../../application/use-cases/identity/authenticate-user.use-case';
+import {
+  AuthenticateUserUseCase,
+  AuthenticateUserInput,
+} from '../../../application/use-cases/identity/authenticate-user.use-case';
 import { RefreshTokenUseCase } from '../../../application/use-cases/identity/refresh-token.use-case';
 import { RevokeTokenUseCase } from '../../../application/use-cases/identity/revoke-token.use-case';
 import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma.service';
@@ -27,20 +30,24 @@ export class AuthController {
       return await this.authenticateUserUseCase.execute(body);
     } catch (error) {
       // Log auth failure
-      await this.prisma.authFailureLog.create({
-        data: {
-          tenantId: body.tenantId ?? null,
-          email: body.email,
-          ipAddress: req.ip ?? '0.0.0.0',
-          reason: (error as Error).message,
-        },
-      }).catch(() => undefined);
+      await this.prisma.authFailureLog
+        .create({
+          data: {
+            tenantId: body.tenantId ?? null,
+            email: body.email,
+            ipAddress: req.ip ?? '0.0.0.0',
+            reason: (error as Error).message,
+          },
+        })
+        .catch(() => undefined);
       throw error;
     }
   }
 
   @Post('refresh')
   @HttpCode(200)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   async refresh(@Body() body: { refreshToken: string }) {
     return this.refreshTokenUseCase.execute(body);
   }

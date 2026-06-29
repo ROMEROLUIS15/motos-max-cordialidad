@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TraceIdInterceptor } from './presentation/http/interceptors/trace-id.interceptor';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -28,7 +28,7 @@ import { SentryExceptionFilter } from './presentation/http/filters/sentry-except
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-    ThrottlerModule.forRoot([{ ttl: 300000, limit: 5 }]),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     PrismaModule,
     IdentityModule,
     CustomersModule,
@@ -54,6 +54,7 @@ import { SentryExceptionFilter } from './presentation/http/filters/sentry-except
     { provide: APP_FILTER, useClass: SentryExceptionFilter },
     { provide: APP_FILTER, useClass: DomainExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: TraceIdInterceptor },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}
