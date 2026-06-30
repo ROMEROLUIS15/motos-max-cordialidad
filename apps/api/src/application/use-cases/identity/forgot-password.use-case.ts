@@ -13,7 +13,7 @@ export class ForgotPasswordUseCase {
   ) {}
 
   async execute(email: string): Promise<{ message: string }> {
-    const user = await this.prisma.user.findFirst({ where: { email } });
+    const user = await this.prisma.user.findFirst({ where: { email, isActive: true } });
 
     if (!user) {
       this.logger.warn(`forgot-password attempted for unknown email: ${email}`);
