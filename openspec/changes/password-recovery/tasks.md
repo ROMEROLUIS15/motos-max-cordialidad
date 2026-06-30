@@ -26,12 +26,12 @@
 
 ## 5. Frontend (Next.js)
 
-- [ ] 5.1 Create `/auth/forgot-password` page with email input form
-- [ ] 5.2 Create `/auth/reset-password` page with token + new password form
-- [ ] 5.3 Add success/error states and loading indicators
+- [x] 5.1 Create `/auth/forgot-password` page with email input form
+- [x] 5.2 Create `/auth/reset-password` page with token + new password form
+- [x] 5.3 Add success/error states and loading indicators
 
 ## 6. Deploy & Verify
 
-- [ ] 6.1 Configure SMTP env vars in Render dashboard
-- [ ] 6.2 Push to main, verify migration runs on Neon
+- [x] 6.1 Configure SMTP env vars in Render dashboard
+- [x] 6.2 Push to main, verify migration runs on Neon
 - [ ] 6.3 Test full flow: forgot → email → reset → login
