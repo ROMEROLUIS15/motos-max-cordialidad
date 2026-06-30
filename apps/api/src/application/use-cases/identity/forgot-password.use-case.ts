@@ -31,7 +31,13 @@ export class ForgotPasswordUseCase {
       },
     });
 
-    await this.mail.sendPasswordResetEmail({ email: user.email, fullName: user.fullName }, raw);
+    try {
+      await this.mail.sendPasswordResetEmail({ email: user.email, fullName: user.fullName }, raw);
+    } catch (err) {
+      this.logger.error(
+        `Failed to send password reset email to ${user.email}: ${(err as Error).message}`,
+      );
+    }
 
     return { message: 'Si el email está registrado, recibirás un link de recuperación.' };
   }
