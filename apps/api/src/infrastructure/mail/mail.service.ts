@@ -22,6 +22,7 @@ export class MailService {
       port: Number(process.env['SMTP_PORT']) || 587,
       secure: false,
       requireTLS: true,
+      family: 4, // Render free has no IPv6 outbound; force IPv4
       auth: { user, pass },
       connectionTimeout: 10000,
       socketTimeout: 15000,
