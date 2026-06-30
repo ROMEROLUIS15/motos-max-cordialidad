@@ -12,6 +12,8 @@ import { MailService } from './mail.service';
           user: process.env['SMTP_USER'] ?? 'apikey',
           pass: process.env['SMTP_PASS'] ?? '',
         },
+        connectionTimeout: 5000,
+        socketTimeout: 10000,
       },
       defaults: {
         from: `"Motos Max Cordialidad" <${process.env['SMTP_FROM'] ?? 'noreply@motosmaxcordialidad.com'}>`,
