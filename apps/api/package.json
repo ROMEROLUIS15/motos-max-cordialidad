@@ -38,6 +38,7 @@
     "@nestjs/websockets": "^10.4.4",
     "@prisma/client": "^5.20.0",
     "@react-pdf/renderer": "^4.5.1",
+    "@sendgrid/mail": "^8.1.6",
     "@sentry/nestjs": "^10.60.0",
     "bcryptjs": "^3.0.3",
     "bullmq": "^5.15.1",

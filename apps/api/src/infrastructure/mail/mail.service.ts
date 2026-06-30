@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createTransport, type Transporter } from 'nodemailer';
-import type SMTPTransport from 'nodemailer/lib/smtp-transport';
+import sgMail from '@sendgrid/mail';
 
 export interface MailUser {
   email: string;
@@ -10,30 +9,16 @@ export interface MailUser {
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private readonly transporter: Transporter;
 
   constructor() {
-    const user = process.env['SMTP_USER'] ?? '';
-    const pass = process.env['SMTP_PASS'] ?? '';
-    this.logger.log(
-      `SMTP init — host:${process.env['SMTP_HOST'] ?? 'smtp.gmail.com'} user:${user} pass_len:${pass.length}`,
-    );
-    const opts: SMTPTransport.Options & { family?: 4 | 6 | 0 } = {
-      host: process.env['SMTP_HOST'] ?? 'smtp.gmail.com',
-      port: Number(process.env['SMTP_PORT']) || 465,
-      secure: true, // SSL on 465
-      family: 4,
-      auth: { user, pass },
-      connectionTimeout: 10000,
-      socketTimeout: 15000,
-    };
-    this.transporter = createTransport(opts);
+    sgMail.setApiKey(process.env['SENDGRID_API_KEY'] ?? '');
+    this.logger.log(`SendGrid init — key_len:${(process.env['SENDGRID_API_KEY'] ?? '').length}`);
   }
 
   async sendPasswordResetEmail(user: MailUser, token: string): Promise<void> {
     const url = `${this._baseUrl}/reset-password?token=${token}`;
-    await this.transporter.sendMail({
-      from: `"Motos Max Cordialidad" <${process.env['SMTP_FROM'] ?? 'noreply@motosmaxcordialidad.com'}>`,
+    await sgMail.send({
+      from: process.env['SMTP_FROM'] ?? 'motosmaxcordialidad@gmail.com',
       to: user.email,
       subject: 'Recuperación de contraseña — Motos Max Cordialidad',
       html: `<p>Hola ${user.fullName},</p>
@@ -46,8 +31,8 @@ export class MailService {
   }
 
   async sendPasswordChangedNotification(user: MailUser): Promise<void> {
-    await this.transporter.sendMail({
-      from: `"Motos Max Cordialidad" <${process.env['SMTP_FROM'] ?? 'noreply@motosmaxcordialidad.com'}>`,
+    await sgMail.send({
+      from: process.env['SMTP_FROM'] ?? 'motosmaxcordialidad@gmail.com',
       to: user.email,
       subject: 'Tu contraseña ha sido cambiada — Motos Max Cordialidad',
       html: `<p>Hola ${user.fullName},</p>
@@ -58,6 +43,6 @@ export class MailService {
   }
 
   private get _baseUrl(): string {
-    return process.env['FRONTEND_URL'] ?? 'https://app.motosmaxcordialidad.com';
+    return process.env['FRONTEND_URL'] ?? 'https://motos-max-cordialidad.pages.dev';
   }
 }
