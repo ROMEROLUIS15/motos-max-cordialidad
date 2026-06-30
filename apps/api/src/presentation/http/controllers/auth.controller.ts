@@ -1,4 +1,12 @@
-import { Body, Controller, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  HttpCode,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Request } from 'express';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { z } from 'zod';
@@ -14,6 +22,12 @@ import { RefreshTokenUseCase } from '../../../application/use-cases/identity/ref
 import { ResetPasswordUseCase } from '../../../application/use-cases/identity/reset-password.use-case';
 import { RevokeTokenUseCase } from '../../../application/use-cases/identity/revoke-token.use-case';
 import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma.service';
+
+const loginSchema = z.object({
+  email: z.string().email('Email inválido'),
+  password: z.string().min(1, 'La contraseña es requerida'),
+  tenantId: z.string().optional(),
+});
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -39,15 +53,20 @@ export class AuthController {
   @HttpCode(200)
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 300000 } })
-  async login(@Body() body: AuthenticateUserInput, @Req() req: Request) {
+  async login(@Body() body: unknown, @Req() req: Request) {
+    const result = loginSchema.safeParse(body);
+    if (!result.success) {
+      throw new BadRequestException(result.error.errors[0]?.message ?? 'Datos inválidos');
+    }
+    const parsed = result.data as AuthenticateUserInput;
     try {
-      return await this.authenticateUserUseCase.execute(body);
+      return await this.authenticateUserUseCase.execute(parsed);
     } catch (error) {
       await this.prisma.authFailureLog
         .create({
           data: {
-            tenantId: body.tenantId ?? null,
-            email: body.email,
+            tenantId: parsed.tenantId ?? null,
+            email: parsed.email,
             ipAddress: req.ip ?? '0.0.0.0',
             reason: (error as Error).message,
           },

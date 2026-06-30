@@ -8,12 +8,16 @@ export class UserPrismaRepository implements UserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async findById(id: string, tenantId: string): Promise<User | null> {
-    const r = await this.prisma.user.findFirst({ where: { id, tenantId } });
+    const where: Record<string, unknown> = { id };
+    if (tenantId) where.tenantId = tenantId;
+    const r = await this.prisma.user.findFirst({ where });
     return r ? this.toDomain(r) : null;
   }
 
   async findByEmail(email: string, tenantId: string): Promise<User | null> {
-    const r = await this.prisma.user.findFirst({ where: { email, tenantId } });
+    const where: Record<string, unknown> = { email: email.toLowerCase().trim() };
+    if (tenantId) where.tenantId = tenantId;
+    const r = await this.prisma.user.findFirst({ where });
     return r ? this.toDomain(r) : null;
   }
 
@@ -35,7 +39,7 @@ export class UserPrismaRepository implements UserRepository {
       data: {
         branchId: user.branchId,
         roleId: user.roleId,
-        email: user.email,
+        email: user.email.toLowerCase().trim(),
         fullName: user.fullName,
         passwordHash: user.passwordHash,
         isActive: user.isActive,
@@ -52,7 +56,7 @@ export class UserPrismaRepository implements UserRepository {
         tenantId: user.tenantId,
         branchId: user.branchId,
         roleId: user.roleId,
-        email: user.email,
+        email: user.email.toLowerCase().trim(),
         passwordHash: user.passwordHash,
         fullName: user.fullName,
         isActive: user.isActive,
