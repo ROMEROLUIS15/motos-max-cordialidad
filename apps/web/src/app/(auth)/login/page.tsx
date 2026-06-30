@@ -57,9 +57,11 @@ export default function LoginPage() {
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { message?: string };
         if (res.status === 401)
-          setServerError('Credenciales inválidas. Verifica tu email y contraseña.');
+          setServerError(body.message ?? 'Credenciales inválidas. Verifica tu email y contraseña.');
         else if (res.status === 429)
           setServerError('Demasiados intentos. Intenta de nuevo en 5 minutos.');
+        else if (res.status === 400)
+          setServerError(body.message ?? 'Datos inválidos. Verifica tu email y contraseña.');
         else setServerError(body.message ?? 'Error al iniciar sesión. Intenta nuevamente.');
         return;
       }
