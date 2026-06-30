@@ -20,10 +20,9 @@ export class MailService {
     );
     const opts: SMTPTransport.Options & { family?: 4 | 6 | 0 } = {
       host: process.env['SMTP_HOST'] ?? 'smtp.gmail.com',
-      port: Number(process.env['SMTP_PORT']) || 587,
-      secure: false,
-      requireTLS: true,
-      family: 4, // Render free has no IPv6 outbound; force IPv4
+      port: Number(process.env['SMTP_PORT']) || 465,
+      secure: true, // SSL on 465
+      family: 4,
       auth: { user, pass },
       connectionTimeout: 10000,
       socketTimeout: 15000,
