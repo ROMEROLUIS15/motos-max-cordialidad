@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createTransport, type Transporter } from 'nodemailer';
+import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 export interface MailUser {
   email: string;
@@ -17,7 +18,7 @@ export class MailService {
     this.logger.log(
       `SMTP init — host:${process.env['SMTP_HOST'] ?? 'smtp.gmail.com'} user:${user} pass_len:${pass.length}`,
     );
-    this.transporter = createTransport({
+    const opts: SMTPTransport.Options & { family?: 4 | 6 | 0 } = {
       host: process.env['SMTP_HOST'] ?? 'smtp.gmail.com',
       port: Number(process.env['SMTP_PORT']) || 587,
       secure: false,
@@ -26,7 +27,8 @@ export class MailService {
       auth: { user, pass },
       connectionTimeout: 10000,
       socketTimeout: 15000,
-    });
+    };
+    this.transporter = createTransport(opts);
   }
 
   async sendPasswordResetEmail(user: MailUser, token: string): Promise<void> {
