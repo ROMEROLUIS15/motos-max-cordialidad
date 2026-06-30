@@ -74,6 +74,8 @@ services:
         sync: false
       - key: FRONTEND_URL
         value: https://motos-max-cordialidad.pages.dev
+      - key: ALLOWED_ORIGINS
+        value: https://motos-max-cordialidad.pages.dev
 
   # Fase 2 — Python agents microservice (AgentAdmin, reports, stock alerts).
   - type: web
