@@ -34,4 +34,4 @@
 
 - [x] 6.1 Configure SMTP env vars in Render dashboard
 - [x] 6.2 Push to main, verify migration runs on Neon
-- [ ] 6.3 Test full flow: forgot → email → reset → login
+- [x] 6.3 Test full flow: forgot → email → reset → login
