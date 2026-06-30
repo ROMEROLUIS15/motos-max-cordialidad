@@ -9,6 +9,10 @@ RUN corepack enable && corepack prepare pnpm@9.14.4 --activate
 WORKDIR /app
 
 FROM base AS builder
+# @prisma/client postinstall runs `prisma generate` during `pnpm install`.
+# Provide a dummy URL so Prisma doesn't fail — the real URL is injected at runtime.
+ARG DATABASE_URL="postgresql://x:x@localhost:5432/x"
+ENV DATABASE_URL=${DATABASE_URL}
 # Copy every workspace package.json first so `--frozen-lockfile` can validate
 # the whole workspace, then install only the api subtree.
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
@@ -17,9 +21,7 @@ COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 RUN pnpm install --frozen-lockfile --filter "@motoworkshop/api..."
 COPY apps/api/ ./apps/api/
-# DATABASE_URL is only needed at runtime; pass a dummy so prisma generate
-# doesn't fail during the build stage where secrets are not available.
-RUN DATABASE_URL="postgresql://x:x@localhost:5432/x" pnpm --filter @motoworkshop/api db:generate
+RUN pnpm --filter @motoworkshop/api db:generate
 RUN pnpm --filter @motoworkshop/api build
 # Pre-compile the seed to plain JS (src/ is available here but not at runtime),
 # preserving relative paths so dist-seed/prisma/seed.js can require its src import.
