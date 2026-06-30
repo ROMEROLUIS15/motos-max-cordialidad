@@ -7,6 +7,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   // rawBody is needed to verify the WhatsApp webhook HMAC signature.
   const app = await NestFactory.create(AppModule, { rawBody: true });
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.setGlobalPrefix('api');
   if (process.env['NODE_ENV'] !== 'production') {
     app.enableCors();
