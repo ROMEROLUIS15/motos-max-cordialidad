@@ -33,9 +33,11 @@ export class ForgotPasswordUseCase {
 
     try {
       await this.mail.sendPasswordResetEmail({ email: user.email, fullName: user.fullName }, raw);
+      this.logger.log(`forgot-password: email sent to ${user.email}`);
     } catch (err) {
       this.logger.error(
-        `Failed to send password reset email to ${user.email}: ${(err as Error).message}`,
+        `forgot-password: SMTP FAILED for ${user.email} — ${(err as Error).message}`,
+        (err as Error).stack,
       );
     }
 
