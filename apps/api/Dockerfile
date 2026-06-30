@@ -17,7 +17,9 @@ COPY apps/api/package.json ./apps/api/
 COPY apps/web/package.json ./apps/web/
 RUN pnpm install --frozen-lockfile --filter "@motoworkshop/api..."
 COPY apps/api/ ./apps/api/
-RUN pnpm --filter @motoworkshop/api db:generate
+# DATABASE_URL is only needed at runtime; pass a dummy so prisma generate
+# doesn't fail during the build stage where secrets are not available.
+RUN DATABASE_URL="postgresql://x:x@localhost:5432/x" pnpm --filter @motoworkshop/api db:generate
 RUN pnpm --filter @motoworkshop/api build
 # Pre-compile the seed to plain JS (src/ is available here but not at runtime),
 # preserving relative paths so dist-seed/prisma/seed.js can require its src import.
