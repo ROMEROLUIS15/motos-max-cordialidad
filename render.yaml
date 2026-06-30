@@ -61,6 +61,19 @@ services:
       # dashboard to the agents service's onrender.com URL once it exists.
       - key: AGENTS_BASE_URL
         sync: false
+      # --- Email (password reset) ---
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: '587'
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: FRONTEND_URL
+        value: https://motos-max-cordialidad.pages.dev
 
   # Fase 2 — Python agents microservice (AgentAdmin, reports, stock alerts).
   - type: web
