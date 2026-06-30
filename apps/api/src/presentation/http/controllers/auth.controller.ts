@@ -77,7 +77,7 @@ export class AuthController {
   @Post('forgot-password')
   @HttpCode(200)
   @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 20, ttl: 3600000 } })
+  @Throttle({ default: { limit: 3, ttl: 3600000 } })
   async forgotPassword(@Body() body: unknown) {
     const { email } = forgotPasswordSchema.parse(body);
     return this.forgotPasswordUseCase.execute(email);
