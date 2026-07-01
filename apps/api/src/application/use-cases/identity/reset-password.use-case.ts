@@ -48,7 +48,13 @@ export class ResetPasswordUseCase {
     });
 
     if (user) {
-      await this.mail.sendPasswordChangedNotification(user);
+      try {
+        await this.mail.sendPasswordChangedNotification(user);
+      } catch (error) {
+        this.logger.error(
+          `password-changed notification failed for ${user.email} — ${(error as Error).message}`,
+        );
+      }
     }
 
     this.logger.log(`password reset successful for user ${record.userId}`);
