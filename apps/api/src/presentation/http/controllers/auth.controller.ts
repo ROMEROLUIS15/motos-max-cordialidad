@@ -31,6 +31,7 @@ const loginSchema = z.object({
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Email inválido'),
+  tenantId: z.string().optional(),
 });
 
 const resetPasswordSchema = z.object({
@@ -98,12 +99,14 @@ export class AuthController {
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 3600000 } })
   async forgotPassword(@Body() body: unknown) {
-    const { email } = forgotPasswordSchema.parse(body);
-    return this.forgotPasswordUseCase.execute(email);
+    const { email, tenantId } = forgotPasswordSchema.parse(body);
+    return this.forgotPasswordUseCase.execute(email, tenantId);
   }
 
   @Post('reset-password')
   @HttpCode(200)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 3600000 } })
   async resetPassword(@Body() body: unknown) {
     const { token, password } = resetPasswordSchema.parse(body);
     return this.resetPasswordUseCase.execute(token, password);

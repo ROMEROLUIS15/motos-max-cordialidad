@@ -12,7 +12,6 @@ export class MailService {
 
   constructor() {
     sgMail.setApiKey(process.env['SENDGRID_API_KEY'] ?? '');
-    this.logger.log(`SendGrid init — key_len:${(process.env['SENDGRID_API_KEY'] ?? '').length}`);
   }
 
   async sendPasswordResetEmail(user: MailUser, token: string): Promise<void> {

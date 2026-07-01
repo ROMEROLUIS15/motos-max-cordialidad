@@ -61,14 +61,9 @@ services:
       # dashboard to the agents service's onrender.com URL once it exists.
       - key: AGENTS_BASE_URL
         sync: false
-      # --- Email (password reset) ---
-      - key: SMTP_HOST
-        value: smtp.gmail.com
-      - key: SMTP_PORT
-        value: '587'
-      - key: SMTP_USER
-        sync: false
-      - key: SMTP_PASS
+      # --- Email (password reset) — SendGrid HTTP API (Render free blocks
+      # outbound SMTP, so port-based mail is not an option here).
+      - key: SENDGRID_API_KEY
         sync: false
       - key: SMTP_FROM
         sync: false
