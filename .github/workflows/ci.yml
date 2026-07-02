@@ -135,3 +135,46 @@ jobs:
 
       - name: Test (pytest)
         run: uv run pytest -q
+
+  # ── Quality gate deploy ────────────────────────────────────────────────
+  # Frontend production deploy runs ONLY when every check above passed, and
+  # only for pushes to main (never PRs). The Cloudflare Git integration's
+  # automatic production builds are disabled — this job is the deploy path.
+  # The API/agents (Render) gate themselves via autoDeployTrigger: checksPass.
+  deploy-web:
+    name: Deploy Web (Cloudflare Pages)
+    needs: [typecheck, test, lint, agents]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          # wrangler 4.x requires Node >= 22
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web (next-on-pages)
+        run: cd apps/web && npx @cloudflare/next-on-pages@1
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://motoworkshop-api.onrender.com' }}
+
+      # WARNING: do NOT add a wrangler.toml under apps/web — wrangler would
+      # sync it into the Cloudflare project settings and break them (see
+      # pages.yml for the full story). CLI flags only.
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/web
+          command: pages deploy .vercel/output/static --project-name=motos-max-cordialidad --branch=main
