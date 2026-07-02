@@ -9,7 +9,8 @@ export interface MailUser {
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private readonly resend: Resend;
+  /** Null when RESEND_API_KEY is missing — `new Resend('')` throws at construction. */
+  private readonly resend: Resend | null;
 
   /** True when running outside production (local dev, testing). */
   private get isDev(): boolean {
@@ -23,7 +24,7 @@ export class MailService {
         'RESEND_API_KEY is not set — password reset emails WILL fail silently (HTTP 200 to client, no email sent)',
       );
     }
-    this.resend = new Resend(apiKey);
+    this.resend = apiKey ? new Resend(apiKey) : null;
   }
 
   async sendPasswordResetEmail(user: MailUser, token: string): Promise<void> {
@@ -48,6 +49,12 @@ export class MailService {
     }
 
     // ── Production: send via Resend ────────────────────────────────────────
+    if (!this.resend) {
+      // Thrown so ForgotPasswordUseCase logs it at ERROR level; the HTTP
+      // response stays 200 (anti-enumeration).
+      throw new Error('RESEND_API_KEY is not configured — cannot send password reset email');
+    }
+
     const { error } = await this.resend.emails.send({
       from: process.env['SMTP_FROM'] ?? 'Motos Max Cordialidad <noreply@motosmaxcordialidad.com>',
       to: user.email,
@@ -70,6 +77,13 @@ export class MailService {
   async sendPasswordChangedNotification(user: MailUser): Promise<void> {
     if (this.isDev) {
       this.logger.log(`[DEV] Password changed notification would be sent to ${user.email}`);
+      return;
+    }
+
+    if (!this.resend) {
+      this.logger.error(
+        `password changed notification skipped for ${user.email} — RESEND_API_KEY is not configured`,
+      );
       return;
     }
 
