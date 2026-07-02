@@ -44,6 +44,13 @@ export class ForgotPasswordThrottlerGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<Request>();
+
+    // E2E: skipped under NODE_ENV=test unless the test opts in with the
+    // x-e2e-throttle header (mirrors the ThrottlerModule skipIf).
+    if (process.env['NODE_ENV'] === 'test' && req.headers['x-e2e-throttle'] !== 'on') {
+      return true;
+    }
+
     const ip = req.ip ?? '0.0.0.0';
     const email =
       ((req.body as Record<string, unknown>)?.['email'] as string)?.toLowerCase().trim() ?? '';
