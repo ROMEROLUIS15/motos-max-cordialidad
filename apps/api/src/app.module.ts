@@ -32,10 +32,13 @@ import { ThrottlerExceptionFilter } from './presentation/http/filters/throttler-
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot({
       throttlers: [
-        // Short window: 60 requests/minute per IP (general protection)
-        { ttl: 60_000, limit: 60 },
+        // Short window: 60 requests/minute per IP (general protection).
+        // MUST be named 'default' — route-level @Throttle({ default: {...} })
+        // overrides target the throttler by name; two unnamed entries both
+        // resolve to 'default' and the override becomes ambiguous.
+        { name: 'default', ttl: 60_000, limit: 60 },
         // Circuit breaker: 100 requests/hour per IP (coordinated brute-force)
-        { ttl: 3_600_000, limit: 100 },
+        { name: 'hourly', ttl: 3_600_000, limit: 100 },
       ],
       // E2E tests run the whole suite from one IP and would trip real limits.
       // Under NODE_ENV=test throttling is skipped UNLESS the request opts in
