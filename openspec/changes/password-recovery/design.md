@@ -23,10 +23,11 @@ El login usa bcryptjs (salt rounds 12) y soporta multi-tenant (email + tenantId)
 
 ## Decisions
 
-### 1. Mailer: @nestjs-modules/mailer + Nodemailer + SendGrid (SMTP)
+### 1. Mailer: Resend (Direct SDK, HTTP API)
 
-- **Alternativas consideradas:** Mailgun API directa, SendGrid API, AWS SES
-- **Decisión:** `@nestjs-modules/mailer` por ser el módulo NestJS estándar, con transporte SMTP a SendGrid (ya configurado en el tenant). Si el tenant no tiene SMTP configurado, se usa un transporte por defecto de las variables de entorno.
+- **Alternativas consideradas:** `@sendgrid/mail`, `@nestjs-modules/mailer` + Nodemailer (SMTP), Mailgun API directa, AWS SES
+- **Decisión:** SDK `resend` directo vía HTTP API. Historia: Nodemailer/SMTP quedó descartado porque Render free bloquea puertos SMTP salientes (587 y 465); SendGrid HTTP API funcionó pero la API key dio 401 persistente en Render. Resend usa HTTP (no bloqueado), SDK mínimo, y con `onboarding@resend.dev` permite enviar al email del dueño de la cuenta Resend sin verificar dominio — suficiente para el caso de uso (solo el OWNER recupera contraseña). Se encapsula en `MailService`; en dev (`NODE_ENV !== 'production'`) se imprime el link en consola en lugar de llamar a Resend.
+- **Config requerida en Render:** `RESEND_API_KEY` y `SMTP_FROM` (sin dominio verificado: `onboarding@resend.dev`).
 
 ### 2. Token storage: Tabla independiente `PasswordResetToken`
 

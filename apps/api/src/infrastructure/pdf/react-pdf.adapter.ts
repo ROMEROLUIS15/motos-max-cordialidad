@@ -23,6 +23,8 @@ const money = (n: number) =>
 // Function indirection keeps it a real dynamic import at runtime.
 const dynamicImport = new Function('m', 'return import(m)') as (m: string) => Promise<unknown>;
 
+type ReactPdfRenderer = typeof import('@react-pdf/renderer');
+
 /**
  * Generates the quote PDF synchronously within the request cycle using
  * @react-pdf/renderer. The library is ESM-only, so it is loaded with a dynamic
@@ -33,7 +35,7 @@ export class ReactPdfAdapter implements PdfGeneratorPort {
   async generateQuotePdf(data: QuotePdfData): Promise<Buffer> {
     const { Document, Page, Text, View, StyleSheet, renderToBuffer } = (await dynamicImport(
       '@react-pdf/renderer',
-    )) as typeof import('@react-pdf/renderer');
+    )) as ReactPdfRenderer;
 
     const s = StyleSheet.create({
       page: { padding: 32, fontSize: 10, color: '#1f2937' },
@@ -124,7 +126,7 @@ export class ReactPdfAdapter implements PdfGeneratorPort {
   async generateSaleContractPdf(data: SaleContractPdfData): Promise<Buffer> {
     const { Document, Page, Text, View, StyleSheet, renderToBuffer } = (await dynamicImport(
       '@react-pdf/renderer',
-    )) as typeof import('@react-pdf/renderer');
+    )) as ReactPdfRenderer;
 
     const s = StyleSheet.create({
       page: { padding: 36, fontSize: 10, color: '#1f2937', lineHeight: 1.4 },

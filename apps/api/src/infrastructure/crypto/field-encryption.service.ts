@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 
 const ALGORITHM = 'aes-256-gcm';
@@ -15,7 +15,7 @@ export class FieldEncryptionService {
       if (process.env['NODE_ENV'] === 'production') {
         throw new Error('ENCRYPTION_KEY is required in production');
       }
-      console.warn('[FieldEncryptionService] ENCRYPTION_KEY not set, using dev fallback');
+      new Logger(FieldEncryptionService.name).warn('ENCRYPTION_KEY not set, using dev fallback');
       const fallback = 'dev-encryption-key-change-in-prod00'.padEnd(32, '0');
       this.key = Buffer.from(fallback.substring(0, 32), 'utf8');
       return;

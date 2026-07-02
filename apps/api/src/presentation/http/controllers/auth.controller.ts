@@ -11,6 +11,7 @@ import { Request } from 'express';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { z } from 'zod';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { ForgotPasswordThrottlerGuard } from '../guards/forgot-password-throttler.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { JWTPayload } from '../../../application/ports/jwt.port';
 import {
@@ -36,7 +37,12 @@ const forgotPasswordSchema = z.object({
 
 const resetPasswordSchema = z.object({
   token: z.string().min(1, 'Token requerido'),
-  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+  password: z
+    .string()
+    .min(8, 'La contraseña debe tener al menos 8 caracteres')
+    .regex(/[A-Z]/, 'Debe contener al menos una letra mayúscula')
+    .regex(/[a-z]/, 'Debe contener al menos una letra minúscula')
+    .regex(/[0-9]/, 'Debe contener al menos un número'),
 });
 
 @Controller('auth')
@@ -96,19 +102,24 @@ export class AuthController {
 
   @Post('forgot-password')
   @HttpCode(200)
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 10, ttl: 3600000 } })
+  @UseGuards(ForgotPasswordThrottlerGuard) // standalone: 3 req / 15 min per IP+email
   async forgotPassword(@Body() body: unknown) {
-    const { email, tenantId } = forgotPasswordSchema.parse(body);
-    return this.forgotPasswordUseCase.execute(email, tenantId);
+    const result = forgotPasswordSchema.safeParse(body);
+    if (!result.success) {
+      throw new BadRequestException(result.error.errors[0]?.message ?? 'Datos inválidos');
+    }
+    return this.forgotPasswordUseCase.execute(result.data.email, result.data.tenantId);
   }
 
   @Post('reset-password')
   @HttpCode(200)
-  @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 10, ttl: 3600000 } })
+  @UseGuards(ThrottlerGuard) // IP guard
+  @Throttle({ default: { limit: 5, ttl: 900_000 } }) // 5 req / 15 min per IP
   async resetPassword(@Body() body: unknown) {
-    const { token, password } = resetPasswordSchema.parse(body);
-    return this.resetPasswordUseCase.execute(token, password);
+    const result = resetPasswordSchema.safeParse(body);
+    if (!result.success) {
+      throw new BadRequestException(result.error.errors[0]?.message ?? 'Datos inválidos');
+    }
+    return this.resetPasswordUseCase.execute(result.data.token, result.data.password);
   }
 }
