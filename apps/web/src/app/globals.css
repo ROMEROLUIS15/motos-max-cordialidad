@@ -49,25 +49,25 @@
   }
 
   /* ============================================================
-     LIGHT — fondo gris frío con superficies blancas que resaltan
+     LIGHT — Fondo suavizado para evitar fatiga visual (menos deslumbrante)
      ============================================================ */
   .light {
-    --background: 214 20% 94%; /* gris claro — las cards/modales resaltan */
-    --foreground: 213 18% 14%;
+    --background: 214 15% 91%; /* Un gris-azulado un tono más oscuro y suave */
+    --foreground: 213 18% 20%; /* Texto un poco más suave, no tan negro */
 
-    --card: 0 0% 100%; /* blanco */
-    --card-foreground: 213 18% 14%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 213 18% 14%;
+    --card: 214 20% 97%; /* Blanco roto/perla, en lugar de blanco puro brillante */
+    --card-foreground: 213 18% 20%;
+    --popover: 214 20% 97%;
+    --popover-foreground: 213 18% 20%;
 
-    --primary: 189 94% 36%;
+    --primary: 189 94% 32%; /* Cian levemente más profundo para compensar el fondo */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 214 22% 91%;
-    --secondary-foreground: 213 18% 14%;
-    --muted: 214 22% 91%;
-    --muted-foreground: 215 14% 40%;
-    --accent: 188 70% 92%;
+    --secondary: 214 15% 86%; /* Grises adaptados al nuevo fondo */
+    --secondary-foreground: 213 18% 20%;
+    --muted: 214 15% 86%;
+    --muted-foreground: 215 14% 45%; /* Texto secundario más suave */
+    --accent: 188 60% 88%;
     --accent-foreground: 189 94% 26%;
 
     --destructive: 0 72% 48%;
@@ -77,9 +77,9 @@
     --warning: 35 92% 40%;
     --warning-foreground: 30 60% 10%;
 
-    --border: 213 18% 85%; /* #d0d7de aprox */
-    --input: 213 18% 82%;
-    --ring: 189 94% 36%;
+    --border: 213 18% 80%; /* Bordes un poco más definidos para separar tarjetas */
+    --input: 213 18% 80%;
+    --ring: 189 94% 32%;
 
     --highlight: 0 0% 100%;
 
