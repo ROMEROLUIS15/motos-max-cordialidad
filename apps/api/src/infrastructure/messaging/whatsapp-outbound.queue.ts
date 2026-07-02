@@ -1,7 +1,10 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Queue, Worker, Job, ConnectionOptions } from 'bullmq';
 import { MetaWhatsAppClient } from './meta-whatsapp.client';
-import { WhatsAppRepository, WHATSAPP_REPOSITORY } from '../../domain/repositories/whatsapp.repository';
+import {
+  WhatsAppRepository,
+  WHATSAPP_REPOSITORY,
+} from '../../domain/repositories/whatsapp.repository';
 
 function redisConnection(): ConnectionOptions {
   const url = process.env['REDIS_URL'];
@@ -49,7 +52,9 @@ export class WhatsAppOutboundQueue implements OnModuleInit, OnModuleDestroy {
     private readonly metaClient: MetaWhatsAppClient,
     @Inject(WHATSAPP_REPOSITORY) private readonly whatsappRepo: WhatsAppRepository,
   ) {
-    this.queue = new Queue<OutboundJobData>(WHATSAPP_OUTBOUND_QUEUE, { connection: this.connection });
+    this.queue = new Queue<OutboundJobData>(WHATSAPP_OUTBOUND_QUEUE, {
+      connection: this.connection,
+    });
   }
 
   async enqueue(data: OutboundJobData): Promise<void> {
@@ -59,6 +64,13 @@ export class WhatsAppOutboundQueue implements OnModuleInit, OnModuleDestroy {
   onModuleInit(): void {
     if (!process.env['REDIS_URL']) {
       this.logger.warn('REDIS_URL not set — whatsapp-outbound worker not started');
+      return;
+    }
+    // E2E: message delivery is not under test, and the worker's background
+    // writes (status updates + retries) contend with the suites' afterAll
+    // cleanup on the message/notification tables. Jobs simply stay queued.
+    if (process.env['NODE_ENV'] === 'test') {
+      this.logger.warn('NODE_ENV=test — whatsapp-outbound worker not started');
       return;
     }
     this.worker = new Worker<OutboundJobData>(
@@ -73,7 +85,9 @@ export class WhatsAppOutboundQueue implements OnModuleInit, OnModuleDestroy {
 
     this.worker.on('failed', (job) => {
       if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
-        void this.whatsappRepo.updateMessageStatus(job.data.messageId, 'FAILED').catch(() => undefined);
+        void this.whatsappRepo
+          .updateMessageStatus(job.data.messageId, 'FAILED')
+          .catch(() => undefined);
       }
     });
   }
