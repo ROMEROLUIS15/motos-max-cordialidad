@@ -72,10 +72,12 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      # test:cov enforces the coverage floor in the jest config
-      # (statements 50 / branches 8 / functions 30 / lines 50)
+      # --coverage enforces the coverage floor in the jest config
+      # (statements 50 / branches 8 / functions 30 / lines 50).
+      # NOTE: `pnpm run script -- --flag` passes a literal "--" to jest,
+      # which then treats --flag as a test path pattern — use exec instead.
       - name: Test API (with coverage floor)
-        run: pnpm --filter @motoworkshop/api test:cov -- --ci
+        run: pnpm --filter @motoworkshop/api exec jest --coverage --ci
 
       - name: Test Web
         run: pnpm --filter @motoworkshop/web test:ci

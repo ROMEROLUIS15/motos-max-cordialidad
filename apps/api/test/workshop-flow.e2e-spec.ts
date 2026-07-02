@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/infrastructure/persistence/prisma/prisma.service';
 import { SystemRole, SYSTEM_ROLE_PERMISSIONS } from '../src/domain/entities/role.entity';
@@ -34,15 +34,40 @@ describeIfDb('Workshop flow (e2e)', () => {
     prisma = app.get(PrismaService);
     http = request(app.getHttpServer());
 
-    await prisma.tenant.create({ data: { id: tenantId, name: 'WF Tenant', taxId: `WF-${randomUUID().slice(0, 8)}`, vatPercentage: 19 } });
-    const branch = await prisma.branch.create({ data: { id: randomUUID(), tenantId, name: 'Main', address: 'x', isActive: true } });
+    await prisma.tenant.create({
+      data: {
+        id: tenantId,
+        name: 'WF Tenant',
+        taxId: `WF-${randomUUID().slice(0, 8)}`,
+        vatPercentage: 19,
+      },
+    });
+    const branch = await prisma.branch.create({
+      data: { id: randomUUID(), tenantId, name: 'Main', address: 'x', isActive: true },
+    });
     branchId = branch.id;
-    const role = await prisma.role.create({ data: { id: randomUUID(), tenantId, name: SystemRole.OWNER, isSystem: true } });
+    const role = await prisma.role.create({
+      data: { id: randomUUID(), tenantId, name: SystemRole.OWNER, isSystem: true },
+    });
     await prisma.rolePermission.createMany({
-      data: SYSTEM_ROLE_PERMISSIONS[SystemRole.OWNER].map((p) => ({ id: randomUUID(), roleId: role.id, module: p.module, action: p.action })),
+      data: SYSTEM_ROLE_PERMISSIONS[SystemRole.OWNER].map((p) => ({
+        id: randomUUID(),
+        roleId: role.id,
+        module: p.module,
+        action: p.action,
+      })),
     });
     const owner = await prisma.user.create({
-      data: { id: randomUUID(), tenantId, branchId, roleId: role.id, email, passwordHash: await bcrypt.hash(password, 12), fullName: 'WF Owner', isActive: true },
+      data: {
+        id: randomUUID(),
+        tenantId,
+        branchId,
+        roleId: role.id,
+        email,
+        passwordHash: await bcrypt.hash(password, 12),
+        fullName: 'WF Owner',
+        isActive: true,
+      },
     });
     ownerId = owner.id;
 
@@ -81,37 +106,76 @@ describeIfDb('Workshop flow (e2e)', () => {
 
   const auth = (req: request.Test) => req.set('Authorization', `Bearer ${token}`);
 
-  async function createWorkOrderWithReception(): Promise<{ workOrderId: string; vehicleId: string }> {
-    const customer = await auth(http.post('/api/customers')).send({
-      fullName: 'Cliente WF', documentType: 'CC', documentNumber: `DOC-${randomUUID().slice(0, 8)}`, phone: '300', city: 'Bogotá',
-    }).expect(201);
-    const vehicle = await auth(http.post('/api/vehicles')).send({
-      plate: `WF${randomUUID().slice(0, 4)}`, brand: 'Yamaha', model: 'FZ', year: 2022, color: 'Negro',
-      engineNumber: `ENG-${randomUUID().slice(0, 6)}`, currentOwnerId: customer.body.id,
-    }).expect(201);
-    const reception = await auth(http.post('/api/receptions')).send({
-      branchId, vehicleId: vehicle.body.id, odometerReading: 10000, fuelLevel: 'HALF',
-    }).expect(201);
-    const wo = await auth(http.post('/api/work-orders')).send({
-      receptionId: reception.body.id, technicianId: ownerId, serviceType: 'MAINTENANCE',
-      problemDescription: 'Mantenimiento', promisedDeliveryAt: new Date(Date.now() + 86400000).toISOString(),
-    }).expect(201);
+  async function createWorkOrderWithReception(): Promise<{
+    workOrderId: string;
+    vehicleId: string;
+  }> {
+    const customer = await auth(http.post('/api/customers'))
+      .send({
+        fullName: 'Cliente WF',
+        documentType: 'CC',
+        documentNumber: `DOC-${randomUUID().slice(0, 8)}`,
+        phone: '300',
+        city: 'Bogotá',
+      })
+      .expect(201);
+    const vehicle = await auth(http.post('/api/vehicles'))
+      .send({
+        plate: `WF${randomUUID().slice(0, 4)}`,
+        brand: 'Yamaha',
+        model: 'FZ',
+        year: 2022,
+        color: 'Negro',
+        engineNumber: `ENG-${randomUUID().slice(0, 6)}`,
+        currentOwnerId: customer.body.id,
+      })
+      .expect(201);
+    const reception = await auth(http.post('/api/receptions'))
+      .send({
+        branchId,
+        vehicleId: vehicle.body.id,
+        odometerReading: 10000,
+        fuelLevel: 'HALF',
+      })
+      .expect(201);
+    const wo = await auth(http.post('/api/work-orders'))
+      .send({
+        receptionId: reception.body.id,
+        technicianId: ownerId,
+        serviceType: 'MAINTENANCE',
+        problemDescription: 'Mantenimiento',
+        promisedDeliveryAt: new Date(Date.now() + 86400000).toISOString(),
+      })
+      .expect(201);
     return { workOrderId: wo.body.id, vehicleId: vehicle.body.id };
   }
 
   it('reserves stock when a part is added and confirms the discount on DELIVERED', async () => {
     // Part with 10 units in stock.
-    const part = await auth(http.post('/api/parts')).send({
-      sku: `SKU-${randomUUID().slice(0, 8)}`, name: 'Filtro', category: 'Filtros', unit: 'unidad', costPrice: 1000, salePrice: 2000,
-    }).expect(201);
-    await auth(http.post('/api/stock/entry')).send({ partId: part.body.id, quantity: 10 }).expect(201);
+    const part = await auth(http.post('/api/parts'))
+      .send({
+        sku: `SKU-${randomUUID().slice(0, 8)}`,
+        name: 'Filtro',
+        category: 'Filtros',
+        unit: 'unidad',
+        costPrice: 1000,
+        salePrice: 2000,
+      })
+      .expect(201);
+    await auth(http.post('/api/stock/entry'))
+      .send({ partId: part.body.id, quantity: 10 })
+      .expect(201);
 
     const { workOrderId } = await createWorkOrderWithReception();
 
     // Add 2 units → should reserve.
-    await auth(http.post(`/api/work-orders/${workOrderId}/parts`)).send({ partId: part.body.id, quantity: 2 }).expect(201);
+    await auth(http.post(`/api/work-orders/${workOrderId}/parts`))
+      .send({ partId: part.body.id, quantity: 2 })
+      .expect(201);
 
-    const reserved = await auth(http.get(`/api/parts/${part.body.id}`).query({ branchId })).expect(200);
+    const reserved = await auth(http.get(`/api/parts/${part.body.id}`).query({ branchId })).expect(
+      200,
+    );
     expect(reserved.body.stock.stockReservado).toBe(2);
     expect(reserved.body.stock.stockDisponible).toBe(8);
     expect(reserved.body.stock.stockFisico).toBe(10);
@@ -127,20 +191,26 @@ describeIfDb('Workshop flow (e2e)', () => {
     expect(detail.body.workOrder.status).toBe('DELIVERED');
 
     // Physical stock decremented, reservation released.
-    const after = await auth(http.get(`/api/parts/${part.body.id}`).query({ branchId })).expect(200);
+    const after = await auth(http.get(`/api/parts/${part.body.id}`).query({ branchId })).expect(
+      200,
+    );
     expect(after.body.stock.stockFisico).toBe(8);
     expect(after.body.stock.stockReservado).toBe(0);
   });
 
   it('rejects an invalid state transition (PENDING → COMPLETED) with 422', async () => {
     const { workOrderId } = await createWorkOrderWithReception();
-    const res = await auth(http.post(`/api/work-orders/${workOrderId}/status`)).send({ newStatus: 'COMPLETED' }).expect(422);
+    const res = await auth(http.post(`/api/work-orders/${workOrderId}/status`))
+      .send({ newStatus: 'COMPLETED' })
+      .expect(422);
     expect(res.body.code).toBe('WORK_ORDER_INVALID_TRANSITION');
   });
 
   itIfR2('approves a quote and moves the work order to IN_PROGRESS', async () => {
     const { workOrderId } = await createWorkOrderWithReception();
-    await auth(http.post(`/api/work-orders/${workOrderId}/lines`)).send({ description: 'Servicio', unitPrice: 50000 }).expect(201);
+    await auth(http.post(`/api/work-orders/${workOrderId}/lines`))
+      .send({ description: 'Servicio', unitPrice: 50000 })
+      .expect(201);
 
     const quote = await auth(http.post('/api/quotes')).send({ workOrderId }).expect(201);
     await auth(http.post(`/api/quotes/${quote.body.id}/send`)).expect(201);
