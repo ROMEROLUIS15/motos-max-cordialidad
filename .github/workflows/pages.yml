@@ -7,7 +7,8 @@ on:
   workflow_dispatch:
 
 env:
-  NODE_VERSION: '20'
+  # wrangler 4.x requires Node >= 22 (deploy step)
+  NODE_VERSION: '22'
   PNPM_VERSION: '9'
 
 jobs:
