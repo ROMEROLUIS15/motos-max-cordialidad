@@ -45,10 +45,14 @@ jobs:
           NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://motoworkshop-api.onrender.com' }}
 
       # wrangler-action replaces the deprecated cloudflare/pages-action.
+      # workingDirectory makes it use the wrangler already installed in
+      # apps/web devDependencies — installing from the action fails in a pnpm
+      # workspace root (ERR_PNPM_ADDING_TO_ROOT).
       # --branch=main marks it as a production deployment on the Pages project.
       - name: Publish to Cloudflare Pages
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy apps/web/.vercel/output/static --project-name=motos-max-cordialidad --branch=main
+          workingDirectory: apps/web
+          command: pages deploy .vercel/output/static --project-name=motos-max-cordialidad --branch=main
