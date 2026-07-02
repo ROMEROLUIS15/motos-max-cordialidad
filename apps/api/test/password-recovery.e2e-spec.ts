@@ -312,14 +312,16 @@ describeIfDb('Password Recovery (e2e)', () => {
   });
 
   it('reset-password returns 429 after exceeding IP rate limit (limit 5/15min)', async () => {
-    const results = await Promise.all(
-      Array.from({ length: 12 }, () =>
-        resetPassword('bogus-' + randomUUID().replace(/-/g, ''), 'StrongPass99!', {
-          throttle: true,
-        }),
-      ),
-    );
-    const statuses = results.map((r) => r.status);
+    // Sequential on purpose: 12 concurrent requests against the supertest
+    // server caused socket resets (ECONNRESET) and cascaded into afterAll
+    // lock timeouts in the following suites.
+    const statuses: number[] = [];
+    for (let i = 0; i < 8; i++) {
+      const res = await resetPassword('bogus-' + randomUUID().replace(/-/g, ''), 'StrongPass99!', {
+        throttle: true,
+      });
+      statuses.push(res.status);
+    }
     expect(statuses).toContain(429);
   });
 
