@@ -81,8 +81,12 @@ describeIfDb('Password Recovery (e2e)', () => {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  async function forgotPassword(email: string) {
-    return request(app.getHttpServer()).post('/api/auth/forgot-password').send({ email, tenantId });
+  // opts.throttle engages the real rate limiters (skipped by default under
+  // NODE_ENV=test via the x-e2e-throttle opt-in — see app.module / guard).
+  async function forgotPassword(email: string, opts: { throttle?: boolean } = {}) {
+    const req = request(app.getHttpServer()).post('/api/auth/forgot-password');
+    if (opts.throttle) req.set('x-e2e-throttle', 'on');
+    return req.send({ email, tenantId });
   }
 
   async function getRawToken(): Promise<string> {
@@ -101,10 +105,10 @@ describeIfDb('Password Recovery (e2e)', () => {
     return raw;
   }
 
-  async function resetPassword(token: string, pwd: string) {
-    return request(app.getHttpServer())
-      .post('/api/auth/reset-password')
-      .send({ token, password: pwd });
+  async function resetPassword(token: string, pwd: string, opts: { throttle?: boolean } = {}) {
+    const req = request(app.getHttpServer()).post('/api/auth/reset-password');
+    if (opts.throttle) req.set('x-e2e-throttle', 'on');
+    return req.send({ token, password: pwd });
   }
 
   async function login(pwd: string) {
@@ -284,13 +288,13 @@ describeIfDb('Password Recovery (e2e)', () => {
 
   // ── 4.15-4.21 Rate limiting ───────────────────────────────────────────────
 
-  it('6th forgot-password from same IP+email returns 429', async () => {
+  it('4th forgot-password from same IP+email returns 429 (limit 3/15min)', async () => {
     const limitEmail = `limit-${randomUUID().slice(0, 8)}@e2e.test`;
-    for (let i = 0; i < 5; i++) {
-      const res = await forgotPassword(limitEmail);
+    for (let i = 0; i < 3; i++) {
+      const res = await forgotPassword(limitEmail, { throttle: true });
       expect(res.status).toBe(200);
     }
-    const blocked = await forgotPassword(limitEmail);
+    const blocked = await forgotPassword(limitEmail, { throttle: true });
     expect(blocked.status).toBe(429);
     expect(blocked.body.code).toBe('TOO_MANY_REQUESTS');
     expect(blocked.body.message).toMatch(/[Dd]emasiados/);
@@ -299,18 +303,20 @@ describeIfDb('Password Recovery (e2e)', () => {
   it('different email from same IP uses a separate rate limit counter', async () => {
     const emailA = `rla-${randomUUID().slice(0, 8)}@e2e.test`;
     const emailB = `rlb-${randomUUID().slice(0, 8)}@e2e.test`;
-    for (let i = 0; i < 5; i++) await forgotPassword(emailA);
-    const blockedA = await forgotPassword(emailA);
+    for (let i = 0; i < 3; i++) await forgotPassword(emailA, { throttle: true });
+    const blockedA = await forgotPassword(emailA, { throttle: true });
     expect(blockedA.status).toBe(429);
 
-    const resB = await forgotPassword(emailB);
+    const resB = await forgotPassword(emailB, { throttle: true });
     expect(resB.status).toBe(200);
   });
 
-  it('reset-password returns 429 after exceeding IP rate limit', async () => {
+  it('reset-password returns 429 after exceeding IP rate limit (limit 5/15min)', async () => {
     const results = await Promise.all(
       Array.from({ length: 12 }, () =>
-        resetPassword('bogus-' + randomUUID().replace(/-/g, ''), 'StrongPass99!'),
+        resetPassword('bogus-' + randomUUID().replace(/-/g, ''), 'StrongPass99!', {
+          throttle: true,
+        }),
       ),
     );
     const statuses = results.map((r) => r.status);
