@@ -132,25 +132,41 @@ motos-max-cordialidad/              # Raíz del monorepo (pnpm workspaces)
 git clone https://github.com/ROMEROLUIS15/motos-max-cordialidad.git
 cd motos-max-cordialidad
 
-# 2. Archivo de entorno
-cp .env.local.example .env.local
-# Editar .env.local con credenciales locales
+# 2. Configurar archivos de entorno
+# Opción A: Usar script automático (Windows)
+setup-env.bat
 
-# 3. Instalar dependencias Node
+# Opción B: Usar script automático (Linux/Mac)
+chmod +x setup-env.sh
+./setup-env.sh
+
+# Opción C: Manual (copiar todos los archivos)
+cp .env.local.example .env.local
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env.local
+cp apps/agents/.env.example apps/agents/.env
+
+# 3. Editar los archivos .env con tus credenciales
+# - .env.local (configuración general)
+# - apps/api/.env (API NestJS)
+# - apps/web/.env.local (frontend Next.js)
+# - apps/agents/.env (Python agents)
+
+# 4. Instalar dependencias Node
 # En Windows bcrypt requiere build tools; si falla usar --ignore-scripts:
 pnpm install --ignore-scripts
 # Si estás en macOS/Linux o tienes build tools:
 pnpm install
 
-# 4. Python (agentes)
+# 5. Python (agentes)
 cd apps/agents
 uv sync
 cd ../..
 
-# 5. Infraestructura local (Docker)
+# 6. Infraestructura local (Docker)
 docker compose up -d
 
-# 6. Base de datos
+# 7. Base de datos
 pnpm --filter @motoworkshop/api db:generate
 pnpm --filter @motoworkshop/api db:migrate
 pnpm --filter @motoworkshop/api db:seed

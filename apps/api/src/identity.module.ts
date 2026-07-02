@@ -41,6 +41,8 @@ import { ForgotPasswordUseCase } from './application/use-cases/identity/forgot-p
 import { RefreshTokenUseCase } from './application/use-cases/identity/refresh-token.use-case';
 import { ResetPasswordUseCase } from './application/use-cases/identity/reset-password.use-case';
 import { RevokeTokenUseCase } from './application/use-cases/identity/revoke-token.use-case';
+import { CleanupExpiredTokensJob } from './application/use-cases/identity/cleanup-expired-tokens.job';
+import { ForgotPasswordThrottlerGuard } from './presentation/http/guards/forgot-password-throttler.guard';
 
 // Controllers
 import { AuthController } from './presentation/http/controllers/auth.controller';
@@ -88,6 +90,8 @@ const repositories = [
     RefreshTokenUseCase,
     ResetPasswordUseCase,
     RevokeTokenUseCase,
+    CleanupExpiredTokensJob,
+    ForgotPasswordThrottlerGuard,
   ],
   exports: [
     JwtService,

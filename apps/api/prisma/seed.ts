@@ -7,6 +7,11 @@ const prisma = new PrismaClient();
 
 const DEMO_TAX_ID = '900123456-7';
 const DEMO_PASSWORD = 'Demo1234!';
+// Owner real — seeded so the forgot-password happy path works in local dev.
+// Never hardcode the real password here (this file is committed): set
+// OWNER_SEED_PASSWORD in .env if you need the real one locally.
+const OWNER_EMAIL = 'motosmaxcordialidad@gmail.com';
+const OWNER_PASSWORD = process.env['OWNER_SEED_PASSWORD'] ?? DEMO_PASSWORD;
 
 async function main() {
   console.log('🌱 Seeding demo data...');
@@ -65,10 +70,33 @@ async function main() {
 
   // ── Users ────────────────────────────────────────────────────────────────
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
+  const ownerPasswordHash = await bcrypt.hash(OWNER_PASSWORD, 12);
   const users = [
-    { email: 'owner@demo.com', fullName: 'Olivia Owner', role: SystemRole.OWNER },
-    { email: 'recepcion@demo.com', fullName: 'Rita Recepción', role: SystemRole.RECEPTIONIST },
-    { email: 'tecnico@demo.com', fullName: 'Tomás Técnico', role: SystemRole.TECHNICIAN },
+    {
+      email: 'owner@demo.com',
+      fullName: 'Olivia Owner',
+      role: SystemRole.OWNER,
+      hash: passwordHash,
+    },
+    {
+      email: 'recepcion@demo.com',
+      fullName: 'Rita Recepción',
+      role: SystemRole.RECEPTIONIST,
+      hash: passwordHash,
+    },
+    {
+      email: 'tecnico@demo.com',
+      fullName: 'Tomás Técnico',
+      role: SystemRole.TECHNICIAN,
+      hash: passwordHash,
+    },
+    // Owner real — para probar el flujo de recuperación de contraseña en local
+    {
+      email: OWNER_EMAIL,
+      fullName: 'Motos Max Cordialidad',
+      role: SystemRole.OWNER,
+      hash: ownerPasswordHash,
+    },
   ];
   const userIdByEmail: Record<string, string> = {};
   for (const u of users) {
@@ -81,7 +109,7 @@ async function main() {
           branchId,
           roleId: roleIdByName[u.role],
           email: u.email,
-          passwordHash,
+          passwordHash: u.hash,
           fullName: u.fullName,
           isActive: true,
         },

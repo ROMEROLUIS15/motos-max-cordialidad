@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import { JwtPort, JWTPayload } from '../../application/ports/jwt.port';
 
@@ -12,7 +12,7 @@ export class JwtService implements JwtPort {
       if (process.env['NODE_ENV'] === 'production') {
         throw new Error('JWT_SECRET is required in production');
       }
-      console.warn('[JwtService] JWT_SECRET not set, using dev fallback');
+      new Logger(JwtService.name).warn('JWT_SECRET not set, using dev fallback');
     }
     this.secret = process.env['JWT_SECRET'] ?? 'dev-secret-change-in-production';
     this.expiresIn = process.env['JWT_EXPIRES_IN'] ?? '15m';

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
 import { JWTPayload } from '../ports/jwt.port';
 
@@ -18,7 +18,7 @@ export class TokenFactoryService {
       if (process.env['NODE_ENV'] === 'production') {
         throw new Error('JWT_SECRET is required in production');
       }
-      console.warn('[TokenFactoryService] JWT_SECRET not set, using dev fallback');
+      new Logger(TokenFactoryService.name).warn('JWT_SECRET not set, using dev fallback');
     }
     this.secret = process.env['JWT_SECRET'] ?? 'dev-secret-change-in-production';
   }

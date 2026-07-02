@@ -36,7 +36,10 @@ jobs:
       - name: Build web
         run: pnpm --filter @motoworkshop/web build
         env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          # The app appends /api/... itself — this must be the bare API origin.
+          # Falls back to the production API so a missing repo var never ships
+          # a build pointing at localhost.
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://motoworkshop-api.onrender.com' }}
 
       - name: Publish to Cloudflare Pages
         uses: cloudflare/pages-action@v1

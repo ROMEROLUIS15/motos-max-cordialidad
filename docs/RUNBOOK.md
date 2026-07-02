@@ -4,15 +4,15 @@
 
 ## Inventario de servicios (producción)
 
-| Servicio | Proveedor | Plan | URL | Keep-alive |
-|----------|-----------|------|-----|------------|
-| **API (NestJS)** | Render | Free | `https://motoworkshop-api.onrender.com` | Cada 10 min |
-| **Web (Next.js)** | Cloudflare Pages | Free | `https://motoworkshop-web.pages.dev` | — (edge) |
-| **Agents (FastAPI)** | Render | Free | `https://motoworkshop-agents.onrender.com` | Cada 10 min |
-| **Base de datos** | Neon | Free | (conexión vía DATABASE_URL) | — |
-| **Redis** | <TBD> | <TBD> | (conexión vía REDIS_URL) | — |
-| **Object Storage** | Cloudflare R2 | Free | (vía R2_PUBLIC_URL) | — |
-| **Monitoreo** | Sentry | Free | `sentry.io` | — |
+| Servicio             | Proveedor        | Plan  | URL                                        | Keep-alive  |
+| -------------------- | ---------------- | ----- | ------------------------------------------ | ----------- |
+| **API (NestJS)**     | Render           | Free  | `https://motoworkshop-api.onrender.com`    | Cada 10 min |
+| **Web (Next.js)**    | Cloudflare Pages | Free  | `https://motoworkshop-web.pages.dev`       | — (edge)    |
+| **Agents (FastAPI)** | Render           | Free  | `https://motoworkshop-agents.onrender.com` | Cada 10 min |
+| **Base de datos**    | Neon             | Free  | (conexión vía DATABASE_URL)                | —           |
+| **Redis**            | <TBD>            | <TBD> | (conexión vía REDIS_URL)                   | —           |
+| **Object Storage**   | Cloudflare R2    | Free  | (vía R2_PUBLIC_URL)                        | —           |
+| **Monitoreo**        | Sentry           | Free  | `sentry.io`                                | —           |
 
 ---
 
@@ -75,7 +75,7 @@ service:
   dockerContext: .
   plan: free
   healthCheckPath: /api/health
-  autoDeploy: true  # Se despliega automáticamente al hacer push a main
+  autoDeploy: true # Se despliega automáticamente al hacer push a main
 ```
 
 **Deploy manual**: `git push origin main` → Render detecta el cambio y redepliega.
@@ -148,10 +148,10 @@ La migración se ejecuta automáticamente al iniciar el contenedor de la API (`C
 
 ## Health Checks
 
-| Servicio | Endpoint | Respuesta esperada |
-|----------|----------|--------------------|
-| API NestJS | `GET /api/health` | `200 { "status": "ok", "timestamp": "..." }` |
-| Agents Python | `GET /health` | `200 { "status": "healthy", "redis": true, "saas": true }` |
+| Servicio      | Endpoint          | Respuesta esperada                                         |
+| ------------- | ----------------- | ---------------------------------------------------------- |
+| API NestJS    | `GET /api/health` | `200 { "status": "ok", "timestamp": "..." }`               |
+| Agents Python | `GET /health`     | `200 { "status": "healthy", "redis": true, "saas": true }` |
 
 Render usa estos endpoints para determinar si el servicio está vivo.
 
@@ -194,6 +194,7 @@ Render usa estos endpoints para determinar si el servicio está vivo.
 **Síntoma**: Mensajes de WhatsApp entrantes no generan respuesta.
 
 **Diagnóstico**:
+
 1. Verificar que `WHATSAPP_VERIFY_TOKEN` coincide entre Meta y la variable de entorno.
 2. Verificar que `webhook` está configurado en Meta Business Dashboard apuntando a `https://motoworkshop-api.onrender.com/api/whatsapp/webhook`.
 3. Revisar logs de API en Render.
@@ -203,6 +204,7 @@ Render usa estos endpoints para determinar si el servicio está vivo.
 **Síntoma**: No se generan reportes semanales/mensuales.
 
 **Diagnóstico**:
+
 1. Verificar que `SCHEDULER_ENABLED=true` en Agents.
 2. Verificar que el `SaasClient` puede conectarse a la API (revisar `API_BASE_URL` y `JWT_SECRET`).
 3. Revisar logs de Agents en Render.
@@ -211,12 +213,91 @@ Render usa estos endpoints para determinar si el servicio está vivo.
 
 ## Enlaces rápidos
 
-| Recurso | URL |
-|---------|-----|
-| API en producción | `https://motoworkshop-api.onrender.com/api/health` |
-| Web en producción | `https://motoworkshop-web.pages.dev` |
-| Dashboard Render | `https://dashboard.render.com` |
-| Dashboard Cloudflare | `https://dash.cloudflare.com` |
-| Sentry | `https://sentry.io` |
-| Neon Console | `https://console.neon.tech` |
-| Meta Business | `https://business.facebook.com` |
+| Recurso              | URL                                                |
+| -------------------- | -------------------------------------------------- |
+| API en producción    | `https://motoworkshop-api.onrender.com/api/health` |
+| Web en producción    | `https://motoworkshop-web.pages.dev`               |
+| Dashboard Render     | `https://dashboard.render.com`                     |
+| Dashboard Cloudflare | `https://dash.cloudflare.com`                      |
+| Sentry               | `https://sentry.io`                                |
+| Neon Console         | `https://console.neon.tech`                        |
+| Meta Business        | `https://business.facebook.com`                    |
+
+### Tokens de recuperacion de contrasena acumulados
+
+**Sintoma**: La tabla `PasswordResetToken` crece sin control o usuarios reportan que el link del email no funciona.
+
+**Diagnostico**:
+
+1. Revisar logs de la API: buscar `cleanup-expired-tokens: deleted N expired unused token(s)`.
+2. El job `CleanupExpiredTokensJob` corre cada hora. Si no aparece en logs, verificar que `ScheduleModule.forRoot()` esta activo.
+
+**Accion**: El job borra tokens donde `expiresAt < NOW() AND usedAt IS NULL`. Los tokens usados se preservan para auditoria.
+
+---
+
+## Recuperacion de contrasena - Arquitectura y operacion
+
+### Flujo tecnico
+
+```
+Usuario -> POST /api/auth/forgot-password
+         |
+   [AdvancedThrottlerGuard: 5 req/hora por IP+email]
+         |
+   ForgotPasswordUseCase:
+     1. Busca usuario -> siempre responde HTTP 200 (anti-enumeracion)
+     2. deleteMany tokens previos sin usar (usedAt IS NULL)
+     3. Crea token: raw = randomBytes(32), hash = SHA-256(raw)
+     4. Envia email via Resend con raw token
+
+Usuario -> POST /api/auth/reset-password (desde link del email)
+         |
+   [ThrottlerGuard: limite global por IP]
+         |
+   ResetPasswordUseCase:
+     1. hash = SHA-256(token recibido)
+     2. findUnique(tokenHash) en DB
+     3. Valida: existe + usedAt IS NULL + expiresAt > NOW()
+        -> Cualquier fallo: HTTP 400 "Token invalido o expirado."
+     4. transaction: actualiza passwordHash + marca usedAt = NOW()
+     5. Envia email de confirmacion
+```
+
+### Rate limiting - Configuracion
+
+| Tipo                            | Limite          | Archivo para ajustar                                               |
+| ------------------------------- | --------------- | ------------------------------------------------------------------ |
+| Por IP+email (forgot-password)  | 5 req / hora    | `auth.controller.ts` - decorador `@Throttle` en `forgotPassword()` |
+| Por IP global - circuit breaker | 100 req / hora  | `app.module.ts` - segunda zona en `ThrottlerModule.forRoot()`      |
+| Por IP global - ventana corta   | 60 req / minuto | `app.module.ts` - primera zona en `ThrottlerModule.forRoot()`      |
+
+### Cleanup job de tokens
+
+| Parametro  | Valor                                             |
+| ---------- | ------------------------------------------------- |
+| Frecuencia | `EVERY_HOUR` (`@nestjs/schedule`)                 |
+| Condicion  | `expiresAt < NOW() AND usedAt IS NULL`            |
+| Preserva   | Tokens con `usedAt IS NOT NULL` (auditoria)       |
+| Clase      | `CleanupExpiredTokensJob` en `identity.module.ts` |
+
+### Troubleshooting de password recovery
+
+**El email no llega**
+
+1. Buscar en logs: `forgot-password: email sent to ...` o `SMTP FAILED for ...`.
+2. Verificar `RESEND_API_KEY` en variables de entorno de Render.
+3. Verificar `SMTP_FROM=onboarding@resend.dev` configurado.
+
+**El link dice token invalido o expirado**
+
+1. El token expira en 15 minutos. Si el usuario espero mas, debe solicitar uno nuevo.
+2. Solo existe un token valido por usuario - solo el ultimo link solicitado funciona.
+
+**Muchos usuarios bloqueados por rate limit (429)**
+
+1. Limite es 5 intentos/hora por IP+email.
+2. Si es un proxy corporativo compartido, aumentar limite en `auth.controller.ts`.
+3. Revisar Sentry para patrones de ataque.
+
+| Resend Dashboard | `https://resend.com/dashboard` |

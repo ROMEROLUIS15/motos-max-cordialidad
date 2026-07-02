@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -22,6 +22,8 @@ export default function ForgotPasswordPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  /** When rate-limited, block the form until this timestamp */
+  const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null);
 
   const {
     register,
@@ -29,7 +31,10 @@ export default function ForgotPasswordPage() {
     formState: { errors },
   } = useForm<ForgotFormData>({ resolver: zodResolver(forgotSchema) });
 
+  const isRateLimited = rateLimitedUntil !== null && Date.now() < rateLimitedUntil;
+
   const onSubmit = async (data: ForgotFormData) => {
+    if (isRateLimited) return;
     setLoading(true);
     setServerError(null);
     try {
@@ -40,9 +45,23 @@ export default function ForgotPasswordPage() {
       });
 
       if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { message?: string };
-        if (res.status === 429) setServerError('Demasiados intentos. Intenta de nuevo más tarde.');
-        else setServerError(body.message ?? 'Error al procesar la solicitud.');
+        const body = (await res.json().catch(() => ({}))) as {
+          message?: string;
+          code?: string;
+        };
+
+        if (res.status === 429) {
+          // Extract retry-after minutes from the backend message if available
+          const match = body.message?.match(/(\d+)\s*minuto/);
+          const minutes = match ? parseInt(match[1], 10) : 60;
+          setRateLimitedUntil(Date.now() + minutes * 60 * 1000);
+          setServerError(
+            body.message ??
+              `Demasiados intentos. Intenta de nuevo en ${minutes} minuto${minutes !== 1 ? 's' : ''}.`,
+          );
+        } else {
+          setServerError(body.message ?? 'Error al procesar la solicitud.');
+        }
         return;
       }
 
@@ -116,20 +135,38 @@ export default function ForgotPasswordPage() {
                   autoComplete="email"
                   placeholder="tu@email.com"
                   aria-invalid={!!errors.email}
+                  disabled={isRateLimited}
                   {...register('email')}
                 />
                 {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
               </div>
 
-              {serverError && (
+              {/* 5.5–5.8: Rate limit UX */}
+              {isRateLimited && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2.5">
+                  <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                  <p className="text-sm text-amber-300">{serverError}</p>
+                </div>
+              )}
+
+              {serverError && !isRateLimited && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5">
                   <p className="text-sm text-destructive">{serverError}</p>
                 </div>
               )}
 
-              <Button type="submit" disabled={loading} className="w-full">
+              <Button
+                type="submit"
+                disabled={loading || isRateLimited}
+                className="w-full"
+                id="forgot-password-submit"
+              >
                 {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-                {loading ? 'Enviando…' : 'Enviar enlace de recuperación'}
+                {isRateLimited
+                  ? 'Espera antes de intentar de nuevo'
+                  : loading
+                    ? 'Enviando…'
+                    : 'Enviar enlace de recuperación'}
               </Button>
 
               <Link

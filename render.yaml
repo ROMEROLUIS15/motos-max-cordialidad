@@ -61,9 +61,12 @@ services:
       # dashboard to the agents service's onrender.com URL once it exists.
       - key: AGENTS_BASE_URL
         sync: false
-      # --- Email (password reset) — SendGrid HTTP API (Render free blocks
+      # --- Email (password reset) — Resend HTTP API (Render free blocks
       # outbound SMTP, so port-based mail is not an option here).
-      - key: SENDGRID_API_KEY
+      # Without a verified domain in Resend, SMTP_FROM must be
+      # "onboarding@resend.dev" and the recipient must be the Resend
+      # account owner's email.
+      - key: RESEND_API_KEY
         sync: false
       - key: SMTP_FROM
         sync: false
