@@ -50,6 +50,13 @@ jobs:
       # apps/web devDependencies — installing from the action fails in a pnpm
       # workspace root (ERR_PNPM_ADDING_TO_ROOT).
       # --branch=main marks it as a production deployment on the Pages project.
+      #
+      # WARNING: do NOT add a wrangler.toml under apps/web. When one exists,
+      # `wrangler pages deploy` SYNCS it into the Cloudflare project settings
+      # with paths relative to apps/web, clobbering the Git-integration build
+      # config (root-relative destination_dir, nodejs_compat flag) and breaking
+      # the automatic deploys. All deploy parameters belong on the CLI below;
+      # project settings live in the Cloudflare dashboard/API only.
       - name: Publish to Cloudflare Pages
         uses: cloudflare/wrangler-action@v4
         with:
