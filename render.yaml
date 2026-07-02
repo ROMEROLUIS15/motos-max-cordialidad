@@ -15,7 +15,8 @@ services:
     # Bump to "starter" (always-on, no keep-alive needed) once there is traffic.
     plan: free
     healthCheckPath: /api/health
-    autoDeploy: true
+    # Quality gate: deploy only after ALL GitHub checks (CI) pass on the commit.
+    autoDeployTrigger: checksPass
     # Migrations + start are baked into the image CMD (see apps/api/Dockerfile),
     # so no dockerCommand override here — Render's parser mangled the quotes.
     # On a paid plan you could instead use: preDeployCommand: npx prisma migrate deploy
@@ -86,7 +87,8 @@ services:
     region: virginia
     plan: free
     healthCheckPath: /health
-    autoDeploy: true
+    # Quality gate: deploy only after ALL GitHub checks (CI) pass on the commit.
+    autoDeployTrigger: checksPass
     envVars:
       - key: API_BASE_URL
         value: https://motoworkshop-api.onrender.com
