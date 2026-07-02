@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [main, develop]
 
+# Burst protection: PR runs are cancelled when a newer push supersedes them;
+# pushes to main are QUEUED instead (never cancel a run that may be mid-deploy)
+# and GitHub collapses intermediate pending runs to the newest one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   NODE_VERSION: '20'
   PNPM_VERSION: '9'
@@ -178,3 +185,138 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/web
           command: pages deploy .vercel/output/static --project-name=motos-max-cordialidad --branch=main
+
+  # Post-deploy smoke test: a deploy that reports "success" can still serve a
+  # broken site (it happened: a config sync wiped the nodejs_compat flag and
+  # every page rendered an error). Verify real pages return real content.
+  smoke-web:
+    name: Smoke test Web
+    needs: [deploy-web]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify production pages
+        run: |
+          for path in / /login /reset-password/help; do
+            ok=false
+            for attempt in 1 2 3 4; do
+              body=$(curl -sf --max-time 30 "https://motos-max-cordialidad.pages.dev$path") || { sleep 15; continue; }
+              if echo "$body" | grep -q 'nodejs_compat'; then
+                echo "$path -> next-on-pages ERROR PAGE (attempt $attempt)"; sleep 15; continue
+              fi
+              echo "$path -> OK"; ok=true; break
+            done
+            if [ "$ok" != true ]; then
+              echo "::error::SMOKE TEST FAILED on $path — site may be broken."
+              echo "Rollback: Cloudflare dashboard -> Workers & Pages -> motos-max-cordialidad -> Deployments -> previous deployment -> Rollback"
+              exit 1
+            fi
+          done
+
+  # API deploy is orchestrated from CI (Render autoDeployTrigger=off): trigger
+  # the deploy, wait until it is live, then verify health. Doing it here (vs
+  # Render's checksPass) lets the pipeline SEE deploy failures — checksPass
+  # only gates the start and reports nothing back.
+  deploy-api:
+    name: Deploy API (Render)
+    needs: [typecheck, test, lint, agents]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      SERVICE_ID: srv-d8un6nurnols73ff7kj0
+    steps:
+      - name: Trigger deploy
+        id: trigger
+        run: |
+          deploy=$(curl -sf -X POST "https://api.render.com/v1/services/$SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" \
+            -d "{\"commitId\": \"${{ github.sha }}\"}")
+          echo "id=$(echo "$deploy" | jq -r .id)" >> "$GITHUB_OUTPUT"
+
+      - name: Wait until live
+        run: |
+          for i in $(seq 1 45); do
+            sleep 20
+            status=$(curl -sf "https://api.render.com/v1/services/$SERVICE_ID/deploys/${{ steps.trigger.outputs.id }}" \
+              -H "Authorization: Bearer $RENDER_API_KEY" | jq -r .status)
+            echo "deploy status: $status"
+            case "$status" in
+              live) exit 0 ;;
+              build_failed|update_failed|canceled|deactivated) echo "::error::Render deploy failed ($status)"; exit 1 ;;
+            esac
+          done
+          echo "::error::Timed out waiting for Render deploy"; exit 1
+
+      - name: Smoke test API
+        run: |
+          for attempt in 1 2 3 4; do
+            status=$(curl -sf --max-time 30 https://motoworkshop-api.onrender.com/api/health | jq -r .status) && \
+              [ "$status" = "ok" ] && { echo "API health OK"; exit 0; }
+            sleep 15
+          done
+          echo "::error::API health check failed after deploy"; exit 1
+
+  # Agents deploy only when apps/agents changed — same trigger+wait pattern.
+  deploy-agents:
+    name: Deploy Agents (Render)
+    needs: [typecheck, test, lint, agents]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      SERVICE_ID: srv-d8vkfre8bjmc738d2nqg
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Detect agents changes
+        id: changes
+        run: |
+          before="${{ github.event.before }}"
+          if [ "$before" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$before" 2>/dev/null; then
+            range="HEAD^..HEAD"
+          else
+            range="$before..HEAD"
+          fi
+          if git diff --name-only "$range" | grep -q '^apps/agents/'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "apps/agents unchanged — skipping deploy"
+          fi
+
+      - name: Trigger deploy
+        id: trigger
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          deploy=$(curl -sf -X POST "https://api.render.com/v1/services/$SERVICE_ID/deploys" \
+            -H "Authorization: Bearer $RENDER_API_KEY" -H "Content-Type: application/json" \
+            -d "{\"commitId\": \"${{ github.sha }}\"}")
+          echo "id=$(echo "$deploy" | jq -r .id)" >> "$GITHUB_OUTPUT"
+
+      - name: Wait until live
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          for i in $(seq 1 45); do
+            sleep 20
+            status=$(curl -sf "https://api.render.com/v1/services/$SERVICE_ID/deploys/${{ steps.trigger.outputs.id }}" \
+              -H "Authorization: Bearer $RENDER_API_KEY" | jq -r .status)
+            echo "deploy status: $status"
+            case "$status" in
+              live) exit 0 ;;
+              build_failed|update_failed|canceled|deactivated) echo "::error::Render deploy failed ($status)"; exit 1 ;;
+            esac
+          done
+          echo "::error::Timed out waiting for Render deploy"; exit 1
+
+      - name: Smoke test Agents
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          for attempt in 1 2 3 4; do
+            curl -sf --max-time 30 https://motoworkshop-agents.onrender.com/health > /dev/null && { echo "Agents health OK"; exit 0; }
+            sleep 15
+          done
+          echo "::error::Agents health check failed after deploy"; exit 1
