@@ -167,8 +167,20 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # The app boots the full module graph — bullmq (WhatsApp queue) connects
+      # to Redis at init and floods the tests with ECONNREFUSED without it.
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       DATABASE_URL: postgresql://test:test@localhost:5432/motoworkshop_test
+      REDIS_URL: redis://localhost:6379
     steps:
       - name: Checkout
         uses: actions/checkout@v7
