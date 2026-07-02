@@ -1,0 +1,15 @@
+# Quality gate local — fase 2 (completa, por push; ~1-2 min)
+# Lo mismo que bloquea el CI, pero antes de que salga de tu máquina.
+echo "▶ pre-push: typecheck API..."
+pnpm --filter @motoworkshop/api typecheck || exit 1
+
+echo "▶ pre-push: typecheck Web..."
+pnpm --filter @motoworkshop/web typecheck || exit 1
+
+echo "▶ pre-push: tests API..."
+pnpm --filter @motoworkshop/api test:ci || exit 1
+
+echo "▶ pre-push: tests Web..."
+pnpm --filter @motoworkshop/web test:ci || exit 1
+
+echo "✔ pre-push OK — el push continúa"
