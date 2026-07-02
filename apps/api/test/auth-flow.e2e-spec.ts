@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { randomUUID } from 'node:crypto';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/infrastructure/persistence/prisma/prisma.service';
 import { SystemRole, SYSTEM_ROLE_PERMISSIONS } from '../src/domain/entities/role.entity';
@@ -23,12 +23,26 @@ describeIfDb('Auth + tenant isolation (e2e)', () => {
 
   // Two tenants to prove isolation.
   const tenants = [
-    { id: randomUUID(), taxId: `E2E-${randomUUID().slice(0, 8)}`, email: `owner-${randomUUID().slice(0, 6)}@e2e.test` },
-    { id: randomUUID(), taxId: `E2E-${randomUUID().slice(0, 8)}`, email: `owner-${randomUUID().slice(0, 6)}@e2e.test` },
+    {
+      id: randomUUID(),
+      taxId: `E2E-${randomUUID().slice(0, 8)}`,
+      email: `owner-${randomUUID().slice(0, 6)}@e2e.test`,
+    },
+    {
+      id: randomUUID(),
+      taxId: `E2E-${randomUUID().slice(0, 8)}`,
+      email: `owner-${randomUUID().slice(0, 6)}@e2e.test`,
+    },
   ];
 
-  async function seedTenant(t: { id: string; taxId: string; email: string }): Promise<{ ownerId: string }> {
-    await prisma.tenant.create({ data: { id: t.id, name: 'E2E Tenant', taxId: t.taxId, vatPercentage: 19 } });
+  async function seedTenant(t: {
+    id: string;
+    taxId: string;
+    email: string;
+  }): Promise<{ ownerId: string }> {
+    await prisma.tenant.create({
+      data: { id: t.id, name: 'E2E Tenant', taxId: t.taxId, vatPercentage: 19 },
+    });
     const branch = await prisma.branch.create({
       data: { id: randomUUID(), tenantId: t.id, name: 'Main', address: 'x', isActive: true },
     });
@@ -37,13 +51,22 @@ describeIfDb('Auth + tenant isolation (e2e)', () => {
     });
     await prisma.rolePermission.createMany({
       data: SYSTEM_ROLE_PERMISSIONS[SystemRole.OWNER].map((p) => ({
-        id: randomUUID(), roleId: role.id, module: p.module, action: p.action,
+        id: randomUUID(),
+        roleId: role.id,
+        module: p.module,
+        action: p.action,
       })),
     });
     const owner = await prisma.user.create({
       data: {
-        id: randomUUID(), tenantId: t.id, branchId: branch.id, roleId: role.id,
-        email: t.email, passwordHash: await bcrypt.hash(password, 12), fullName: 'E2E Owner', isActive: true,
+        id: randomUUID(),
+        tenantId: t.id,
+        branchId: branch.id,
+        roleId: role.id,
+        email: t.email,
+        passwordHash: await bcrypt.hash(password, 12),
+        fullName: 'E2E Owner',
+        isActive: true,
       },
     });
     return { ownerId: owner.id };
@@ -98,7 +121,13 @@ describeIfDb('Auth + tenant isolation (e2e)', () => {
     const created = await request(app.getHttpServer())
       .post('/api/customers')
       .set('Authorization', `Bearer ${tokenA}`)
-      .send({ fullName: 'Cliente A', documentType: 'CC', documentNumber: `DOC-${randomUUID().slice(0, 8)}`, phone: '300', city: 'Bogotá' })
+      .send({
+        fullName: 'Cliente A',
+        documentType: 'CC',
+        documentNumber: `DOC-${randomUUID().slice(0, 8)}`,
+        phone: '300',
+        city: 'Bogotá',
+      })
       .expect(201);
     expect(created.body.id).toBeDefined();
 
