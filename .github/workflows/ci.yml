@@ -72,8 +72,10 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      - name: Test API
-        run: pnpm --filter @motoworkshop/api test:ci
+      # test:cov enforces the coverage floor in the jest config
+      # (statements 50 / branches 8 / functions 30 / lines 50)
+      - name: Test API (with coverage floor)
+        run: pnpm --filter @motoworkshop/api test:cov -- --ci
 
       - name: Test Web
         run: pnpm --filter @motoworkshop/web test:ci
@@ -143,6 +145,113 @@ jobs:
       - name: Test (pytest)
         run: uv run pytest -q
 
+  # Integration tests against a disposable Postgres. `prisma migrate deploy`
+  # doubles as the MIGRATIONS GATE: a migration that cannot apply cleanly to a
+  # fresh database fails here instead of at container boot in production.
+  e2e-api:
+    name: E2E API
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: motoworkshop_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/motoworkshop_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter @motoworkshop/api db:generate
+
+      - name: Apply migrations (migrations gate)
+        run: pnpm --filter @motoworkshop/api exec prisma migrate deploy
+
+      - name: Run API e2e tests
+        run: pnpm --filter @motoworkshop/api test:e2e
+
+  # Playwright against the real Next.js app. Only the mocked spec runs here
+  # (API calls intercepted with page.route) — the "real API" spec needs a
+  # full backend and stays local-only.
+  e2e-web:
+    name: E2E Web
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright chromium
+        run: pnpm --filter @motoworkshop/web exec playwright install --with-deps chromium
+
+      - name: Run Playwright tests (mocked API)
+        run: pnpm --filter @motoworkshop/web exec playwright test e2e/password-recovery.spec.ts --project=chromium
+
+  # Secret scanning over the full git history of the push/PR.
+  secrets:
+    name: Secrets scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Dependency audit budget: HIGH+ vulnerabilities in PRODUCTION deps block
+  # the pipeline. Known-accepted advisories are listed in the root
+  # package.json under pnpm.auditConfig.ignoreGhsas (each must have a reason
+  # in docs/memory). Dev-tool vulnerabilities do not block (--prod).
+  audit:
+    name: Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level high
+
   # ── Quality gate deploy ────────────────────────────────────────────────
   # Frontend production deploy runs ONLY when every check above passed, and
   # only for pushes to main (never PRs). The Cloudflare Git integration's
@@ -150,7 +259,7 @@ jobs:
   # The API/agents (Render) gate themselves via autoDeployTrigger: checksPass.
   deploy-web:
     name: Deploy Web (Cloudflare Pages)
-    needs: [typecheck, test, lint, agents]
+    needs: [typecheck, test, lint, agents, e2e-api, e2e-web, secrets, audit]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
@@ -219,7 +328,7 @@ jobs:
   # only gates the start and reports nothing back.
   deploy-api:
     name: Deploy API (Render)
-    needs: [typecheck, test, lint, agents]
+    needs: [typecheck, test, lint, agents, e2e-api, e2e-web, secrets, audit]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
@@ -260,7 +369,7 @@ jobs:
   # Agents deploy only when apps/agents changed — same trigger+wait pattern.
   deploy-agents:
     name: Deploy Agents (Render)
-    needs: [typecheck, test, lint, agents]
+    needs: [typecheck, test, lint, agents, e2e-api, e2e-web, secrets, audit]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
@@ -320,3 +429,23 @@ jobs:
             sleep 15
           done
           echo "::error::Agents health check failed after deploy"; exit 1
+
+  # Email the owner when any deploy or smoke test fails on main. GitHub's own
+  # notifications depend on personal settings; this one always arrives.
+  notify-failure:
+    name: Notify deploy failure
+    needs: [deploy-web, smoke-web, deploy-api, deploy-agents]
+    if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send failure email (Resend)
+        run: |
+          curl -sf -X POST https://api.resend.com/emails \
+            -H "Authorization: Bearer ${{ secrets.RESEND_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"from\": \"CI Motos Max <onboarding@resend.dev>\",
+              \"to\": [\"motosmaxcordialidad@gmail.com\"],
+              \"subject\": \"🔴 Deploy FALLIDO — ${{ github.repository }} (${GITHUB_SHA:0:7})\",
+              \"html\": \"<p>Un deploy a producción falló.</p><p><b>Commit:</b> ${{ github.sha }}</p><p><b>Run:</b> <a href=\\\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\\\">ver detalles en GitHub Actions</a></p><p>El sitio sigue sirviendo la última versión buena. Revisa el run para diagnosticar.</p>\"
+            }"

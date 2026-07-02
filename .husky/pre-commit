@@ -1,1 +1,13 @@
+# Quality gate local — fase 1 (rápida, por commit)
+# 1) Bloquear secretos obvios en las líneas AÑADIDAS del commit
+#    (keys de Resend/Render/SendGrid/OpenAI/GitHub/AWS/Slack y llaves privadas)
+if git diff --cached -U0 | grep -E '^\+[^+]' | grep -nE '(re_[A-Za-z0-9]{20,}|rnd_[A-Za-z0-9]{20,}|SG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}|sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)'; then
+  echo ""
+  echo "✖ COMMIT BLOQUEADO: posible secreto/API key en los cambios (ver líneas arriba)."
+  echo "  Mueve el valor a una variable de entorno (.env está en .gitignore)."
+  echo "  Si es un falso positivo, ajusta el patrón en .husky/pre-commit."
+  exit 1
+fi
+
+# 2) Lint + format de los archivos staged
 npx lint-staged
