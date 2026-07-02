@@ -1,6 +1,9 @@
-name = "motoworkshop-web"
+# Cloudflare Pages project config. IMPORTANT: when this file exists,
+# `wrangler pages deploy` SYNCS it to the project settings in Cloudflare —
+# an incomplete file here wipes settings in the dashboard (it once removed
+# the nodejs_compat flag and broke production).
+name = "motos-max-cordialidad"
 compatibility_date = "2024-01-01"
-pages_build_output_dir = ".next"
-
-[env.production]
-name = "motoworkshop-web"
+# Required by @cloudflare/next-on-pages — without it every page errors.
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".vercel/output/static"
