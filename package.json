@@ -8,9 +8,9 @@
   ],
   "scripts": {
     "build": "pnpm -r build",
-    "dev": "pnpm -r dev",
-    "dev:web": "pnpm --filter @motoworkshop/web dev",
-    "dev:api": "pnpm --filter @motoworkshop/api start:dev",
+    "dev": "node scripts/dev-local.mjs",
+    "dev:web": "node scripts/free-ports.mjs 3000 && pnpm --filter @motoworkshop/web dev",
+    "dev:api": "node scripts/free-ports.mjs 3001 && pnpm --filter @motoworkshop/api dev",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "test:ci": "pnpm -r test:ci",
