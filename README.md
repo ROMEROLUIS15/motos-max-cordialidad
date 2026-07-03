@@ -2,7 +2,20 @@
 
 [![CI](https://github.com/ROMEROLUIS15/motos-max-cordialidad/actions/workflows/ci.yml/badge.svg)](https://github.com/ROMEROLUIS15/motos-max-cordialidad/actions/workflows/ci.yml)
 
-SaaS multi-tenant para talleres de motos con asistencia de IA. Gestión de órdenes de trabajo, inventario, ventas de motos,CRM de clientes y comunicación vía WhatsApp.
+SaaS multi-tenant para talleres de motocicletas, con asistencia de IA vía WhatsApp. Gestión de órdenes de trabajo, inventario, venta de motocicletas, CRM de clientes y comunicación conversacional, todo aislado por taller (tenant).
+
+---
+
+## Funcionalidades
+
+- **Órdenes de trabajo** — recepción de vehículo, líneas de servicio, repuestos, evidencia fotográfica, máquina de estados (pendiente → en progreso → esperando repuestos → completada → entregada), historial completo por vehículo.
+- **Inventario** — repuestos con stock por sucursal (físico / reservado / disponible), movimientos de entrada/salida/ajuste/transferencia, alertas de stock bajo.
+- **Cotizaciones y pagos** — cotizaciones versionadas con aprobación del cliente, registro de pagos, generación de PDF.
+- **Venta de motocicletas** — inventario de unidades (nuevas/usadas), órdenes de venta con plan de pago, contrato de compraventa en PDF, dashboard de ventas.
+- **CRM de clientes** — historial de vehículos y órdenes por cliente, servicio a domicilio.
+- **Asistente conversacional por WhatsApp** — atención automática a clientes (RouterAgent) y a la administración del taller (AgentAdmin), con reportes periódicos y alertas de stock generados por IA.
+- **Multi-tenant** — aislamiento estricto por taller a nivel de datos y de roles/permisos, con auditoría de acciones.
+- **PWA instalable**, tema claro/oscuro, notificaciones en tiempo real (WebSocket).
 
 ---
 
@@ -10,11 +23,11 @@ SaaS multi-tenant para talleres de motos con asistencia de IA. Gestión de órde
 
 | Capa                | Tecnología                                                     |
 | ------------------- | -------------------------------------------------------------- |
-| **API**             | NestJS 11 · TypeScript · Prisma ORM                            |
+| **API**             | NestJS 10 · TypeScript · Prisma ORM                            |
 | **Web**             | Next.js 15.5 (App Router) · React 19 · Tailwind CSS · Radix UI |
 | **Agentes IA**      | Python 3.12 · FastAPI · LangGraph · DeepSeek / Groq            |
 | **Base de datos**   | PostgreSQL (Neon)                                              |
-| **Cache / Cola**    | Redis (BullMQ + sesiones agente)                               |
+| **Cache / Cola**    | Redis (BullMQ + sesiones de agente)                            |
 | **Storage**         | Cloudflare R2 (fotos, PDFs)                                    |
 | **WhatsApp**        | Meta Cloud API (webhook + envío)                               |
 | **Frontend deploy** | Cloudflare Pages                                               |
@@ -51,6 +64,8 @@ SaaS multi-tenant para talleres de motos con asistencia de IA. Gestión de órde
                                                     └──────────────────┘
 ```
 
+La API sigue arquitectura hexagonal (dominio → aplicación → infraestructura → presentación) con inyección de dependencias por puertos. El microservicio de agentes es un proceso Python independiente, comunicado con la API vía JWT de servicio de vida corta. Ver [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) para el detalle completo.
+
 Monorepo pnpm workspaces con 4 paquetes:
 
 | Paquete                | Ruta              | Rol                              |
@@ -59,17 +74,6 @@ Monorepo pnpm workspaces con 4 paquetes:
 | `@motoworkshop/web`    | `apps/web/`       | Frontend Next.js                 |
 | `@motoworkshop/agents` | `apps/agents/`    | Microservicio Python (LangGraph) |
 | `@motoworkshop/types`  | `packages/types/` | Tipos compartidos TS             |
-
----
-
-## Ramas
-
-| Rama            | Propósito                                                            |
-| --------------- | -------------------------------------------------------------------- |
-| `main`          | Rama principal. Auto-deploy a producción (Render + Cloudflare Pages) |
-| `chore/next-15` | Actualización experimental a Next.js 15 (en revisión, no desplegada) |
-
-> Todo nuevo trabajo parte de `main`. Las ramas de funcionalidades se fusionan aquí mediante PR.
 
 ---
 
@@ -87,7 +91,7 @@ motos-max-cordialidad/              # Raíz del monorepo (pnpm workspaces)
 │   ├── web/                        # @motoworkshop/web — Next.js App Router
 │   │   └── src/
 │   │       ├── app/
-│   │       │   ├── (auth)/         # Ruta de login
+│   │       │   ├── (auth)/         # Login, recuperación de contraseña
 │   │       │   ├── (dashboard)/    # Rutas protegidas (work-orders, customers,
 │   │       │   │                   #   inventory, sales, reports, users, etc.)
 │   │       │   └── api/            # Route handlers de Next.js
@@ -99,8 +103,8 @@ motos-max-cordialidad/              # Raíz del monorepo (pnpm workspaces)
 │       └── src/
 │           ├── agents/             # Agentes LangGraph (admin/, shared/)
 │           ├── api/                # Endpoints FastAPI expuestos a la API NestJS
-│           ├── reports/            # Generación de PDFs y plantillas HTML
-│           ├── schedulers/         # Tareas programadas (alertas de stock)
+│           ├── reports/            # Generación de PDFs y plantillas
+│           ├── schedulers/         # Tareas programadas (reportes, alertas de stock)
 │           └── tools/              # Herramientas que consumen los agentes
 ├── packages/
 │   └── types/                      # @motoworkshop/types — tipos TypeScript compartidos
@@ -133,14 +137,14 @@ git clone https://github.com/ROMEROLUIS15/motos-max-cordialidad.git
 cd motos-max-cordialidad
 
 # 2. Configurar archivos de entorno
-# Opción A: Usar script automático (Windows)
+# Opción A: script automático (Windows)
 setup-env.bat
 
-# Opción B: Usar script automático (Linux/Mac)
+# Opción B: script automático (Linux/Mac)
 chmod +x setup-env.sh
 ./setup-env.sh
 
-# Opción C: Manual (copiar todos los archivos)
+# Opción C: manual (copiar todos los archivos)
 cp .env.local.example .env.local
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
@@ -155,7 +159,7 @@ cp apps/agents/.env.example apps/agents/.env
 # 4. Instalar dependencias Node
 # En Windows bcrypt requiere build tools; si falla usar --ignore-scripts:
 pnpm install --ignore-scripts
-# Si estás en macOS/Linux o tienes build tools:
+# En macOS/Linux (o con build tools disponibles):
 pnpm install
 
 # 5. Python (agentes)
@@ -176,39 +180,40 @@ pnpm --filter @motoworkshop/api db:seed
 
 ## Variables de entorno
 
-| Variable                   | Descripción                                | Obligatoria en producción  |
-| -------------------------- | ------------------------------------------ | -------------------------- |
-| `DATABASE_URL`             | URL de conexión PostgreSQL (Neon)          | Sí                         |
-| `REDIS_URL`                | URL de conexión Redis                      | Sí                         |
-| `JWT_SECRET`               | Secreto para firmar JWT (≥ 32 chars)       | Sí                         |
-| `JWT_EXPIRES_IN`           | Tiempo de expiración JWT (ej. `15m`)       | No                         |
-| `JWT_REFRESH_EXPIRES_IN`   | Tiempo de expiración refresh token         | No                         |
-| `ENCRYPTION_KEY`           | Clave AES-256-GCM en hex (64 chars)        | Sí                         |
-| `R2_ACCOUNT_ID`            | ID de cuenta Cloudflare R2                 | Sí                         |
-| `R2_ACCESS_KEY_ID`         | Access Key R2                              | Sí                         |
-| `R2_SECRET_ACCESS_KEY`     | Secret Key R2                              | Sí                         |
-| `R2_BUCKET_NAME`           | Nombre del bucket R2                       | Sí                         |
-| `R2_PUBLIC_URL`            | URL pública del bucket R2                  | Sí                         |
-| `WHATSAPP_PHONE_NUMBER_ID` | ID de número de teléfono WhatsApp Business | Sí                         |
-| `WHATSAPP_ACCESS_TOKEN`    | Token de acceso WhatsApp Cloud API         | Sí                         |
-| `WHATSAPP_VERIFY_TOKEN`    | Token de verificación webhook              | Sí                         |
-| `WHATSAPP_APP_SECRET`      | App Secret de Meta                         | Sí                         |
-| `DEEPSEEK_API_KEY`         | API Key de DeepSeek                        | Sí (al menos un proveedor) |
-| `GROQ_API_KEY`             | API Key de Groq (fallback)                 | No                         |
-| `SENTRY_DSN`               | DSN de Sentry                              | No                         |
-| `NODE_ENV`                 | `development` / `production`               | Sí                         |
-| `ALLOWED_ORIGINS`          | Orígenes CORS (separados por coma)         | Sí                         |
-| `AGENTS_BASE_URL`          | URL del microservicio de agentes           | Sí                         |
-| `API_BASE_URL`             | URL de la API para los agentes             | Sí                         |
-| `SCHEDULER_ENABLED`        | Habilitar scheduler de agentes             | No                         |
-| `TZ`                       | Zona horaria (ej. `America/Bogota`)        | No                         |
+| Variable                   | Descripción                                   | Obligatoria en producción  |
+| -------------------------- | --------------------------------------------- | -------------------------- |
+| `DATABASE_URL`             | URL de conexión PostgreSQL (Neon)             | Sí                         |
+| `REDIS_URL`                | URL de conexión Redis                         | Sí                         |
+| `JWT_SECRET`               | Secreto para firmar JWT (≥ 32 chars)          | Sí                         |
+| `JWT_EXPIRES_IN`           | Expiración del access token (ej. `15m`)       | No                         |
+| `JWT_REFRESH_EXPIRES_IN`   | Expiración del refresh token                  | No                         |
+| `ENCRYPTION_KEY`           | Clave AES-256-GCM en hex (64 chars)           | Sí                         |
+| `R2_ACCOUNT_ID`            | ID de cuenta Cloudflare R2                    | Sí                         |
+| `R2_ACCESS_KEY_ID`         | Access Key R2                                 | Sí                         |
+| `R2_SECRET_ACCESS_KEY`     | Secret Key R2                                 | Sí                         |
+| `R2_BUCKET_NAME`           | Nombre del bucket R2                          | Sí                         |
+| `R2_PUBLIC_URL`            | URL pública del bucket R2                     | Sí                         |
+| `WHATSAPP_PHONE_NUMBER_ID` | ID de número de teléfono WhatsApp Business    | Sí                         |
+| `WHATSAPP_ACCESS_TOKEN`    | Token de acceso WhatsApp Cloud API            | Sí                         |
+| `WHATSAPP_VERIFY_TOKEN`    | Token de verificación del webhook             | Sí                         |
+| `WHATSAPP_APP_SECRET`      | App Secret de Meta                            | Sí                         |
+| `RESEND_API_KEY`           | API Key de Resend (envío de correo)           | Sí                         |
+| `DEEPSEEK_API_KEY`         | API Key de DeepSeek                           | Sí (al menos un proveedor) |
+| `GROQ_API_KEY`             | API Key de Groq (fallback de LLM)             | No                         |
+| `SENTRY_DSN`               | DSN de Sentry                                 | No                         |
+| `NODE_ENV`                 | `development` / `production`                  | Sí                         |
+| `ALLOWED_ORIGINS`          | Orígenes CORS permitidos (separados por coma) | Sí                         |
+| `AGENTS_BASE_URL`          | URL del microservicio de agentes              | Sí                         |
+| `API_BASE_URL`             | URL de la API, consumida por los agentes      | Sí                         |
+| `SCHEDULER_ENABLED`        | Habilita el scheduler de reportes/alertas     | No                         |
+| `TZ`                       | Zona horaria (ej. `America/Bogota`)           | No                         |
 
 ---
 
 ## Desarrollo local
 
 ```bash
-# Las 3 apps en paralelo
+# Levanta Docker (Postgres+Redis), libera puertos y arranca API+Web en paralelo
 pnpm dev
 
 # Apps individuales
@@ -220,25 +225,28 @@ cd apps/agents
 uv run uvicorn src.main:app --reload --port 8000
 ```
 
-### Login demo
+### Cuentas demo (tras `db:seed`)
 
-| Correo               | Rol                           |
-| -------------------- | ----------------------------- |
-| `owner@demo.com`     | Propietario (acceso completo) |
-| `recepcion@demo.com` | Recepción (órdenes, clientes) |
-| `tecnico@demo.com`   | Técnico (órdenes asignadas)   |
-
-Contraseña: `password123`
+| Correo               | Rol                           | Contraseña  |
+| -------------------- | ----------------------------- | ----------- |
+| `owner@demo.com`     | Propietario (acceso completo) | `Demo1234!` |
+| `recepcion@demo.com` | Recepción (órdenes, clientes) | `Demo1234!` |
+| `tecnico@demo.com`   | Técnico (órdenes asignadas)   | `Demo1234!` |
 
 ---
 
 ## Calidad
 
+El repositorio tiene un pipeline de CI que bloquea el merge y el deploy hasta que todo pasa: typecheck, tests con piso de cobertura, lint, tests del microservicio Python, e2e de API y de Web, escaneo de secretos y auditoría de dependencias. Ver [docs/RUNBOOK.md](docs/RUNBOOK.md#pipeline-de-cicd) para el detalle completo del pipeline.
+
 ```bash
 pnpm typecheck              # TypeScript (API + Web)
 pnpm lint                   # ESLint (API + Web)
 pnpm test                   # Tests (API Jest + Web Vitest)
-pnpm -r test:ci             # Tests en CI
+pnpm -r test:ci             # Tests en modo CI (con cobertura)
+
+# API — end-to-end contra Postgres/Redis reales
+pnpm --filter @motoworkshop/api test:e2e
 
 # Python
 cd apps/agents
@@ -251,24 +259,30 @@ uv run pytest
 
 ## Despliegue
 
-Ver [docs/RUNBOOK.md](docs/RUNBOOK.md) para el runbook de producción.
+Los tres servicios se despliegan únicamente cuando el pipeline de CI está en verde — no hay auto-deploy directo de Render ni de Cloudflare al hacer push. Ver [docs/RUNBOOK.md](docs/RUNBOOK.md) para el runbook completo de producción (variables por servicio, rollback, diagnóstico de incidentes).
 
-| Servicio       | Proveedor        | Método                                |
-| -------------- | ---------------- | ------------------------------------- |
-| API NestJS     | Render           | Dockerfile + auto-deploy desde `main` |
-| Web Next.js    | Cloudflare Pages | GitHub Action manual                  |
-| Agentes Python | Render           | Dockerfile + auto-deploy desde `main` |
-| Base de datos  | Neon             | PostgreSQL serverless                 |
-| Storage        | Cloudflare R2    | S3-compatible                         |
+| Servicio       | Proveedor        | Disparador                                           |
+| -------------- | ---------------- | ---------------------------------------------------- |
+| API NestJS     | Render (Docker)  | Orquestado desde CI tras checks verdes               |
+| Agentes Python | Render (Docker)  | Orquestado desde CI, solo si cambió `apps/agents/**` |
+| Web Next.js    | Cloudflare Pages | Orquestado desde CI (`wrangler` vía flags de CLI)    |
+| Base de datos  | Neon             | PostgreSQL serverless                                |
+| Storage        | Cloudflare R2    | S3-compatible                                        |
 
 ---
 
 ## Documentación
 
-- [Arquitectura](docs/ARCHITECTURE.md)
-- [Runbook de producción](docs/RUNBOOK.md)
-- [Decisiones técnicas (ADR)](docs/ADR.md)
-- [Seguridad](docs/SECURITY.md)
+- [Arquitectura](docs/ARCHITECTURE.md) — capas, módulos, sistema multi-agente, modelo de datos.
+- [Runbook de producción](docs/RUNBOOK.md) — inventario de servicios, pipeline de CI/CD, rollback, diagnóstico de incidentes.
+- [Decisiones técnicas (ADR)](docs/ADR.md) — contexto, alternativas y trade-offs de cada decisión de arquitectura.
+- [Seguridad](docs/SECURITY.md) — autenticación, rate limiting, aislamiento multi-tenant, cifrado, riesgo de dependencias aceptado.
+
+---
+
+## Contribuir
+
+`main` es la rama protegida: requiere pull request y que los checks del pipeline de CI pasen antes de mergear. No se hace force-push ni se saltan los hooks locales (pre-commit escanea secretos, pre-push corre typecheck y tests).
 
 ---
 

@@ -12,12 +12,12 @@
 
 **Alternativas consideradas**:
 
-| Alternativa | Razón de descarte |
-|-------------|-------------------|
-| **nx** | Poderoso pero sobrecarga de configuración innecesaria para 3 apps. Nx trae su propio sistema de caché, task orchestrator y generadores que no necesitamos. |
-| **turbo** | Similar a nx. El caché remoto es de pago. |
-| **Repositorios separados** | Mayor overhead de coordinación entre repos (cambios atómicos, versionado de tipos compartidos). |
-| **npm workspaces** | Soporte básico pero sin overrides nativos hasta npm 9+. pnpm tiene mejor gestión de dependencias huérfanas. |
+| Alternativa                | Razón de descarte                                                                                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **nx**                     | Poderoso pero sobrecarga de configuración innecesaria para 3 apps. Nx trae su propio sistema de caché, task orchestrator y generadores que no necesitamos. |
+| **turbo**                  | Similar a nx. El caché remoto es de pago.                                                                                                                  |
+| **Repositorios separados** | Mayor overhead de coordinación entre repos (cambios atómicos, versionado de tipos compartidos).                                                            |
+| **npm workspaces**         | Soporte básico pero sin overrides nativos hasta npm 9+. pnpm tiene mejor gestión de dependencias huérfanas.                                                |
 
 **Trade-offs**:
 
@@ -43,10 +43,10 @@ Presentation:  Controladores HTTP, guards, filtros, interceptors. Orquesta use-c
 
 **Alternativas consideradas**:
 
-| Alternativa | Razón de descarte |
-|-------------|-------------------|
-| **Módulos planos por feature** | Funciona para prototipos, pero cambias de ORM o proveedor de storage y tienes que tocar archivos en toda la codebase. Sin DIP, los tests usan la DB real. |
-| **Módulos NEST por feature** | NestJS modular por feature (ej. `users/`, `workshop/`, `inventory/`) termina mezclando controladores con lógica de negocio con queries de BD en el mismo feature. |
+| Alternativa                    | Razón de descarte                                                                                                                                                 |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Módulos planos por feature** | Funciona para prototipos, pero cambias de ORM o proveedor de storage y tienes que tocar archivos en toda la codebase. Sin DIP, los tests usan la DB real.         |
+| **Módulos NEST por feature**   | NestJS modular por feature (ej. `users/`, `workshop/`, `inventory/`) termina mezclando controladores con lógica de negocio con queries de BD en el mismo feature. |
 
 **Trade-offs**:
 
@@ -88,11 +88,11 @@ constructor(
 
 **Alternativas consideradas**:
 
-| Alternativa | Descarte |
-|-------------|----------|
-| **Inyección por clase concreta** | Rompe DIP: el use-case depende de la implementación. Si cambias de proveedor, tocas el use-case. |
-| **String token** | `'WHATSAPP_SENDER_PORT'` funciona pero hay riesgo de colisión de strings y no hay autocompletado. Symbol garantiza unicidad. |
-| **abstract class** | Podemos inyectar por `abstract class` (NestJS lo soporta). Pero introduce herencia donde debería haber interfaces. Además, una clase abstracta puede tener implementación, lo que diluye la separación de concerns. |
+| Alternativa                      | Descarte                                                                                                                                                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Inyección por clase concreta** | Rompe DIP: el use-case depende de la implementación. Si cambias de proveedor, tocas el use-case.                                                                                                                    |
+| **String token**                 | `'WHATSAPP_SENDER_PORT'` funciona pero hay riesgo de colisión de strings y no hay autocompletado. Symbol garantiza unicidad.                                                                                        |
+| **abstract class**               | Podemos inyectar por `abstract class` (NestJS lo soporta). Pero introduce herencia donde debería haber interfaces. Además, una clase abstracta puede tener implementación, lo que diluye la separación de concerns. |
 
 **Trade-offs**:
 
@@ -111,11 +111,11 @@ constructor(
 
 **Alternativas consideradas**:
 
-| Alternativa | Razón de descarte |
-|-------------|-------------------|
-| **LangChain.JS / Vercel AI SDK** | El ecosistema Python para LLM tooling es más maduro: LangGraph oficial, más modelos con soporte nativo, más herramientas de agentes. TypeScript está alcanzando pero todavía tiene menos integraciones. |
-| **Integrar en NestJS directamente** | Ejecutar LangGraph dentro de Node.js requeriría llamadas HTTP a un LLM proxy o usar bindings Python. Más complejo que un microservicio separado. |
-| **Un solo monolito Python** | Perderíamos todo el código NestJS existente (auth, Prisma, etc.). Migrar no es viable. |
+| Alternativa                         | Razón de descarte                                                                                                                                                                                       |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **LangChain.JS / Vercel AI SDK**    | El ecosistema Python para LLM tooling es más maduro: LangGraph oficial, más modelos con soporte nativo, más herramientas de agentes. TypeScript está alcanzando pero todavía tiene menos integraciones. |
+| **Integrar en NestJS directamente** | Ejecutar LangGraph dentro de Node.js requeriría llamadas HTTP a un LLM proxy o usar bindings Python. Más complejo que un microservicio separado.                                                        |
+| **Un solo monolito Python**         | Perderíamos todo el código NestJS existente (auth, Prisma, etc.). Migrar no es viable.                                                                                                                  |
 
 **Trade-offs**:
 
@@ -134,11 +134,11 @@ constructor(
 
 **Alternativas consideradas**:
 
-| Alternativa | Razón de descarte |
-|-------------|-------------------|
-| **Vercel** | Excelente para frontend, pero caro para backend (funciones serverless). No soporta Dockerfile nativo. |
-| **Railway** | Bueno para backend pero plan free limitado a 500 MB y 500 horas. Frontend no es su fuerte. |
-| **Fly.io** | Más caro que Render para el mismo servicio. |
+| Alternativa | Razón de descarte                                                                                     |
+| ----------- | ----------------------------------------------------------------------------------------------------- |
+| **Vercel**  | Excelente para frontend, pero caro para backend (funciones serverless). No soporta Dockerfile nativo. |
+| **Railway** | Bueno para backend pero plan free limitado a 500 MB y 500 horas. Frontend no es su fuerte.            |
+| **Fly.io**  | Más caro que Render para el mismo servicio.                                                           |
 
 **Trade-offs**:
 
@@ -162,13 +162,99 @@ constructor(
 
 **Alternativas consideradas**:
 
-| Alternativa | Descarte |
-|-------------|----------|
-| **Solo cifrado Neon (disco)** | Protege contra robo físico del disco pero no contra fuga de datos desde la aplicación o snapshot de BD. |
+| Alternativa                                            | Descarte                                                                                                               |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| **Solo cifrado Neon (disco)**                          | Protege contra robo físico del disco pero no contra fuga de datos desde la aplicación o snapshot de BD.                |
 | **Cifrado a nivel de columna PostgreSQL (`pgcrypto`)** | Más lento que cifrar en la aplicación. La clave estaría en la BD (si alguien accede a la BD, tiene acceso a la clave). |
-| **No cifrar nada** | Riesgo de exposición de datos personales. |
+| **No cifrar nada**                                     | Riesgo de exposición de datos personales.                                                                              |
 
 **Trade-offs**:
 
 - **Positivo**: Doble capa de cifrado (aplicación + disco). La clave nunca está en la BD. Si alguien obtiene un dump de la BD, los campos sensibles son ilegibles.
 - **Negativo**: No se puede hacer `WHERE` sobre campos cifrados (no son deterministas). Hay que desencriptar en la aplicación antes de usar. Si se pierde `ENCRYPTION_KEY`, los datos son irrecuperables (sin backdoor). Impacto en performance por CPU de encriptación/desencriptación en cada lectura/escritura.
+
+---
+
+## ADR-007: NestJS se mantiene en v10 — migración a v11 diferida
+
+**Fecha**: 2026
+
+**Contexto**: NestJS 11 resuelve una vulnerabilidad de severidad moderada en una dependencia transitiva (`file-type`, vía `@nestjs/common`), pero introduce cambios incompatibles: Express v4→v5 y `@nestjs/schedule` v4→v6 con breaking changes en la API de cron jobs.
+
+**Decisión**: permanecer en NestJS 10 hasta ejecutar una migración planificada con ventana de pruebas dedicada. La vulnerabilidad se acepta como riesgo conocido documentado (ver `SECURITY.md`) mientras tanto.
+
+**Alternativas consideradas**:
+
+| Alternativa                                 | Razón de descarte                                                                                                                                           |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Actualizar de inmediato a v11**           | Cambios incompatibles en Express y en el scheduler sin ventana de pruebas dedicada — riesgo de regresión no planificada en un sistema con usuarios activos. |
+| **Parchear solo la dependencia transitiva** | No es posible: `file-type` está fijado por rango en `@nestjs/common` 10.x; requiere el salto de major completo.                                             |
+
+**Trade-offs**:
+
+- **Positivo**: cero riesgo de regresión no planificada mientras el sistema está en operación activa; la migración se puede planificar con calma en vez de bajo presión de un CVE.
+- **Negativo**: la vulnerabilidad permanece abierta (mitigada — alcance de build/dependencia transitiva, no explotable directamente) hasta ejecutar la migración. Este ADR debe revisarse cuando se planifique el salto a v11.
+
+---
+
+## ADR-008: bcryptjs en lugar de bcrypt para el hashing de contraseñas
+
+**Fecha**: 2026
+
+**Contexto**: `bcrypt` (binding nativo) depende transitivamente de `@mapbox/node-pre-gyp` → `tar@^6`, una versión con una vulnerabilidad conocida. pnpm no puede forzar un override entre majors incompatibles (`tar@^6` → `>=7`) cuando el consumidor declara ese rango.
+
+**Decisión**: reemplazar `bcrypt` por `bcryptjs`, una implementación en JavaScript puro con la misma API pública.
+
+**Alternativas consideradas**:
+
+| Alternativa                                     | Razón de descarte                                                                                                                                          |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Mantener bcrypt y aceptar el CVE transitivo** | Existía una alternativa sin ese costo; no había razón para aceptar el riesgo.                                                                              |
+| **Argon2**                                      | Requiere binding nativo también, con el mismo problema de portabilidad y compilación en distintos entornos (Windows sin build tools, contenedores Alpine). |
+
+**Trade-offs**:
+
+- **Positivo**: sin dependencias nativas — instala igual en cualquier plataforma sin build tools ni compilación, elimina el CVE transitivo por completo.
+- **Negativo**: bcryptjs es más lento que la implementación en C de bcrypt (diferencia no perceptible en el volumen actual de autenticaciones del sistema).
+
+---
+
+## ADR-009: Unicidad de email por tenant, no global
+
+**Fecha**: 2026
+
+**Contexto**: El sistema es multi-tenant. Una misma persona (ej. un contador o un gerente de zona) puede necesitar una cuenta en más de un taller cliente, potencialmente con el mismo correo electrónico.
+
+**Decisión**: la unicidad de `email` en el modelo `User` se define a nivel de tenant (`@@unique([tenantId, email])`), no globalmente.
+
+**Alternativas consideradas**:
+
+| Alternativa                  | Razón de descarte                                                                                           |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Unicidad global de email** | Impediría que la misma persona tuviera cuentas en dos talleres distintos — un caso de uso real del negocio. |
+
+**Trade-offs**:
+
+- **Positivo**: modela correctamente la realidad del negocio; cada tenant gestiona su propio espacio de usuarios sin coordinarse con otros tenants.
+- **Negativo**: cualquier flujo de autenticación que no reciba el `tenantId` de forma explícita debe resolver la posible ambigüedad entre tenants de manera determinista (implementado: el login sin `tenantId` solo procede si exactamente una cuenta coincide con el email; de lo contrario responde el mismo error genérico que una credencial inválida).
+
+---
+
+## ADR-010: `SalePayment` como modelo independiente de `Payment`
+
+**Fecha**: 2026 (Fase 3 — módulo de ventas)
+
+**Contexto**: el modelo `Payment` existente está diseñado específicamente para pagos asociados a una orden de trabajo (`workOrderId` obligatorio, acoplado a los reportes financieros del taller). El nuevo módulo de venta de motocicletas necesita registrar pagos y cuotas de una venta.
+
+**Decisión**: introducir `SalePayment` como modelo independiente en vez de generalizar `Payment` con una relación polimórfica.
+
+**Alternativas consideradas**:
+
+| Alternativa                                                            | Razón de descarte                                                                                                                                                                                           |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Generalizar `Payment` (relación polimórfica workOrder / saleOrder)** | Habría requerido migrar datos de producción existentes y complejizar las queries de reportes financieros del taller, para un beneficio (menos duplicación de modelo) no crítico en el alcance de la Fase 3. |
+
+**Trade-offs**:
+
+- **Positivo**: entrega del módulo de ventas sin riesgo de migración sobre datos de producción existentes; cada modelo permanece simple y con un único propósito.
+- **Negativo**: la lógica de "registrar pago" y "listar pagos" está duplicada entre los dos modelos. Candidato a unificación si aparece una tercera necesidad de pagos (ej. suscripciones de plataforma).
