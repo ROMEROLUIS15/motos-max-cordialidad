@@ -1,4 +1,10 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // incremental + nest's deleteOutDir is a trap: the build wipes dist/ but
+    // a stale .tsbuildinfo makes tsc think everything is up to date and emit
+    // NOTHING → `node dist/main` fails with MODULE_NOT_FOUND.
+    "incremental": false
+  },
   "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
 }
