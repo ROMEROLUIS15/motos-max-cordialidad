@@ -36,6 +36,12 @@ export interface WhatsAppRepository {
   ): Promise<PaginatedResult<WhatsAppSessionRecord>>;
 
   createMessage(message: MessageRecord): Promise<void>;
+  /**
+   * True if an inbound message with this Meta message id was already stored.
+   * Meta delivers webhooks at-least-once (and a captured request could be
+   * replayed), so processing must be idempotent per waMessageId.
+   */
+  messageExistsByWaId(waMessageId: string): Promise<boolean>;
   listMessages(sessionId: string, pagination: Pagination): Promise<PaginatedResult<MessageRecord>>;
   updateMessageStatus(
     messageId: string,
