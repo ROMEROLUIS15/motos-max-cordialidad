@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useState, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -12,9 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 // ── Schema — mirrors backend validation ──────────────────────────────────────
+// The reset token travels only in the URL and in the POST body — it is never
+// rendered in the UI.
 const resetSchema = z
   .object({
-    token: z.string().min(1, 'Token requerido'),
     password: z
       .string()
       .min(8, 'Mínimo 8 caracteres')
@@ -93,29 +94,25 @@ function ResetPasswordForm() {
   const {
     register,
     handleSubmit,
-    setValue,
     control,
     formState: { errors },
   } = useForm<ResetFormData>({ resolver: zodResolver(resetSchema) });
 
   const passwordValue = useWatch({ control, name: 'password', defaultValue: '' });
 
-  useEffect(() => {
-    const token = searchParams.get('token');
-    if (token) setValue('token', token);
-  }, [searchParams, setValue]);
+  const token = searchParams.get('token');
 
   const isRateLimited = rateLimitedUntil !== null && Date.now() < rateLimitedUntil;
 
   const onSubmit = async (data: ResetFormData) => {
-    if (isRateLimited) return;
+    if (isRateLimited || !token) return;
     setLoading(true);
     setServerError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: data.token, password: data.password }),
+        body: JSON.stringify({ token, password: data.password }),
       });
 
       if (!res.ok) {
@@ -157,22 +154,37 @@ function ResetPasswordForm() {
     );
   }
 
+  // No token in the URL — the page was reached without a valid reset link.
+  if (!token) {
+    return (
+      <div className="space-y-4">
+        <div
+          className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5"
+          data-testid="missing-token"
+        >
+          <p className="text-sm text-destructive">
+            El enlace de recuperación es inválido o está incompleto. Solicita uno nuevo para
+            continuar.
+          </p>
+        </div>
+        <Link
+          href="/forgot-password"
+          className="inline-flex h-9 w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
+        >
+          Solicitar un nuevo enlace
+        </Link>
+        <Link
+          href="/login"
+          className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        >
+          Volver al inicio de sesión
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-      <div className="space-y-1.5">
-        <label htmlFor="token" className="text-sm font-medium text-foreground/90">
-          Token de recuperación
-        </label>
-        <Input
-          id="token"
-          type="text"
-          placeholder="Pega el token del email"
-          aria-invalid={!!errors.token}
-          {...register('token')}
-        />
-        {errors.token && <p className="text-xs text-destructive">{errors.token.message}</p>}
-      </div>
-
       <div className="space-y-1.5">
         <label htmlFor="password" className="text-sm font-medium text-foreground/90">
           Nueva contraseña

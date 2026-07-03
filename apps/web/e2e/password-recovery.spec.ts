@@ -95,13 +95,42 @@ test.describe('Reset Password Page', () => {
     await page.waitForSelector('#password', { timeout: 15000 });
   });
 
-  test('renderiza el formulario y carga el token desde la URL', async ({ page }) => {
+  test('renderiza el formulario sin exponer el token en pantalla', async ({ page }) => {
     await expect(
       page.getByRole('heading', { name: 'Restablecer contraseña', level: 2 }),
     ).toBeVisible();
-    await expect(page.locator('#token')).toHaveValue(TOKEN);
     await expect(page.locator('#password')).toBeVisible();
     await expect(page.locator('#confirm')).toBeVisible();
+    // Security: the token must never be rendered in the page body
+    await expect(page.locator('#token')).toHaveCount(0);
+    await expect(page.locator('main, body')).not.toContainText(TOKEN);
+  });
+
+  test('envía el token de la URL en el POST sin mostrarlo', async ({ page }) => {
+    let sentBody: { token?: string } = {};
+    await page.route('**/api/auth/reset-password', async (route) => {
+      sentBody = route.request().postDataJSON() as { token?: string };
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'ok' }),
+      });
+    });
+    await page.locator('#password').fill('StrongPass99');
+    await page.locator('#confirm').fill('StrongPass99');
+    await page.locator('#reset-password-submit').click();
+    await expect(page.getByText(/Contrase.*restablecida con.*xito/i)).toBeVisible();
+    expect(sentBody.token).toBe(TOKEN);
+  });
+
+  test('sin token en la URL muestra aviso de enlace inválido', async ({ page }) => {
+    await page.goto('/reset-password');
+    await expect(page.getByTestId('missing-token')).toBeVisible();
+    await expect(page.getByRole('link', { name: /Solicitar un nuevo enlace/i })).toHaveAttribute(
+      'href',
+      '/forgot-password',
+    );
+    await expect(page.locator('#password')).toHaveCount(0);
   });
 
   test('muestra indicador de fuerza al escribir la contraseña', async ({ page }) => {

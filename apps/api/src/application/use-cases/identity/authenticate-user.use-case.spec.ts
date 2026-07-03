@@ -54,4 +54,9 @@ describe('AuthenticateUserUseCase', () => {
     const { useCase } = make({ user: fakeUser({ isActive: false }), passwordValid: true });
     await expect(useCase.execute(input)).rejects.toThrow('inactive');
   });
+
+  it('does not reveal inactive status when the password is wrong (anti-enumeration)', async () => {
+    const { useCase } = make({ user: fakeUser({ isActive: false }), passwordValid: false });
+    await expect(useCase.execute(input)).rejects.toThrow('Invalid credentials');
+  });
 });
