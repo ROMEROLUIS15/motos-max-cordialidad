@@ -7,7 +7,7 @@
 | Servicio             | Proveedor        | Plan  | URL                                        | Keep-alive  |
 | -------------------- | ---------------- | ----- | ------------------------------------------ | ----------- |
 | **API (NestJS)**     | Render           | Free  | `https://motoworkshop-api.onrender.com`    | Cada 10 min |
-| **Web (Next.js)**    | Cloudflare Pages | Free  | `https://motoworkshop-web.pages.dev`       | — (edge)    |
+| **Web (Next.js)**    | Cloudflare Pages | Free  | `https://motos-max-cordialidad.pages.dev`  | — (edge)    |
 | **Agents (FastAPI)** | Render           | Free  | `https://motoworkshop-agents.onrender.com` | Cada 10 min |
 | **Base de datos**    | Neon             | Free  | (conexión vía DATABASE_URL)                | —           |
 | **Redis**            | <TBD>            | <TBD> | (conexión vía REDIS_URL)                   | —           |
@@ -63,10 +63,12 @@ Configurado en el dashboard de Cloudflare Pages > Settings > Environment variabl
 
 ## Despliegue
 
+Nada se despliega si el pipeline de CI no está en verde. Ver [«Pipeline de CI/CD»](#pipeline-de-cicd) más abajo para el detalle completo; esta sección cubre solo el mecanismo de cada servicio.
+
 ### API (NestJS) — Render
 
 ```yaml
-# render.yaml (auto-generado)
+# render.yaml
 service:
   name: motoworkshop-api
   type: web
@@ -75,57 +77,46 @@ service:
   dockerContext: .
   plan: free
   healthCheckPath: /api/health
-  autoDeploy: true # Se despliega automáticamente al hacer push a main
+  autoDeployTrigger: off # el deploy NO lo dispara Render — lo orquesta CI
 ```
 
-**Deploy manual**: `git push origin main` → Render detecta el cambio y redepliega.
+El auto-deploy nativo de Render está deshabilitado a propósito. El job `deploy-api` de `ci.yml` dispara el deploy vía la API de Render (`POST /v1/services/{id}/deploys`) **solo después** de que todos los checks (typecheck, tests, lint, e2e, secrets, audit) pasan, y espera a que el estado sea `live` antes de continuar con el smoke test. Esto evita un deadlock que se daría si en cambio se usara `autoDeployTrigger: checksPass` junto con un job de verificación en el mismo pipeline (Render esperaría el check, el check esperaría a Render).
 
-**Build**: Docker multistage (instalación → build → copia artefactos → producción).
+**Build**: Docker multistage (instalación → build → copia de artefactos → imagen final). Las migraciones y el seed corren dentro del `CMD` del contenedor al arrancar (ver [«Migraciones de base de datos»](#migraciones-de-base-de-datos)) — el plan free de Render no ofrece `preDeployCommand` como paso separado.
 
 ### Web (Next.js) — Cloudflare Pages
 
-**Via GitHub Action**:
+El deploy de producción corre en el job `deploy-web` de `ci.yml`, gated por los mismos checks que el API, usando `cloudflare/wrangler-action@v4` con flags de CLI (`--project-name`, `--branch=main`):
 
 ```bash
-# .github/workflows/pages.yml (workflow_dispatch manual)
-pnpm install
-pnpm --filter @motoworkshop/web build
-# Publica .next/ a Cloudflare Pages via cloudflare/pages-action
+cd apps/web
+npx @cloudflare/next-on-pages@1   # build para el runtime de Cloudflare
+wrangler pages deploy .vercel/output/static --project-name=... --branch=main
 ```
 
-**Output dir**: `.next` (configurado en `wrangler.toml`).
+> **No crear `apps/web/wrangler.toml`.** `wrangler pages deploy` sincroniza cualquier `wrangler.toml` presente con la configuración del proyecto en el dashboard de Cloudflare — incluyendo `compatibility_flags` y `destination_dir`. Un archivo desactualizado sobreescribe esa configuración en cada deploy manual, aunque el archivo en sí parezca correcto (sus rutas son relativas a `apps/web/`, incompatibles con la integración Git que usa la raíz del repo como root). Todos los parámetros van por flags de CLI.
+
+`.github/workflows/pages.yml` (`workflow_dispatch`, manual) queda como respaldo funcional si el job de CI necesita re-ejecutarse de forma aislada.
 
 ### Agents (Python) — Render
 
-```yaml
-service:
-  name: motoworkshop-agents
-  type: web
-  runtime: docker
-  dockerfile: apps/agents/Dockerfile
-  dockerContext: apps/agents
-  plan: free
-  healthCheckPath: /health
-  autoDeploy: true
-```
-
-**Deploy manual**: `git push origin main` → Render redepliega automáticamente.
+Mismo mecanismo que el API: `autoDeployTrigger: off`, el job `deploy-agents` de `ci.yml` orquesta el deploy vía API de Render. Este job además solo se ejecuta si el diff del commit toca `apps/agents/**` — un cambio solo en `apps/web` o `apps/api` no redespliega el microservicio de agentes.
 
 ---
 
 ## Migraciones de base de datos
 
 ```bash
-# Producción — ejecutar via GitHub Action (deploy.yml) o manual
+# Local / manual
 pnpm --filter @motoworkshop/api db:migrate
-# Internamente corre: npx prisma migrate deploy
+# Internamente corre: npx prisma migrate dev (crea+aplica migración)
 
-# NUNCA usar en producción:
+# NUNCA usar contra producción:
 # ❌ npx prisma migrate dev  (resetearía datos)
 # ❌ npx prisma db push       (saltaría validaciones)
 ```
 
-La migración se ejecuta automáticamente al iniciar el contenedor de la API (`CMD` en Dockerfile ejecuta `prisma migrate deploy` antes de iniciar el servidor).
+En **producción**, la migración se ejecuta automáticamente dentro del `CMD` del contenedor de la API al arrancar — `npx prisma migrate deploy && node dist-seed/prisma/seed.js && node dist/main` — no hay un paso separado ni una GitHub Action dedicada. Dos razones: el plan free de Render no ofrece `preDeployCommand`, y Neon no es alcanzable de forma confiable desde fuera de la red de Render para correr el seed manualmente. El seed es idempotente (usa `upsert`/chequeos de existencia), por lo que reintentarlo en cada arranque es seguro.
 
 ---
 
@@ -148,12 +139,14 @@ La migración se ejecuta automáticamente al iniciar el contenedor de la API (`C
 
 ## Health Checks
 
-| Servicio      | Endpoint          | Respuesta esperada                                         |
-| ------------- | ----------------- | ---------------------------------------------------------- |
-| API NestJS    | `GET /api/health` | `200 { "status": "ok", "timestamp": "..." }`               |
-| Agents Python | `GET /health`     | `200 { "status": "healthy", "redis": true, "saas": true }` |
+| Servicio      | Endpoint          | Respuesta esperada                                   |
+| ------------- | ----------------- | ---------------------------------------------------- |
+| API NestJS    | `GET /api/health` | `200 { "status": "ok" }`                             |
+| Agents Python | `GET /health`     | `200 { "status": "ok", "redis": true, "api": true }` |
 
-Render usa estos endpoints para determinar si el servicio está vivo.
+Render usa estos endpoints para determinar si el servicio está vivo, y el job `smoke-web`/keep-alive los consulta cada 10 minutos para evitar que el plan free entre en sleep.
+
+> **Nota de implementación**: existe un segundo controller (`HealthController` en `health.controller.ts`) que expone un chequeo más detallado (estado de Postgres, y si Redis/R2/WhatsApp están configurados) también bajo `/health`. `AppController` registra su propia ruta `health` primero, así que en la práctica `GET /api/health` responde siempre la forma simple de arriba. Si se necesita el detalle por componente, exponerlo bajo una ruta propia (ej. `/api/health/detail`) en vez de depender del orden de registro de controllers.
 
 ---
 
@@ -162,6 +155,29 @@ Render usa estos endpoints para determinar si el servicio está vivo.
 - **Sentry**: Captura errores no manejados en API (NestJS filtro global) y Agents (Sentry SDK).
 - **Logs**: Render dashboard > servicio > **Logs**.
 - **Keep-alive**: GitHub Action cada 10 minutos previene que los servicios free de Render entren en sleep.
+
+---
+
+## Pipeline de CI/CD
+
+Todo push a `main` corre la misma secuencia; nada se despliega si un check falla.
+
+**Checks (`ci.yml`, en paralelo):**
+
+| Check           | Qué valida                                                                                                     |
+| --------------- | -------------------------------------------------------------------------------------------------------------- |
+| Typecheck       | `tsc --noEmit` en API y Web                                                                                    |
+| Test            | Jest (API) + Vitest (Web), con piso de cobertura                                                               |
+| Lint            | ESLint en API y Web                                                                                            |
+| Agents (Python) | `ruff check` + `ruff format --check` + `mypy` + `pytest`                                                       |
+| E2E API         | Suites contra Postgres + Redis efímeros en el runner, incluye el gate de migraciones (`prisma migrate deploy`) |
+| E2E Web         | Playwright (Chromium) contra specs mockeadas                                                                   |
+| Secrets scan    | `gitleaks-action` sobre el diff                                                                                |
+| Audit           | `pnpm audit --prod --audit-level high` (con las excepciones documentadas en `SECURITY.md`)                     |
+
+**Deploys (solo si los 8 checks anteriores pasan):** `deploy-web` (Cloudflare Pages) → `smoke-web` (verifica `/`, `/login`, `/reset-password/help` con contenido real) en paralelo con `deploy-api` / `deploy-agents` (Render, orquestados vía API — ver arriba) → verificación de health post-deploy.
+
+**Protección de la rama `main`**: 8 checks requeridos + pull request obligatorio. Un fallo en cualquier paso — incluido un smoke test post-deploy — dispara un correo de notificación al equipo (`notify-failure`) para que un deploy roto no pase desapercibido.
 
 ---
 
@@ -216,12 +232,13 @@ Render usa estos endpoints para determinar si el servicio está vivo.
 | Recurso              | URL                                                |
 | -------------------- | -------------------------------------------------- |
 | API en producción    | `https://motoworkshop-api.onrender.com/api/health` |
-| Web en producción    | `https://motoworkshop-web.pages.dev`               |
+| Web en producción    | `https://motos-max-cordialidad.pages.dev`          |
 | Dashboard Render     | `https://dashboard.render.com`                     |
 | Dashboard Cloudflare | `https://dash.cloudflare.com`                      |
 | Sentry               | `https://sentry.io`                                |
 | Neon Console         | `https://console.neon.tech`                        |
 | Meta Business        | `https://business.facebook.com`                    |
+| Resend Dashboard     | `https://resend.com/dashboard`                     |
 
 ### Tokens de recuperacion de contrasena acumulados
 
@@ -243,7 +260,7 @@ Render usa estos endpoints para determinar si el servicio está vivo.
 ```
 Usuario -> POST /api/auth/forgot-password
          |
-   [AdvancedThrottlerGuard: 5 req/hora por IP+email]
+   [ForgotPasswordThrottlerGuard: 3 req/15min por IP+email]
          |
    ForgotPasswordUseCase:
      1. Busca usuario -> siempre responde HTTP 200 (anti-enumeracion)
@@ -253,7 +270,7 @@ Usuario -> POST /api/auth/forgot-password
 
 Usuario -> POST /api/auth/reset-password (desde link del email)
          |
-   [ThrottlerGuard: limite global por IP]
+   [ThrottlerGuard: 5 req/15min por IP]
          |
    ResetPasswordUseCase:
      1. hash = SHA-256(token recibido)
@@ -266,11 +283,13 @@ Usuario -> POST /api/auth/reset-password (desde link del email)
 
 ### Rate limiting - Configuracion
 
-| Tipo                            | Limite          | Archivo para ajustar                                               |
-| ------------------------------- | --------------- | ------------------------------------------------------------------ |
-| Por IP+email (forgot-password)  | 5 req / hora    | `auth.controller.ts` - decorador `@Throttle` en `forgotPassword()` |
-| Por IP global - circuit breaker | 100 req / hora  | `app.module.ts` - segunda zona en `ThrottlerModule.forRoot()`      |
-| Por IP global - ventana corta   | 60 req / minuto | `app.module.ts` - primera zona en `ThrottlerModule.forRoot()`      |
+| Tipo                               | Limite          | Archivo para ajustar                                                            |
+| ---------------------------------- | --------------- | ------------------------------------------------------------------------------- |
+| Por IP+email (forgot-password)     | 3 req / 15 min  | `forgot-password-throttler.guard.ts` (guard dedicado, no usa `@Throttle`)       |
+| Por IP (reset-password)            | 5 req / 15 min  | `auth.controller.ts` - decorador `@Throttle` en `resetPassword()`               |
+| Por IP (login)                     | 5 req / 5 min   | `auth.controller.ts` - decorador `@Throttle` en `login()`                       |
+| Por IP global - circuit breaker    | 100 req / hora  | `app.module.ts` - throttler nombrado `hourly` en `ThrottlerModule.forRoot()`    |
+| Por IP+ruta global - ventana corta | 60 req / minuto | `app.module.ts` - throttler nombrado `default`, clave en `GlobalThrottlerGuard` |
 
 ### Cleanup job de tokens
 
@@ -296,8 +315,6 @@ Usuario -> POST /api/auth/reset-password (desde link del email)
 
 **Muchos usuarios bloqueados por rate limit (429)**
 
-1. Limite es 5 intentos/hora por IP+email.
+1. Limite es 3 intentos / 15 min por IP+email (forgot-password) o 5 intentos / 15 min por IP (reset-password).
 2. Si es un proxy corporativo compartido, aumentar limite en `auth.controller.ts`.
 3. Revisar Sentry para patrones de ataque.
-
-| Resend Dashboard | `https://resend.com/dashboard` |
