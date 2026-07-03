@@ -9,13 +9,14 @@ from typing import Any
 
 import redis.asyncio as aioredis
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from pydantic import BaseModel
 
 from .agents.admin.agent import AdminAgent
 from .agents.admin.memory import AdminSessionStore
 from .agents.shared.llm_factory import LLMFactory
 from .api.admin_handler import AdminHandler
+from .api.service_auth import require_service_token
 from .config import get_settings
 from .health import build_health
 from .reports.report_generator import ReportGenerator
@@ -73,7 +74,7 @@ async def health() -> dict[str, Any]:
     return await build_health(app.state.redis, app.state.saas)
 
 
-@app.post("/agents/admin")
+@app.post("/agents/admin", dependencies=[Depends(require_service_token)])
 async def agents_admin(req: AdminMessageRequest) -> dict[str, str]:
     handler: AdminHandler = app.state.admin_handler
     return await handler.handle(req.message, req.phoneNumber, req.tenantId)

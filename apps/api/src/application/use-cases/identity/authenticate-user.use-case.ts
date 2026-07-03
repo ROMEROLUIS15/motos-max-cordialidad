@@ -1,7 +1,10 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import { UserRepository, USER_REPOSITORY } from '../../../domain/repositories/user.repository';
-import { RefreshTokenRepository, REFRESH_TOKEN_REPOSITORY } from '../../../domain/repositories/refresh-token.repository';
+import {
+  RefreshTokenRepository,
+  REFRESH_TOKEN_REPOSITORY,
+} from '../../../domain/repositories/refresh-token.repository';
 import { PasswordService } from '../../../infrastructure/auth/password.service';
 import { JwtService } from '../../../infrastructure/auth/jwt.service';
 
@@ -29,10 +32,12 @@ export class AuthenticateUserUseCase {
   async execute(input: AuthenticateUserInput): Promise<AuthenticateUserOutput> {
     const user = await this.userRepo.findByEmail(input.email, input.tenantId);
     if (!user) throw new UnauthorizedException('Invalid credentials');
-    if (!user.isActive) throw new UnauthorizedException('Account is inactive');
 
     const valid = await this.passwordService.verify(input.password, user.passwordHash);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
+    // Checked only after a correct password so a probing attacker can't use
+    // the distinct message to confirm which emails are registered.
+    if (!user.isActive) throw new UnauthorizedException('Account is inactive');
 
     const accessToken = this.jwtService.sign({
       sub: user.id,
@@ -53,7 +58,13 @@ export class AuthenticateUserUseCase {
     return {
       accessToken,
       refreshToken: rawRefreshToken,
-      user: { id: user.id, email: user.email, fullName: user.fullName, roleId: user.roleId, tenantId: user.tenantId },
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        roleId: user.roleId,
+        tenantId: user.tenantId,
+      },
     };
   }
 }

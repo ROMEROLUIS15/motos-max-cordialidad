@@ -96,6 +96,10 @@ services:
     # never deploys on its own.
     autoDeployTrigger: off
     envVars:
+      # Activates the config.py guard that refuses to boot with the default
+      # JWT_SECRET — without this the safety net never fires on Render.
+      - key: ENV
+        value: production
       - key: API_BASE_URL
         value: https://motoworkshop-api.onrender.com
       - key: TZ

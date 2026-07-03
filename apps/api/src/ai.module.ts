@@ -22,6 +22,7 @@ import { ToolRegistry } from './infrastructure/ai/tools/tool-registry';
 import { ToolExecutor } from './infrastructure/ai/tool-executor';
 import { RouterAgent } from './infrastructure/ai/router-agent';
 import { AgentsServiceClient } from './infrastructure/agents/agents-service.client';
+import { TokenFactoryService } from './application/services/token-factory.service';
 
 // Use cases
 import { ProcessIncomingMessageUseCase } from './application/use-cases/messaging/process-incoming-message.use-case';
@@ -55,6 +56,7 @@ import { MessagesController } from './presentation/http/controllers/messages.con
     LLMProviderFactory,
     ToolRegistry,
     ToolExecutor,
+    TokenFactoryService,
     { provide: ROUTER_AGENT_PORT, useClass: RouterAgent },
     { provide: AGENTS_SERVICE_PORT, useClass: AgentsServiceClient },
     ProcessIncomingMessageUseCase,
