@@ -60,6 +60,14 @@ export class WhatsAppPrismaRepository implements WhatsAppRepository {
     await this.prisma.message.create({ data: message });
   }
 
+  async messageExistsByWaId(waMessageId: string): Promise<boolean> {
+    const existing = await this.prisma.message.findFirst({
+      where: { waMessageId },
+      select: { id: true },
+    });
+    return existing !== null;
+  }
+
   async listMessages(
     sessionId: string,
     pagination: Pagination,

@@ -45,6 +45,14 @@ export class ProcessIncomingMessageUseCase {
   ) {}
 
   async execute(input: ProcessIncomingMessageInput): Promise<void> {
+    // Idempotency: Meta retries webhooks (at-least-once) and a captured request
+    // could be replayed. Skip a message id we've already stored so the agent
+    // doesn't run twice and the customer doesn't get duplicate replies.
+    if (input.waMessageId && (await this.whatsappRepo.messageExistsByWaId(input.waMessageId))) {
+      this.logger.log(`duplicate webhook for waMessageId=${input.waMessageId} — skipping`);
+      return;
+    }
+
     const customerId = await this.customerRepo.findIdByPhone(input.tenantId, input.from);
 
     let session = await this.whatsappRepo.findSessionByPhone(input.from, input.tenantId);

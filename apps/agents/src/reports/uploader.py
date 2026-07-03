@@ -9,7 +9,9 @@ from ..config import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 
-PRESIGNED_TTL_SECONDS = 7 * 24 * 60 * 60  # 7 days
+# Short-lived on purpose: a presigned URL needs no auth to fetch, so it should
+# outlive only the immediate hand-off, not linger for days in logs/history.
+PRESIGNED_TTL_SECONDS = 15 * 60  # 15 minutes
 
 
 def _default_s3_client(settings: Settings) -> Any:

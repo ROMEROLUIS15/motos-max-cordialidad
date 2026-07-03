@@ -5,7 +5,10 @@ import {
 } from '../../../../domain/repositories/report.repository';
 import { StoragePort, STORAGE_PORT } from '../../../../application/ports/storage.port';
 
-const REPORT_URL_TTL_SECONDS = 7 * 24 * 60 * 60;
+// Short-lived: the URL is handed out the moment the user clicks "download",
+// so a wide window only widens the leak surface (browser history, referrer,
+// proxy logs) for a financial PDF that requires no auth to fetch once signed.
+const REPORT_URL_TTL_SECONDS = 15 * 60;
 
 @Injectable()
 export class GetReportDownloadUrlUseCase {
