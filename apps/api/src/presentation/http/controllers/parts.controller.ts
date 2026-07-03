@@ -86,7 +86,7 @@ export class PartsController {
     @CurrentUser() user: JWTPayload,
     @Body() body: UpdatePartDto,
   ) {
-    await this.updatePart.execute({ partId: id, tenantId: user.tenantId, ...body });
+    await this.updatePart.execute({ ...body, partId: id, tenantId: user.tenantId });
     return { success: true };
   }
 

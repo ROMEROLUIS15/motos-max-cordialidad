@@ -42,7 +42,7 @@ export class TenantsController {
   @Put('me')
   @UseGuards(JwtAuthGuard)
   async updateMe(@CurrentUser() user: JWTPayload, @Body() body: UpdateTenantConfigDto) {
-    await this.updateTenantConfigUseCase.execute({ tenantId: user.tenantId, ...body } as Parameters<
+    await this.updateTenantConfigUseCase.execute({ ...body, tenantId: user.tenantId } as Parameters<
       UpdateTenantConfigUseCase['execute']
     >[0]);
     return { success: true };

@@ -75,7 +75,7 @@ export class MotorcycleUnitsController {
     @CurrentUser() user: JWTPayload,
     @Body() body: UpdateMotorcycleUnitDto,
   ) {
-    await this.updateUnit.execute({ unitId: id, tenantId: user.tenantId, ...body });
+    await this.updateUnit.execute({ ...body, unitId: id, tenantId: user.tenantId });
     return { success: true };
   }
 
