@@ -71,7 +71,7 @@ export class VehiclesController {
     @CurrentUser() user: JWTPayload,
     @Body() body: UpdateVehicleDto,
   ) {
-    await this.updateVehicle.execute({ vehicleId: id, tenantId: user.tenantId, ...body });
+    await this.updateVehicle.execute({ ...body, vehicleId: id, tenantId: user.tenantId });
     return { success: true };
   }
 

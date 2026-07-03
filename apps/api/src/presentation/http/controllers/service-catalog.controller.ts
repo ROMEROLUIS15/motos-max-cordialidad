@@ -55,7 +55,7 @@ export class ServiceCatalogController {
       serviceType: string;
     },
   ) {
-    return this.createItem.execute({ tenantId: user.tenantId, ...body });
+    return this.createItem.execute({ ...body, tenantId: user.tenantId });
   }
 
   @Get(':id')
@@ -73,7 +73,7 @@ export class ServiceCatalogController {
     @CurrentUser() user: JWTPayload,
     @Body() body: UpdateServiceCatalogItemDto,
   ) {
-    await this.updateItem.execute({ id, tenantId: user.tenantId, ...body });
+    await this.updateItem.execute({ ...body, id, tenantId: user.tenantId });
     return { success: true };
   }
 

@@ -46,9 +46,9 @@ export class UsersController {
     @Body() body: UpdateUserDto,
   ) {
     await this.updateUserUseCase.execute({
+      ...body,
       userId: id,
       tenantId: user.tenantId,
-      ...body,
     });
     return { success: true };
   }

@@ -151,7 +151,7 @@ export class WorkOrdersController {
       observations?: string;
     },
   ) {
-    await this.updateWorkOrder.execute({ tenantId: user.tenantId, workOrderId: id, ...body });
+    await this.updateWorkOrder.execute({ ...body, tenantId: user.tenantId, workOrderId: id });
     return { success: true };
   }
 
@@ -193,7 +193,7 @@ export class WorkOrdersController {
       serviceCatalogId?: string;
     },
   ) {
-    return this.addLine.execute({ tenantId: user.tenantId, workOrderId: id, ...body });
+    return this.addLine.execute({ ...body, tenantId: user.tenantId, workOrderId: id });
   }
 
   @Put(':id/lines/:lineId')
@@ -210,7 +210,7 @@ export class WorkOrdersController {
       technicianId?: string | null;
     },
   ) {
-    return this.updateLine.execute({ tenantId: user.tenantId, workOrderId: id, lineId, ...body });
+    return this.updateLine.execute({ ...body, tenantId: user.tenantId, workOrderId: id, lineId });
   }
 
   @Delete(':id/lines/:lineId')

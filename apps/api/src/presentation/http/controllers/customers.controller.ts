@@ -74,7 +74,7 @@ export class CustomersController {
     @CurrentUser() user: JWTPayload,
     @Body() body: UpdateCustomerDto,
   ) {
-    await this.updateCustomer.execute({ customerId: id, tenantId: user.tenantId, ...body });
+    await this.updateCustomer.execute({ ...body, customerId: id, tenantId: user.tenantId });
     return { success: true };
   }
 
