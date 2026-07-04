@@ -35,15 +35,18 @@ class AdminHandler:
     async def handle(self, message: str, phone: str, tenant_id: str) -> dict[str, str]:
         session = await self._sessions.load(tenant_id, phone)
         session_id = f"{tenant_id}:{phone}"
-        reply, intent = await self._agent.answer(
+        reply, intent, awaiting = await self._agent.answer(
             message,
             tenant_id=tenant_id,
             admin_phone=phone,
             session_id=session_id,
             tool_call_count=int(session.get("tool_call_count", 0)),
             history=session.get("history", []),
+            awaiting_po_confirmation=bool(session.get("awaiting_po_confirmation", False)),
         )
-        await self._sessions.record_turn(tenant_id, phone, message, reply)
+        await self._sessions.record_turn(
+            tenant_id, phone, message, reply, awaiting_po_confirmation=awaiting
+        )
         if intent == "REPORT_REQUEST" and self._generator is not None:
             asyncio.create_task(self._generate_report_bg(tenant_id))
         try:

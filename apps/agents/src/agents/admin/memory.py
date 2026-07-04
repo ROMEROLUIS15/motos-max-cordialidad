@@ -27,23 +27,46 @@ class AdminSessionStore:
     async def load(self, tenant_id: str, phone: str) -> dict[str, Any]:
         raw = await self._redis.get(session_key(tenant_id, phone))
         if not raw:
-            return {"history": [], "tool_call_count": 0}
+            return {"history": [], "tool_call_count": 0, "awaiting_po_confirmation": False}
         data: dict[str, Any] = json.loads(raw)
         data.setdefault("history", [])
         data.setdefault("tool_call_count", 0)
+        data.setdefault("awaiting_po_confirmation", False)
         return data
 
     async def save(
-        self, tenant_id: str, phone: str, history: list[dict[str, str]], tool_call_count: int
+        self,
+        tenant_id: str,
+        phone: str,
+        history: list[dict[str, str]],
+        tool_call_count: int,
+        awaiting_po_confirmation: bool = False,
     ) -> None:
-        payload = json.dumps({"history": history[-20:], "tool_call_count": tool_call_count})
+        payload = json.dumps(
+            {
+                "history": history[-20:],
+                "tool_call_count": tool_call_count,
+                "awaiting_po_confirmation": awaiting_po_confirmation,
+            }
+        )
         await self._redis.set(session_key(tenant_id, phone), payload, ex=self._ttl)
 
     async def record_turn(
-        self, tenant_id: str, phone: str, user_message: str, assistant_message: str
+        self,
+        tenant_id: str,
+        phone: str,
+        user_message: str,
+        assistant_message: str,
+        awaiting_po_confirmation: bool = False,
     ) -> None:
         data = await self.load(tenant_id, phone)
         history: list[dict[str, str]] = data["history"]
         history.append({"role": "user", "content": user_message})
         history.append({"role": "assistant", "content": assistant_message})
-        await self.save(tenant_id, phone, history, int(data["tool_call_count"]))
+        await self.save(
+            tenant_id,
+            phone,
+            history,
+            int(data["tool_call_count"]),
+            awaiting_po_confirmation=awaiting_po_confirmation,
+        )

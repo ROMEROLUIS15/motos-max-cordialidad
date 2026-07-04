@@ -77,6 +77,7 @@ class AdminAgent:
     # --- nodes -----------------------------------------------------------
     async def _classify_intent(self, state: AdminAgentState) -> dict[str, Any]:
         message = _last_user_text(state)
+        awaiting = bool(state.get("awaiting_po_confirmation"))
         try:
             raw = await self._llm.complete(
                 [
@@ -87,8 +88,18 @@ class AdminAgent:
             )
             intent = raw.strip().upper()
             intent = next((i for i in VALID_INTENTS if i in intent), "GENERAL")
-            logger.info("classify intent=%s", intent)
-            return {"intent": intent}
+            # A confirmation ("sí", "dale", "confirmar") only counts when we
+            # actually proposed a purchase order on the previous turn. Otherwise
+            # the LLM can misread an unrelated affirmation as a PO confirmation
+            # and create a spurious draft. Downgrade to a plain reply instead.
+            if intent == "PURCHASE_ORDER_CONFIRM" and not awaiting:
+                logger.info("PO confirm ignored — no pending purchase-order proposal")
+                intent = "GENERAL"
+            # We await a confirmation only right after proposing a PO; any other
+            # intent (including the confirm itself) clears the pending state.
+            next_awaiting = intent == "PURCHASE_ORDER_REQUEST"
+            logger.info("classify intent=%s awaiting=%s", intent, next_awaiting)
+            return {"intent": intent, "awaiting_po_confirmation": next_awaiting}
         except Exception as exc:  # noqa: BLE001
             logger.warning("classify failed: %s", exc)
             return {"error": True}
@@ -152,8 +163,14 @@ class AdminAgent:
         session_id: str,
         tool_call_count: int = 0,
         history: list[dict[str, str]] | None = None,
-    ) -> tuple[str, str]:
-        """Run one turn and return (natural-language reply, detected intent)."""
+        awaiting_po_confirmation: bool = False,
+    ) -> tuple[str, str, bool]:
+        """Run one turn.
+
+        Returns ``(reply, detected intent, awaiting_po_confirmation)`` — the last
+        flag must be persisted by the caller and passed back on the next turn so
+        a purchase-order confirmation is only honored right after it was offered.
+        """
         messages: list[Any] = []
         if history:
             recent = history[-20:]
@@ -169,9 +186,11 @@ class AdminAgent:
             "admin_phone": admin_phone,
             "session_id": session_id,
             "tool_call_count": tool_call_count,
+            "awaiting_po_confirmation": awaiting_po_confirmation,
         }
         config = {"configurable": {"thread_id": session_id}}
         final: AdminAgentState = await self._graph.ainvoke(initial, config=config)
         reply = final.get("final_response") or prompts.FALLBACK_MESSAGE
         intent = final.get("intent", "GENERAL")
-        return reply, intent
+        awaiting = bool(final.get("awaiting_po_confirmation"))
+        return reply, intent, awaiting

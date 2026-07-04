@@ -15,6 +15,9 @@ class AdminAgentState(TypedDict, total=False):
     session_id: str
     tool_call_count: int
     intent: str
+    # True only for the turn immediately after a purchase-order proposal, so a
+    # bare "sí"/"confirmar" can only create a draft when one was actually offered.
+    awaiting_po_confirmation: bool
     tool_data: dict[str, Any]
     final_response: str
     error: bool
