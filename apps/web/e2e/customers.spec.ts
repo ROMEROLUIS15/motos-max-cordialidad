@@ -7,7 +7,7 @@ test('login, registro de cliente y cierre de sesión', async ({ page }) => {
   // 1) Login
   await page.goto('/login');
   await page.getByLabel('Email').fill('owner@demo.com');
-  await page.getByLabel('Contraseña').fill('Demo1234!');
+  await page.getByRole('textbox', { name: 'Contraseña' }).fill('Demo1234!');
   await page.getByRole('button', { name: 'Ingresar' }).click();
   await page.waitForURL('http://localhost:3000/', { timeout: 60_000 });
 
