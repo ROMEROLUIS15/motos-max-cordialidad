@@ -1,17 +1,32 @@
-import { Body, Controller, Get, NotFoundException, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { PermissionGuard } from '../guards/permission.guard';
+import { RequirePermission } from '../decorators/require-permission.decorator';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { JWTPayload } from '../../../application/ports/jwt.port';
 import { Inject } from '@nestjs/common';
-import { WhatsAppRepository, WHATSAPP_REPOSITORY } from '../../../domain/repositories/whatsapp.repository';
+import {
+  WhatsAppRepository,
+  WHATSAPP_REPOSITORY,
+} from '../../../domain/repositories/whatsapp.repository';
 import {
   SendManualMessageUseCase,
   ListSessionsUseCase,
   GetConversationHistoryUseCase,
 } from '../../../application/use-cases/messaging/messaging.use-cases';
+import { SendMessageDto } from '../dtos/send-message.dto';
 
 @Controller('messages')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
 export class MessagesController {
   constructor(
     @Inject(WHATSAPP_REPOSITORY) private readonly whatsappRepo: WhatsAppRepository,
@@ -21,6 +36,7 @@ export class MessagesController {
   ) {}
 
   @Get('sessions')
+  @RequirePermission('messages:READ')
   async sessions(
     @CurrentUser() user: JWTPayload,
     @Query('page') page?: string,
@@ -34,6 +50,7 @@ export class MessagesController {
   }
 
   @Get('sessions/:sessionId')
+  @RequirePermission('messages:READ')
   async session(@Param('sessionId') sessionId: string, @CurrentUser() user: JWTPayload) {
     const session = await this.whatsappRepo.findSessionById(sessionId, user.tenantId);
     if (!session) throw new NotFoundException('Sesión no encontrada');
@@ -41,6 +58,7 @@ export class MessagesController {
   }
 
   @Get('sessions/:sessionId/messages')
+  @RequirePermission('messages:READ')
   async messages(
     @Param('sessionId') sessionId: string,
     @CurrentUser() user: JWTPayload,
@@ -56,7 +74,8 @@ export class MessagesController {
   }
 
   @Post('send')
-  async send(@CurrentUser() user: JWTPayload, @Body() body: { sessionId: string; content: string }) {
+  @RequirePermission('messages:CREATE')
+  async send(@CurrentUser() user: JWTPayload, @Body() body: SendMessageDto) {
     return this.sendManual.execute({
       tenantId: user.tenantId,
       sessionId: body.sessionId,

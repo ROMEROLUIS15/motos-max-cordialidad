@@ -56,15 +56,19 @@ async function main() {
       role = await prisma.role.create({
         data: { id: randomUUID(), tenantId, name: roleName, isSystem: true },
       });
-      await prisma.rolePermission.createMany({
-        data: SYSTEM_ROLE_PERMISSIONS[roleName].map((p) => ({
-          id: randomUUID(),
-          roleId: role!.id,
-          module: p.module,
-          action: p.action,
-        })),
-      });
     }
+    // Backfill any permission added to SYSTEM_ROLE_PERMISSIONS after this role
+    // was first seeded (e.g. a new module). Safe to re-run on every deploy —
+    // the (roleId, module, action) unique constraint makes existing rows skip.
+    await prisma.rolePermission.createMany({
+      data: SYSTEM_ROLE_PERMISSIONS[roleName].map((p) => ({
+        id: randomUUID(),
+        roleId: role!.id,
+        module: p.module,
+        action: p.action,
+      })),
+      skipDuplicates: true,
+    });
     roleIdByName[roleName] = role.id;
   }
 
