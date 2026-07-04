@@ -18,10 +18,14 @@ function make(opts: { reserveThrows?: boolean }) {
       ? jest.fn().mockRejectedValue(new InsufficientStockException('p1', 5, 2))
       : jest.fn().mockResolvedValue(undefined),
   };
-  const prisma = {
-    part: { findFirst: jest.fn().mockResolvedValue({ salePrice: 1000 }) },
+  const partRepo = {
+    findById: jest.fn().mockResolvedValue({ name: 'Bujia NGK', sku: 'SKU-1', salePrice: 1000 }),
   };
-  const useCase = new AddPartToWorkOrderUseCase(workOrderRepo as never, inventory as never, prisma as never);
+  const useCase = new AddPartToWorkOrderUseCase(
+    workOrderRepo as never,
+    inventory as never,
+    partRepo as never,
+  );
   return { useCase, workOrderRepo, inventory };
 }
 

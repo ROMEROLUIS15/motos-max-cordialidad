@@ -9,6 +9,8 @@ import {
   WorkOrderPartRecord,
   WorkOrderWithDetails,
   WorkOrderListItem,
+  VehicleServiceHistoryItem,
+  CustomerWorkOrderSummary,
 } from '../../../../domain/repositories/work-order.repository';
 import { WorkOrder } from '../../../../domain/entities/work-order.entity';
 import {
@@ -340,6 +342,58 @@ export class WorkOrderPrismaRepository implements WorkOrderRepository {
       orderBy: { promisedDeliveryAt: 'asc' },
     });
     return rows.map((r) => this.toDomain(r));
+  }
+
+  async findVehicleServiceHistory(
+    vehicleId: string,
+    tenantId: string,
+  ): Promise<VehicleServiceHistoryItem[]> {
+    const rows = await this.prisma.workOrder.findMany({
+      where: { vehicleId, tenantId, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        parts: { include: { part: true }, orderBy: { createdAt: 'asc' } },
+        photoEvidences: { where: { deletedAt: null } },
+      },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      orderNumber: r.orderNumber,
+      status: r.status as WorkOrderStatus,
+      createdAt: r.createdAt,
+      promisedDeliveryAt: r.promisedDeliveryAt,
+      serviceType: r.serviceType,
+      parts: r.parts.map((p) => ({
+        quantity: Number(p.quantity),
+        unitPriceAtSale: Number(p.unitPriceAtSale),
+        part: { name: p.part.name, sku: p.part.sku },
+      })),
+      photoEvidences: r.photoEvidences.map((e) => ({
+        id: e.id,
+        phase: e.phase,
+        filename: e.filename,
+      })),
+    }));
+  }
+
+  async findRecentByCustomer(
+    customerId: string,
+    tenantId: string,
+    limit: number,
+  ): Promise<CustomerWorkOrderSummary[]> {
+    const rows = await this.prisma.workOrder.findMany({
+      where: { customerId, tenantId, deletedAt: null },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: { vehicle: { select: { plate: true } } },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      orderNumber: r.orderNumber,
+      status: r.status as WorkOrderStatus,
+      createdAt: r.createdAt,
+      vehicle: { plate: r.vehicle.plate },
+    }));
   }
 
   async create(workOrder: WorkOrder): Promise<void> {

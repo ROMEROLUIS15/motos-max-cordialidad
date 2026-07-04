@@ -4,9 +4,19 @@ import {
   WORK_ORDER_REPOSITORY,
   WorkOrderWithDetails,
 } from '../../../domain/repositories/work-order.repository';
-import { TenantRepository, TENANT_REPOSITORY } from '../../../domain/repositories/tenant.repository';
+import {
+  TenantRepository,
+  TENANT_REPOSITORY,
+} from '../../../domain/repositories/tenant.repository';
+import {
+  CustomerRepository,
+  CUSTOMER_REPOSITORY,
+} from '../../../domain/repositories/customer.repository';
+import {
+  VehicleRepository,
+  VEHICLE_REPOSITORY,
+} from '../../../domain/repositories/vehicle.repository';
 import { QuotePdfData } from '../../ports/pdf-generator.port';
-import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma.service';
 
 export interface AssembledQuote {
   details: WorkOrderWithDetails;
@@ -26,7 +36,8 @@ export class QuoteAssembler {
   constructor(
     @Inject(WORK_ORDER_REPOSITORY) private readonly workOrderRepo: WorkOrderRepository,
     @Inject(TENANT_REPOSITORY) private readonly tenantRepo: TenantRepository,
-    private readonly prisma: PrismaService,
+    @Inject(CUSTOMER_REPOSITORY) private readonly customerRepo: CustomerRepository,
+    @Inject(VEHICLE_REPOSITORY) private readonly vehicleRepo: VehicleRepository,
   ) {}
 
   async assemble(workOrderId: string, tenantId: string, validUntil: Date): Promise<AssembledQuote> {
@@ -36,22 +47,10 @@ export class QuoteAssembler {
     const tenant = await this.tenantRepo.findById(tenantId);
     if (!tenant) throw new NotFoundException('Tenant no encontrado');
 
-    const [customer, vehicle, partNames] = await Promise.all([
-      this.prisma.customer.findUnique({
-        where: { id: details.workOrder.customerId },
-        select: { fullName: true, documentNumber: true },
-      }),
-      this.prisma.vehicle.findUnique({
-        where: { id: details.workOrder.vehicleId },
-        select: { plate: true, brand: true, model: true },
-      }),
-      this.prisma.part.findMany({
-        where: { id: { in: details.parts.map((p) => p.partId) } },
-        select: { id: true, name: true },
-      }),
+    const [customer, vehicle] = await Promise.all([
+      this.customerRepo.findById(details.workOrder.customerId, tenantId),
+      this.vehicleRepo.findById(details.workOrder.vehicleId, tenantId),
     ]);
-
-    const nameById = new Map(partNames.map((p) => [p.id, p.name]));
 
     const subtotal = details.total;
     const vatPercentage = tenant.vatPercentage;
@@ -85,7 +84,7 @@ export class QuoteAssembler {
         total: l.unitPrice,
       })),
       parts: details.parts.map((p) => ({
-        description: nameById.get(p.partId) ?? p.partId,
+        description: p.partName,
         quantity: p.quantity,
         unitPrice: p.unitPriceAtSale,
         total: p.quantity * p.unitPriceAtSale,

@@ -1,7 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { createHash, randomBytes } from 'node:crypto';
 import { MailService } from '../../../infrastructure/mail/mail.service';
-import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma.service';
+import { User } from '../../../domain/entities/user.entity';
+import { UserRepository, USER_REPOSITORY } from '../../../domain/repositories/user.repository';
+import {
+  PasswordResetTokenRepository,
+  PASSWORD_RESET_TOKEN_REPOSITORY,
+} from '../../../domain/repositories/password-reset-token.repository';
+
+const GENERIC_MESSAGE = 'Si el email está registrado, recibirás un link de recuperación.';
 
 /**
  * Initiates the password-recovery flow for a given email address.
@@ -15,8 +22,8 @@ import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma
  *
  * ### Single valid token per user
  * Before creating a new token, all previous **unused** tokens for the same user are
- * deleted (`deleteMany WHERE usedAt IS NULL`). This ensures that only the most
- * recently requested link is valid and prevents token accumulation.
+ * deleted. This ensures that only the most recently requested link is valid and
+ * prevents token accumulation.
  *
  * ### Token storage
  * The raw token (`randomBytes(32)`) is NEVER stored in the database. Only its
@@ -33,7 +40,9 @@ export class ForgotPasswordUseCase {
 
   constructor(
     private readonly mail: MailService,
-    private readonly prisma: PrismaService,
+    @Inject(USER_REPOSITORY) private readonly userRepo: UserRepository,
+    @Inject(PASSWORD_RESET_TOKEN_REPOSITORY)
+    private readonly tokens: PasswordResetTokenRepository,
   ) {}
 
   /**
@@ -42,29 +51,23 @@ export class ForgotPasswordUseCase {
    * @returns        Always `{ message: '…' }` — never reveals whether the email exists.
    */
   async execute(email: string, tenantId?: string): Promise<{ message: string }> {
-    const where: Record<string, unknown> = { email, isActive: true };
-    if (tenantId) where['tenantId'] = tenantId;
-    const user = await this.prisma.user.findFirst({ where });
+    const user = await this.resolveUser(email, tenantId);
 
     if (!user) {
       this.logger.warn(`forgot-password attempted for unknown email: ${email}`);
-      return { message: 'Si el email está registrado, recibirás un link de recuperación.' };
+      return { message: GENERIC_MESSAGE };
     }
 
     // Invalidar tokens previos no usados antes de crear uno nuevo
-    await this.prisma.passwordResetToken.deleteMany({
-      where: { userId: user.id, usedAt: null },
-    });
+    await this.tokens.deleteUnusedForUser(user.id);
 
     const raw = randomBytes(32).toString('hex');
     const hash = createHash('sha256').update(raw).digest('hex');
 
-    await this.prisma.passwordResetToken.create({
-      data: {
-        userId: user.id,
-        tokenHash: hash,
-        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
-      },
+    await this.tokens.create({
+      userId: user.id,
+      tokenHash: hash,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
     });
 
     try {
@@ -77,6 +80,18 @@ export class ForgotPasswordUseCase {
       );
     }
 
-    return { message: 'Si el email está registrado, recibirás un link de recuperación.' };
+    return { message: GENERIC_MESSAGE };
+  }
+
+  /**
+   * Email is unique only per tenant, so a tenant-less request must resolve
+   * deterministically instead of arbitrarily picking one account — same policy
+   * as login (see AuthenticateUserUseCase.resolveWithoutTenant).
+   */
+  private async resolveUser(email: string, tenantId?: string): Promise<User | null> {
+    const matches = (await this.userRepo.findManyByEmail(email)).filter(
+      (u) => u.isActive && (!tenantId || u.tenantId === tenantId),
+    );
+    return matches.length === 1 ? matches[0] : null;
   }
 }

@@ -11,6 +11,7 @@ import { BranchPrismaRepository } from './infrastructure/persistence/prisma/repo
 import { UserPrismaRepository } from './infrastructure/persistence/prisma/repositories/user.prisma-repository';
 import { RolePrismaRepository } from './infrastructure/persistence/prisma/repositories/role.prisma-repository';
 import { RefreshTokenPrismaRepository } from './infrastructure/persistence/prisma/repositories/refresh-token.prisma-repository';
+import { PasswordResetTokenPrismaRepository } from './infrastructure/persistence/prisma/repositories/password-reset-token.prisma-repository';
 
 // Repository tokens
 import { TENANT_REPOSITORY } from './domain/repositories/tenant.repository';
@@ -18,6 +19,7 @@ import { BRANCH_REPOSITORY } from './domain/repositories/branch.repository';
 import { USER_REPOSITORY } from './domain/repositories/user.repository';
 import { ROLE_REPOSITORY } from './domain/repositories/role.repository';
 import { REFRESH_TOKEN_REPOSITORY } from './domain/repositories/refresh-token.repository';
+import { PASSWORD_RESET_TOKEN_REPOSITORY } from './domain/repositories/password-reset-token.repository';
 
 // Guards
 import { JwtAuthGuard } from './presentation/http/guards/jwt-auth.guard';
@@ -57,6 +59,7 @@ const repositories = [
   { provide: USER_REPOSITORY, useClass: UserPrismaRepository },
   { provide: ROLE_REPOSITORY, useClass: RolePrismaRepository },
   { provide: REFRESH_TOKEN_REPOSITORY, useClass: RefreshTokenPrismaRepository },
+  { provide: PASSWORD_RESET_TOKEN_REPOSITORY, useClass: PasswordResetTokenPrismaRepository },
 ];
 
 @Module({
