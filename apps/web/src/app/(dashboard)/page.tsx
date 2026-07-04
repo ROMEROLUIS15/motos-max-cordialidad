@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import Link from 'next/link';
+import { usePolling } from '@/hooks/use-polling';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -168,11 +169,7 @@ export default function DashboardPage() {
       .catch((e) => setError((e as Error).message));
   }, []);
 
-  useEffect(() => {
-    void load();
-    const t = setInterval(() => void load(), 60000);
-    return () => clearInterval(t);
-  }, [load]);
+  usePolling(() => void load(), 60000);
 
   const activeTotal = data ? Object.values(data.activeByStatus).reduce((a, b) => a + b, 0) : 0;
 

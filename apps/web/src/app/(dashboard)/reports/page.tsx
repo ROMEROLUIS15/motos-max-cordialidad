@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { FileBarChart, Download } from 'lucide-react';
 import { apiGet } from '@/lib/api';
+import { usePolling } from '@/hooks/use-polling';
 import type { PaginatedResponse } from '@/types/api';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,11 +48,7 @@ export default function ReportsPage() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-    const t = setInterval(() => void load(), POLL_MS);
-    return () => clearInterval(t);
-  }, [load]);
+  usePolling(() => void load(), POLL_MS);
 
   async function download(id: string) {
     setDownloading(id);

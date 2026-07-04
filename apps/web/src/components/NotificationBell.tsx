@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiGet, apiSend } from '@/lib/api';
 import type { PaginatedResponse } from '@/types/api';
+import { usePolling } from '@/hooks/use-polling';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -50,11 +51,7 @@ export function NotificationBell() {
     }
   }, []);
 
-  useEffect(() => {
-    void loadUnread();
-    const t = setInterval(() => void loadUnread(), 30000);
-    return () => clearInterval(t);
-  }, [loadUnread]);
+  usePolling(() => void loadUnread(), 30000);
 
   const toggle = async () => {
     const next = !open;

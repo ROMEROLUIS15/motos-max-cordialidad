@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ShoppingCart, Check, X } from 'lucide-react';
 import { apiGet, apiSend } from '@/lib/api';
+import { usePolling } from '@/hooks/use-polling';
 import type { PaginatedResponse } from '@/types/api';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,11 +53,7 @@ export default function PurchaseOrdersPage() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-    const t = setInterval(() => void load(), POLL_MS);
-    return () => clearInterval(t);
-  }, [load]);
+  usePolling(() => void load(), POLL_MS);
 
   async function decide(id: string, action: 'approve' | 'reject') {
     setBusy(id);

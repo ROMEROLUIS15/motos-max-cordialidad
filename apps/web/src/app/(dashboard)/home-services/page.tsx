@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Truck } from 'lucide-react';
 import { apiGet, apiSend } from '@/lib/api';
 import type { PaginatedResponse } from '@/types/api';
 import { useTeam } from '@/hooks/use-team';
+import { usePolling } from '@/hooks/use-polling';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -57,11 +58,7 @@ export default function HomeServicesPage() {
     }
   }, [status]);
 
-  useEffect(() => {
-    void load();
-    const t = setInterval(() => void load(), POLL_MS);
-    return () => clearInterval(t);
-  }, [load]);
+  usePolling(() => void load(), POLL_MS);
 
   async function assign(id: string, userId: string) {
     if (!userId) return;
