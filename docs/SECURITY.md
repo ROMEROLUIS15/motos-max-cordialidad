@@ -131,6 +131,18 @@ El webhook de WhatsApp deduplica por `waMessageId` antes de procesar un mensaje 
 
 ---
 
+## Control de acceso por módulo (RBAC)
+
+Cada módulo de la API declara sus permisos en `SYSTEM_ROLE_PERMISSIONS` (`domain/entities/role.entity.ts`) y cada ruta los exige explícitamente con `@RequirePermission('modulo:ACCION')` + `PermissionGuard`. Un módulo sin entrada en `SYSTEM_ROLE_PERMISSIONS` queda, por diseño, sin protección real aunque el guard esté declarado en el controlador (`PermissionGuard` deja pasar si no hay un permiso requerido resuelto para ese rol).
+
+**Hallazgo corregido (jul 2026)**: `messages.controller.ts` (envío/lectura de mensajes de WhatsApp) no tenía ningún permiso registrado — cualquier usuario autenticado del tenant, sin importar su rol, podía leer y enviar mensajes a nombre del negocio. Se agregó `messages:CREATE`/`messages:READ` a OWNER/ADMIN/RECEPTIONIST y se protegieron las 4 rutas del controlador.
+
+**Gotcha de despliegue**: agregar un permiso nuevo a `SYSTEM_ROLE_PERMISSIONS` no lo aplica automáticamente a los roles de sistema ya sembrados en producción — `seed.ts` solo creaba `rolePermission` la primera vez que un rol se creaba. Se corrigió para que el `createMany({ skipDuplicates: true })` corra en cada seed (cada deploy de Render), backfillando cualquier permiso nuevo sin duplicar ni romper los existentes.
+
+**Implementación**: `apps/api/src/domain/entities/role.entity.ts`, `apps/api/src/presentation/http/guards/permission.guard.ts`, `apps/api/prisma/seed.ts`
+
+---
+
 ## Autenticación service-to-service
 
 La comunicación entre NestJS (API) y Python (Agents) usa JWT firmado con la misma clave `JWT_SECRET`:

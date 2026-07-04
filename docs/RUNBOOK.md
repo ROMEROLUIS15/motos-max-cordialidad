@@ -215,6 +215,22 @@ Todo push a `main` corre la misma secuencia; nada se despliega si un check falla
 2. Verificar que `webhook` está configurado en Meta Business Dashboard apuntando a `https://motoworkshop-api.onrender.com/api/whatsapp/webhook`.
 3. Revisar logs de API en Render.
 
+### Falla el build de Cloudflare Pages: "routes not configured to run with the Edge Runtime"
+
+**Síntoma**: el job "Deploy Web (Cloudflare Pages)" del CI falla con `Failed to produce a Cloudflare Pages build from the project` señalando una o más rutas dinámicas (`[id]`, `[slug]`).
+
+**Causa**: toda ruta dinámica (no estática) bajo `apps/web/src/app` necesita `export const runtime = 'edge';`, porque Cloudflare Workers solo ejecuta Edge Runtime, nunca Node.js. Este export puede parecer "código muerto" leyendo solo el componente (sobre todo si la página es `'use client'`, donde el runtime del servidor no se nota a simple vista) — **no lo es**: su única función es satisfacer al build de `@cloudflare/next-on-pages`.
+
+**Acción**: si se quitó por error, restaurar el export en cada archivo señalado por el log del build (`git log -p -- <archivo>` para ver cuándo se agregó/quitó). No hay forma de verificar esto con `next build` local ni con `pnpm --filter web typecheck` — ninguno de los dos falla sin el export; solo el build real de `@cloudflare/next-on-pages` lo detecta, y en Windows ese build no corre localmente (ver más abajo), así que el chequeo real solo ocurre en CI (Linux).
+
+**Local Windows**: `npx @cloudflare/next-on-pages` / `pnpm dlx @cloudflare/next-on-pages` fallan con `spawn npx/pnpm ENOENT` — es un bug conocido del Vercel CLI (que next-on-pages invoca internamente) en Windows, no del proyecto. Verificar solo con `next build` local; el build real de Cloudflare corre en CI.
+
+### E2E de Web fallan en bucle con "Demasiados intentos. Intenta de nuevo en 5 minutos."
+
+**Causa**: `POST /api/auth/login` tiene throttle real de 5 intentos / 5 minutos por IP (ver [SECURITY.md](SECURITY.md#rate-limiting)). Cada spec de `apps/web/e2e/*.spec.ts` hace login real contra la API local — correr toda la suite varias veces seguidas (o en paralelo con varios workers) agota la cuota.
+
+**Acción**: esperar a que expire la ventana (o hacer polling: `curl -X POST .../api/auth/login` hasta que deje de responder `429`) antes de reintentar. No es un bug de los tests; es el rate-limit funcionando como se diseñó.
+
 ### Scheduler no ejecuta reportes
 
 **Síntoma**: No se generan reportes semanales/mensuales.

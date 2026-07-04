@@ -258,3 +258,27 @@ constructor(
 
 - **Positivo**: entrega del módulo de ventas sin riesgo de migración sobre datos de producción existentes; cada modelo permanece simple y con un único propósito.
 - **Negativo**: la lógica de "registrar pago" y "listar pagos" está duplicada entre los dos modelos. Candidato a unificación si aparece una tercera necesidad de pagos (ej. suscripciones de plataforma).
+
+---
+
+## ADR-011: Repositorios de dominio en vez de `PrismaService` directo en use-cases
+
+**Fecha**: 2026-07-03 (auditoría general — hallazgo Alta)
+
+**Contexto**: una auditoría encontró 9 use-cases/servicios de la capa de aplicación (`forgot-password`, `reset-password`, `cleanup-expired-tokens`, `work-order-parts`, `delivery-alerts` scheduler, `quote-assembler`, `transfer-vehicle-ownership`, `get-vehicle-history`, `get-customer-profile`) que inyectaban `PrismaService` directamente en vez de un repositorio de dominio, violando DIP (Dependency Inversion Principle) del patrón hexagonal ya establecido en ADR-002: la capa de aplicación quedaba acoplada al ORM concreto, no a una abstracción.
+
+**Decisión**: crear los repositorios de dominio faltantes (`PasswordResetTokenRepository`, `VehicleOwnershipHistoryRepository`) y extender `WorkOrderRepository` con los métodos de consulta que faltaban (`findVehicleServiceHistory`, `findRecentByCustomer`), migrando los 9 use-cases a depender de esas interfaces vía Symbol token + `@Inject` (ver ADR-003), nunca de `PrismaService`.
+
+**Alternativas consideradas**:
+
+| Alternativa                                                | Razón de descarte                                                                                                                                     |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dejarlo así, documentar como deuda técnica**             | El patrón hexagonal pierde su propósito (testear use-cases sin BD real) si una parte relevante del código lo rodea; further erosion en cada PR nuevo. |
+| **Un solo "repositorio god" con todos los métodos ad-hoc** | Repite el problema original (acoplamiento a Prisma) un nivel más arriba; dificulta razonar sobre qué invariantes de dominio protege cada repositorio. |
+
+**Trade-off no trivial encontrado durante la implementación**: la cadena de imports de NestJS `WorkshopModule → VehiclesModule → CustomersModule` es circular en la dirección inversa — `CommerceModule`/`VehiclesModule`/`CustomersModule` no pueden importar el módulo canónico que provee `WORK_ORDER_REPOSITORY`/`VEHICLE_REPOSITORY`/`CUSTOMER_REPOSITORY` sin crear un ciclo. Se optó por re-proveer localmente el mismo token + clase de implementación en cada módulo que lo necesita (documentado inline) en vez de introducir `forwardRef()`, que oculta el ciclo real en lugar de resolverlo.
+
+**Trade-offs**:
+
+- **Positivo**: todos los use-cases de la capa de aplicación son testeables con mocks puros, sin `PrismaClient` real ni contenedor de BD; consistente con el resto del código.
+- **Negativo**: la re-provisión local del mismo token en varios módulos es una duplicación menor (un `providers: [{ provide: TOKEN, useClass: Impl }]` repetido) que hay que mantener sincronizada si la clase de implementación cambia.
