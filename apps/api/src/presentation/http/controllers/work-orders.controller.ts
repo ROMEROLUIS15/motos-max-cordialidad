@@ -45,6 +45,13 @@ import {
   DeletePhotoEvidenceUseCase,
   GetPhotoEvidenceUrlsUseCase,
 } from '../../../application/use-cases/workshop/photo-evidence.use-case';
+import { CreateWorkOrderDto } from '../dtos/create-work-order.dto';
+import { UpdateWorkOrderDto } from '../dtos/update-work-order.dto';
+import { TransitionWorkOrderStatusDto } from '../dtos/transition-work-order-status.dto';
+import { CreateWorkOrderLineDto } from '../dtos/create-work-order-line.dto';
+import { UpdateWorkOrderLineDto } from '../dtos/update-work-order-line.dto';
+import { AddWorkOrderPartDto } from '../dtos/add-work-order-part.dto';
+import { AddWorkOrderEvidenceDto } from '../dtos/add-work-order-evidence.dto';
 
 interface UploadedImage {
   buffer: Buffer;
@@ -109,18 +116,7 @@ export class WorkOrdersController {
 
   @Post()
   @RequirePermission('work_orders:CREATE')
-  async create(
-    @CurrentUser() user: JWTPayload,
-    @Body()
-    body: {
-      receptionId: string;
-      technicianId: string;
-      serviceType: string;
-      problemDescription: string;
-      promisedDeliveryAt: string;
-      observations?: string;
-    },
-  ) {
+  async create(@CurrentUser() user: JWTPayload, @Body() body: CreateWorkOrderDto) {
     return this.createWorkOrder.execute({
       tenantId: user.tenantId,
       receptionId: body.receptionId,
@@ -143,13 +139,7 @@ export class WorkOrdersController {
   async update(
     @Param('id') id: string,
     @CurrentUser() user: JWTPayload,
-    @Body()
-    body: {
-      technicianId?: string;
-      serviceType?: string;
-      problemDescription?: string;
-      observations?: string;
-    },
+    @Body() body: UpdateWorkOrderDto,
   ) {
     await this.updateWorkOrder.execute({ ...body, tenantId: user.tenantId, workOrderId: id });
     return { success: true };
@@ -167,7 +157,7 @@ export class WorkOrdersController {
   async changeStatus(
     @Param('id') id: string,
     @CurrentUser() user: JWTPayload,
-    @Body() body: { newStatus: string; note?: string; finalOdometer?: number },
+    @Body() body: TransitionWorkOrderStatusDto,
   ) {
     return this.transitionStatus.execute({
       workOrderId: id,
@@ -184,14 +174,7 @@ export class WorkOrdersController {
   async createLine(
     @Param('id') id: string,
     @CurrentUser() user: JWTPayload,
-    @Body()
-    body: {
-      description: string;
-      unitPrice: number;
-      estimatedHours?: number;
-      technicianId?: string;
-      serviceCatalogId?: string;
-    },
+    @Body() body: CreateWorkOrderLineDto,
   ) {
     return this.addLine.execute({ ...body, tenantId: user.tenantId, workOrderId: id });
   }
@@ -202,13 +185,7 @@ export class WorkOrdersController {
     @Param('id') id: string,
     @Param('lineId') lineId: string,
     @CurrentUser() user: JWTPayload,
-    @Body()
-    body: {
-      description?: string;
-      unitPrice?: number;
-      estimatedHours?: number | null;
-      technicianId?: string | null;
-    },
+    @Body() body: UpdateWorkOrderLineDto,
   ) {
     return this.updateLine.execute({ ...body, tenantId: user.tenantId, workOrderId: id, lineId });
   }
@@ -229,7 +206,7 @@ export class WorkOrdersController {
   async createPart(
     @Param('id') id: string,
     @CurrentUser() user: JWTPayload,
-    @Body() body: { partId: string; quantity: number },
+    @Body() body: AddWorkOrderPartDto,
   ) {
     return this.addPart.execute({
       tenantId: user.tenantId,
@@ -263,7 +240,7 @@ export class WorkOrdersController {
     @Param('id') id: string,
     @CurrentUser() user: JWTPayload,
     @UploadedFile() file: UploadedImage,
-    @Body() body: { phase: string; description?: string },
+    @Body() body: AddWorkOrderEvidenceDto,
   ) {
     if (!file) throw new UnprocessableEntityException('Archivo de imagen requerido (campo "file")');
     return this.uploadEvidence.execute({

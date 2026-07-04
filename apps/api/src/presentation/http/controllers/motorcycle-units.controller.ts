@@ -10,10 +10,10 @@ import {
   ChangeMotorcycleUnitStatusUseCase,
   SearchMotorcycleUnitsUseCase,
   GetMotorcycleUnitDetailUseCase,
-  RegisterMotorcycleUnitInput,
 } from '../../../application/use-cases/sales/motorcycle-units.use-case';
 import { UpdateMotorcycleUnitDto } from '../dtos/update-motorcycle-unit.dto';
-import { MotorcycleStatus } from '../../../domain/entities/motorcycle-unit.entity';
+import { RegisterMotorcycleUnitDto } from '../dtos/register-motorcycle-unit.dto';
+import { SetMotorcycleUnitStatusDto } from '../dtos/set-motorcycle-unit-status.dto';
 
 @Controller('motorcycle-units')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -50,11 +50,7 @@ export class MotorcycleUnitsController {
 
   @Post()
   @RequirePermission('sales:CREATE')
-  async create(
-    @CurrentUser() user: JWTPayload,
-    @Body()
-    body: Omit<RegisterMotorcycleUnitInput, 'tenantId' | 'branchId'> & { branchId?: string },
-  ) {
+  async create(@CurrentUser() user: JWTPayload, @Body() body: RegisterMotorcycleUnitDto) {
     return this.registerUnit.execute({
       ...body,
       tenantId: user.tenantId,
@@ -84,7 +80,7 @@ export class MotorcycleUnitsController {
   async setStatus(
     @Param('id') id: string,
     @CurrentUser() user: JWTPayload,
-    @Body() body: { status: MotorcycleStatus },
+    @Body() body: SetMotorcycleUnitStatusDto,
   ) {
     await this.changeStatus.execute(id, user.tenantId, body.status);
     return { success: true };

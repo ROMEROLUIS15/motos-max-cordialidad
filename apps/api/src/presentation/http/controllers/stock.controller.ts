@@ -13,13 +13,9 @@ import {
   GetLowStockUseCase,
   GetStockValuationUseCase,
 } from '../../../application/use-cases/inventory/stock-movements.use-case';
-
-interface MovementBody {
-  partId: string;
-  branchId?: string;
-  quantity: number;
-  notes?: string;
-}
+import { StockMovementDto } from '../dtos/stock-movement.dto';
+import { AdjustStockDto } from '../dtos/adjust-stock.dto';
+import { TransferStockDto } from '../dtos/transfer-stock.dto';
 
 @Controller('stock')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -36,7 +32,7 @@ export class StockController {
 
   @Post('entry')
   @RequirePermission('inventory:UPDATE')
-  async entry(@CurrentUser() user: JWTPayload, @Body() body: MovementBody) {
+  async entry(@CurrentUser() user: JWTPayload, @Body() body: StockMovementDto) {
     await this.stockEntry.execute({
       tenantId: user.tenantId,
       partId: body.partId,
@@ -50,7 +46,7 @@ export class StockController {
 
   @Post('exit')
   @RequirePermission('inventory:UPDATE')
-  async exit(@CurrentUser() user: JWTPayload, @Body() body: MovementBody) {
+  async exit(@CurrentUser() user: JWTPayload, @Body() body: StockMovementDto) {
     await this.stockExit.execute({
       tenantId: user.tenantId,
       partId: body.partId,
@@ -64,10 +60,7 @@ export class StockController {
 
   @Post('adjust')
   @RequirePermission('inventory:UPDATE')
-  async adjustStock(
-    @CurrentUser() user: JWTPayload,
-    @Body() body: { partId: string; branchId?: string; newPhysicalCount: number; notes: string },
-  ) {
+  async adjustStock(@CurrentUser() user: JWTPayload, @Body() body: AdjustStockDto) {
     return this.adjust.execute({
       tenantId: user.tenantId,
       partId: body.partId,
@@ -80,10 +73,7 @@ export class StockController {
 
   @Post('transfer')
   @RequirePermission('inventory:UPDATE')
-  async transferStock(
-    @CurrentUser() user: JWTPayload,
-    @Body() body: { partId: string; fromBranchId: string; toBranchId: string; quantity: number; notes?: string },
-  ) {
+  async transferStock(@CurrentUser() user: JWTPayload, @Body() body: TransferStockDto) {
     await this.transfer.execute({
       tenantId: user.tenantId,
       partId: body.partId,

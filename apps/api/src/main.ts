@@ -2,6 +2,7 @@ import { initSentry } from './infrastructure/observability/sentry';
 initSentry();
 
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -9,6 +10,13 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.setGlobalPrefix('api');
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
   if (process.env['NODE_ENV'] !== 'production') {
     app.enableCors();
   } else {

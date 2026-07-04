@@ -3,16 +3,14 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { JWTPayload } from '../../../application/ports/jwt.port';
-import {
-  CreateTenantUseCase,
-  CreateTenantInput,
-} from '../../../application/use-cases/identity/create-tenant.use-case';
+import { CreateTenantUseCase } from '../../../application/use-cases/identity/create-tenant.use-case';
 import { UpdateTenantConfigUseCase } from '../../../application/use-cases/identity/update-tenant-config.use-case';
 import {
   TenantRepository,
   TENANT_REPOSITORY,
 } from '../../../domain/repositories/tenant.repository';
 import { UpdateTenantConfigDto } from '../dtos/update-tenant-config.dto';
+import { CreateTenantDto } from '../dtos/create-tenant.dto';
 
 @Controller('tenants')
 export class TenantsController {
@@ -25,7 +23,7 @@ export class TenantsController {
   @Post()
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 300000 } })
-  async create(@Body() body: CreateTenantInput) {
+  async create(@Body() body: CreateTenantDto) {
     return this.createTenantUseCase.execute(body);
   }
 

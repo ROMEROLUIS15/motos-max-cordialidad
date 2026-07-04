@@ -4,13 +4,11 @@ import { CurrentUser } from '../decorators/current-user.decorator';
 import { RequirePermission } from '../decorators/require-permission.decorator';
 import { PermissionGuard } from '../guards/permission.guard';
 import { JWTPayload } from '../../../application/ports/jwt.port';
-import {
-  CreateUserUseCase,
-  CreateUserInput,
-} from '../../../application/use-cases/identity/create-user.use-case';
+import { CreateUserUseCase } from '../../../application/use-cases/identity/create-user.use-case';
 import { UpdateUserUseCase } from '../../../application/use-cases/identity/update-user.use-case';
 import { AssignRoleUseCase } from '../../../application/use-cases/identity/assign-role.use-case';
 import { UpdateUserDto } from '../dtos/update-user.dto';
+import { CreateUserDto } from '../dtos/create-user.dto';
 import { UserRepository, USER_REPOSITORY } from '../../../domain/repositories/user.repository';
 
 @Controller('users')
@@ -32,7 +30,7 @@ export class UsersController {
 
   @Post()
   @RequirePermission('users:CREATE')
-  async create(@CurrentUser() user: JWTPayload, @Body() body: Omit<CreateUserInput, 'tenantId'>) {
+  async create(@CurrentUser() user: JWTPayload, @Body() body: CreateUserDto) {
     const created = await this.createUserUseCase.execute({ ...body, tenantId: user.tenantId });
     const { passwordHash: _ph, ...safe } = created;
     return safe;

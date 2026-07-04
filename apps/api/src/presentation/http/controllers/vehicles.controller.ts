@@ -16,12 +16,11 @@ import { PermissionGuard } from '../guards/permission.guard';
 import { RequirePermission } from '../decorators/require-permission.decorator';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { JWTPayload } from '../../../application/ports/jwt.port';
-import {
-  RegisterVehicleUseCase,
-  RegisterVehicleInput,
-} from '../../../application/use-cases/vehicles/register-vehicle.use-case';
+import { RegisterVehicleUseCase } from '../../../application/use-cases/vehicles/register-vehicle.use-case';
 import { UpdateVehicleUseCase } from '../../../application/use-cases/vehicles/update-vehicle.use-case';
 import { UpdateVehicleDto } from '../dtos/update-vehicle.dto';
+import { RegisterVehicleDto } from '../dtos/register-vehicle.dto';
+import { TransferVehicleOwnershipDto } from '../dtos/transfer-vehicle-ownership.dto';
 import { DeactivateVehicleUseCase } from '../../../application/use-cases/vehicles/deactivate-vehicle.use-case';
 import { TransferVehicleOwnershipUseCase } from '../../../application/use-cases/vehicles/transfer-vehicle-ownership.use-case';
 import { GetVehicleHistoryUseCase } from '../../../application/use-cases/vehicles/get-vehicle-history.use-case';
@@ -51,10 +50,7 @@ export class VehiclesController {
 
   @Post()
   @RequirePermission('vehicles:CREATE')
-  async create(
-    @CurrentUser() user: JWTPayload,
-    @Body() body: Omit<RegisterVehicleInput, 'tenantId'>,
-  ) {
+  async create(@CurrentUser() user: JWTPayload, @Body() body: RegisterVehicleDto) {
     return this.registerVehicle.execute({ ...body, tenantId: user.tenantId });
   }
 
@@ -87,7 +83,7 @@ export class VehiclesController {
   async transfer(
     @Param('id') id: string,
     @CurrentUser() user: JWTPayload,
-    @Body() body: { newOwnerId: string },
+    @Body() body: TransferVehicleOwnershipDto,
   ) {
     await this.transferOwnership.execute({
       vehicleId: id,

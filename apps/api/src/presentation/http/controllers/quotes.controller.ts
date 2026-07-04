@@ -1,14 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Inject,
-  Param,
-  Post,
-  Put,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { PermissionGuard } from '../guards/permission.guard';
 import { RequirePermission } from '../decorators/require-permission.decorator';
@@ -24,6 +14,7 @@ import {
   GetQuotePdfUrlUseCase,
   ListQuotesUseCase,
 } from '../../../application/use-cases/commerce/quote-lifecycle.use-case';
+import { CreateQuoteDto } from '../dtos/create-quote.dto';
 
 @Controller('quotes')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -48,7 +39,7 @@ export class QuotesController {
 
   @Post()
   @RequirePermission('quotes:CREATE')
-  async create(@CurrentUser() user: JWTPayload, @Body() body: { workOrderId: string; validDays?: number }) {
+  async create(@CurrentUser() user: JWTPayload, @Body() body: CreateQuoteDto) {
     return this.createQuote.execute({
       tenantId: user.tenantId,
       workOrderId: body.workOrderId,
