@@ -32,9 +32,21 @@ export class QuotePrismaRepository implements QuoteRepository {
 
   private toDomain(r: QuoteRow): Quote {
     return new Quote(
-      r.id, r.tenantId, r.workOrderId, r.quoteNumber, r.status as QuoteStatus,
-      Number(r.subtotal), Number(r.vatPercentage), Number(r.vatAmount), Number(r.total),
-      r.validUntil, r.pdfR2Key, r.termsConditions, r.version, r.createdAt, r.updatedAt,
+      r.id,
+      r.tenantId,
+      r.workOrderId,
+      r.quoteNumber,
+      r.status as QuoteStatus,
+      Number(r.subtotal),
+      Number(r.vatPercentage),
+      Number(r.vatAmount),
+      Number(r.total),
+      r.validUntil,
+      r.pdfR2Key,
+      r.termsConditions,
+      r.version,
+      r.createdAt,
+      r.updatedAt,
     );
   }
 
@@ -58,14 +70,32 @@ export class QuotePrismaRepository implements QuoteRepository {
     return rows.map((r) => this.toDomain(r));
   }
 
+  async expireMany(ids: string[], now: Date): Promise<void> {
+    if (ids.length === 0) return;
+    await this.prisma.quote.updateMany({
+      where: { id: { in: ids } },
+      data: { status: QuoteStatus.EXPIRED, updatedAt: now },
+    });
+  }
+
   async create(quote: Quote): Promise<void> {
     await this.prisma.quote.create({
       data: {
-        id: quote.id, tenantId: quote.tenantId, workOrderId: quote.workOrderId,
-        quoteNumber: quote.quoteNumber, status: quote.status, subtotal: quote.subtotal,
-        vatPercentage: quote.vatPercentage, vatAmount: quote.vatAmount, total: quote.total,
-        validUntil: quote.validUntil, pdfR2Key: quote.pdfR2Key, termsConditions: quote.termsConditions,
-        version: quote.version, createdAt: quote.createdAt, updatedAt: quote.updatedAt,
+        id: quote.id,
+        tenantId: quote.tenantId,
+        workOrderId: quote.workOrderId,
+        quoteNumber: quote.quoteNumber,
+        status: quote.status,
+        subtotal: quote.subtotal,
+        vatPercentage: quote.vatPercentage,
+        vatAmount: quote.vatAmount,
+        total: quote.total,
+        validUntil: quote.validUntil,
+        pdfR2Key: quote.pdfR2Key,
+        termsConditions: quote.termsConditions,
+        version: quote.version,
+        createdAt: quote.createdAt,
+        updatedAt: quote.updatedAt,
       },
     });
   }
@@ -74,10 +104,16 @@ export class QuotePrismaRepository implements QuoteRepository {
     await this.prisma.quote.update({
       where: { id: quote.id },
       data: {
-        status: quote.status, subtotal: quote.subtotal, vatPercentage: quote.vatPercentage,
-        vatAmount: quote.vatAmount, total: quote.total, validUntil: quote.validUntil,
-        pdfR2Key: quote.pdfR2Key, termsConditions: quote.termsConditions,
-        version: quote.version, updatedAt: quote.updatedAt,
+        status: quote.status,
+        subtotal: quote.subtotal,
+        vatPercentage: quote.vatPercentage,
+        vatAmount: quote.vatAmount,
+        total: quote.total,
+        validUntil: quote.validUntil,
+        pdfR2Key: quote.pdfR2Key,
+        termsConditions: quote.termsConditions,
+        version: quote.version,
+        updatedAt: quote.updatedAt,
       },
     });
   }

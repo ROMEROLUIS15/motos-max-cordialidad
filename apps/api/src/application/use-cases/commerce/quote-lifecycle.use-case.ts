@@ -3,7 +3,10 @@ import { Quote } from '../../../domain/entities/quote.entity';
 import { QuoteStatus } from '../../../domain/value-objects/quote-status.vo';
 import { WorkOrderStatus } from '../../../domain/value-objects/work-order-status.vo';
 import { QuoteRepository, QUOTE_REPOSITORY } from '../../../domain/repositories/quote.repository';
-import { WorkOrderRepository, WORK_ORDER_REPOSITORY } from '../../../domain/repositories/work-order.repository';
+import {
+  WorkOrderRepository,
+  WORK_ORDER_REPOSITORY,
+} from '../../../domain/repositories/work-order.repository';
 import { StoragePort, STORAGE_PORT } from '../../ports/storage.port';
 import { MessagingPort, MESSAGING_PORT } from '../../ports/messaging.port';
 import { TransitionWorkOrderStatusUseCase } from '../workshop/transition-work-order-status.use-case';
@@ -109,10 +112,11 @@ export class ExpireQuotesUseCase {
 
   async execute(now = new Date()): Promise<number> {
     const expired = await this.quoteRepo.findExpired(now);
-    for (const quote of expired) {
-      quote.expire();
-      await this.quoteRepo.save(quote);
-    }
+    if (expired.length === 0) return 0;
+    await this.quoteRepo.expireMany(
+      expired.map((q) => q.id),
+      now,
+    );
     return expired.length;
   }
 }

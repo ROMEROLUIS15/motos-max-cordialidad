@@ -11,10 +11,14 @@ export interface QuoteRepository {
   findById(id: string, tenantId: string): Promise<Quote | null>;
   findByWorkOrder(workOrderId: string, tenantId: string): Promise<Quote[]>;
   findExpired(now: Date): Promise<Quote[]>;
+  /** Bulk-transitions the given quotes to EXPIRED in a single query. */
+  expireMany(ids: string[], now: Date): Promise<void>;
   create(quote: Quote): Promise<void>;
   save(quote: Quote): Promise<void>;
   saveVersion(version: QuoteVersionSnapshot): Promise<void>;
-  findVersions(quoteId: string): Promise<Array<{ version: number; pdfR2Key: string; createdAt: Date }>>;
+  findVersions(
+    quoteId: string,
+  ): Promise<Array<{ version: number; pdfR2Key: string; createdAt: Date }>>;
   generateQuoteNumber(tenantId: string, year: number): Promise<string>;
 }
 

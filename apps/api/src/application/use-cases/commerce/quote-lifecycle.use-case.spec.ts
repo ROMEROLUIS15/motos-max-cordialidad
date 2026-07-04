@@ -211,27 +211,30 @@ describe('ListQuotesUseCase', () => {
 });
 
 describe('ExpireQuotesUseCase', () => {
-  it('expires every quote past its validUntil and returns how many were expired', async () => {
+  it('expires every quote past its validUntil in a single bulk update and returns how many were expired', async () => {
     const quotes = [makeQuote(QuoteStatus.SENT), makeQuote(QuoteStatus.SENT)];
     const quoteRepo = {
       findExpired: jest.fn().mockResolvedValue(quotes),
-      save: jest.fn().mockResolvedValue(undefined),
+      expireMany: jest.fn().mockResolvedValue(undefined),
     };
     const useCase = new ExpireQuotesUseCase(quoteRepo as never);
+    const now = new Date();
 
-    const count = await useCase.execute(new Date());
+    const count = await useCase.execute(now);
 
     expect(count).toBe(2);
-    expect(quoteRepo.save).toHaveBeenCalledTimes(2);
-    expect(quotes[0].status).toBe(QuoteStatus.EXPIRED);
-    expect(quotes[1].status).toBe(QuoteStatus.EXPIRED);
+    expect(quoteRepo.expireMany).toHaveBeenCalledTimes(1);
+    expect(quoteRepo.expireMany).toHaveBeenCalledWith(
+      quotes.map((q) => q.id),
+      now,
+    );
   });
 
-  it('returns 0 and saves nothing when there are no expired quotes', async () => {
-    const quoteRepo = { findExpired: jest.fn().mockResolvedValue([]), save: jest.fn() };
+  it('returns 0 and does not call expireMany when there are no expired quotes', async () => {
+    const quoteRepo = { findExpired: jest.fn().mockResolvedValue([]), expireMany: jest.fn() };
     const useCase = new ExpireQuotesUseCase(quoteRepo as never);
     const count = await useCase.execute(new Date());
     expect(count).toBe(0);
-    expect(quoteRepo.save).not.toHaveBeenCalled();
+    expect(quoteRepo.expireMany).not.toHaveBeenCalled();
   });
 });
