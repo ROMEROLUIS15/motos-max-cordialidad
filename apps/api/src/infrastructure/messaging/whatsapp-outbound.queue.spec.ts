@@ -71,6 +71,23 @@ describe('WhatsAppOutboundQueue', () => {
   });
 
   describe('handleFinalFailure', () => {
+    const envBackup = {
+      id: process.env['WHATSAPP_PHONE_NUMBER_ID'],
+      token: process.env['WHATSAPP_ACCESS_TOKEN'],
+    };
+
+    beforeEach(() => {
+      process.env['WHATSAPP_PHONE_NUMBER_ID'] = '12345';
+      process.env['WHATSAPP_ACCESS_TOKEN'] = 'token';
+    });
+
+    afterAll(() => {
+      if (envBackup.id === undefined) delete process.env['WHATSAPP_PHONE_NUMBER_ID'];
+      else process.env['WHATSAPP_PHONE_NUMBER_ID'] = envBackup.id;
+      if (envBackup.token === undefined) delete process.env['WHATSAPP_ACCESS_TOKEN'];
+      else process.env['WHATSAPP_ACCESS_TOKEN'] = envBackup.token;
+    });
+
     it('marks the message FAILED and notifies the tenant admins', async () => {
       const error = Object.assign(new Error('window closed'), { metaCode: 131047 });
       await queue.handleFinalFailure(job, error);
@@ -81,6 +98,19 @@ describe('WhatsAppOutboundQueue', () => {
         messageId: 'msg-1',
         metaCode: 131047,
       });
+    });
+
+    it('skips the admin alert for stale jobs without tenantId (pre-deploy queue)', async () => {
+      await queue.handleFinalFailure({ ...job, tenantId: undefined as never });
+      expect(repo.updateMessageStatus).toHaveBeenCalledWith('msg-1', 'FAILED');
+      expect(notification.notifyAdmins).not.toHaveBeenCalled();
+    });
+
+    it('skips the admin alert when the WhatsApp channel is not provisioned', async () => {
+      delete process.env['WHATSAPP_PHONE_NUMBER_ID'];
+      await queue.handleFinalFailure(job);
+      expect(repo.updateMessageStatus).toHaveBeenCalledWith('msg-1', 'FAILED');
+      expect(notification.notifyAdmins).not.toHaveBeenCalled();
     });
 
     it('never throws, even when persistence or notification fail', async () => {

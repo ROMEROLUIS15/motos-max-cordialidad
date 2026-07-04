@@ -96,10 +96,24 @@ export class WhatsAppOutboundQueue implements OnModuleInit, OnModuleDestroy {
    * Terminal failure: mark FAILED and surface it to the tenant's admins —
    * a silent FAILED row in the DB helps nobody notice a customer was never
    * notified. Never throws (runs inside the worker's event handler).
+   *
+   * The admin alert is skipped when the WhatsApp channel itself is not
+   * provisioned (no phone id / token in the environment): every send fails
+   * by definition then, and alerting on each would flood the inbox — one
+   * warn log per failure is enough until the channel is configured.
    */
   async handleFinalFailure(data: OutboundJobData, error?: Error): Promise<void> {
     try {
       await this.whatsappRepo.updateMessageStatus(data.messageId, 'FAILED');
+      // Jobs enqueued by a pre-2026-07 deploy lack tenantId; skip the alert
+      // rather than crash Prisma with an undefined where-clause.
+      if (!data.tenantId) return;
+      if (!this.channelConfigured()) {
+        this.logger.warn(
+          `WhatsApp channel not configured (missing WHATSAPP_PHONE_NUMBER_ID/ACCESS_TOKEN) — message ${data.messageId} FAILED, admin alert skipped`,
+        );
+        return;
+      }
       const metaCode = (error as { metaCode?: number | null } | undefined)?.metaCode ?? null;
       await this.notification.notifyAdmins(data.tenantId, {
         type: 'WHATSAPP_SEND_FAILED',
@@ -114,6 +128,10 @@ export class WhatsAppOutboundQueue implements OnModuleInit, OnModuleDestroy {
         notifyError as Error,
       );
     }
+  }
+
+  private channelConfigured(): boolean {
+    return Boolean(process.env['WHATSAPP_PHONE_NUMBER_ID'] && process.env['WHATSAPP_ACCESS_TOKEN']);
   }
 
   onModuleInit(): void {

@@ -221,7 +221,19 @@ Todo push a `main` corre la misma secuencia; nada se despliega si un check falla
 
 **Síntoma**: llega una notificación in-app `WHATSAPP_SEND_FAILED`, o hay mensajes con estado `FAILED` en la sección Mensajes.
 
+> ⚠️ **Estado real verificado 2026-07-04**: las variables `WHATSAPP_*` **NO existen en Render**
+> (verificado vía API: ni PHONE_NUMBER_ID, ni ACCESS_TOKEN, ni APP_SECRET, ni VERIFY_TOKEN).
+> El canal de WhatsApp de producción **nunca ha estado conectado a Meta**: todo envío falla
+> con Graph code 100 ("Object with ID 'messages' does not exist" — phone id vacío) y el
+> webhook entrante rechazaría cualquier POST por firma ausente. Los mensajes automáticos a
+> clientes ("tu moto está lista", alertas de entrega) nunca se han entregado. Para activar el
+> canal: crear la app en Meta for Developers, obtener PHONE_NUMBER_ID + token de System User,
+> y configurar las 4 variables en Render. Mientras no estén, el sistema marca los mensajes
+> FAILED con un warn en logs y **no** genera notificaciones in-app (para no inundar al admin).
+
 **Diagnóstico** (el campo `metaCode` de la notificación indica la causa):
+
+- **Primero**: verificar que las 4 variables `WHATSAPP_*` existen en Render (ver advertencia de arriba). `metaCode: 100` con "Object with ID 'messages'" = `WHATSAPP_PHONE_NUMBER_ID` vacío.
 
 - `metaCode: 131047` — el mensaje era iniciado por el negocio (ej. "tu moto está lista", alertas del scheduler) y el cliente no escribió en las últimas 24h. Meta solo permite plantillas aprobadas fuera de esa ventana. **Acción**: aprobar una plantilla utility en Meta Business Manager (WhatsApp Manager → Plantillas → categoría "Utilidad", body con un parámetro `{{1}}`) y configurar su nombre en `WHATSAPP_UTILITY_TEMPLATE`; el sistema la usa automáticamente cuando detecta la ventana cerrada.
 - `metaCode: 190` (o HTTP 401) — `WHATSAPP_ACCESS_TOKEN` expirado o revocado. **Importante**: el token debe ser de **System User** (Meta Business Settings → Users → System users → generar token con permisos `whatsapp_business_messaging`), que no expira. Un token de usuario normal dura 60 días y muere en silencio.
