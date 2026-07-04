@@ -49,6 +49,12 @@ export interface WhatsAppRepository {
     waMessageId?: string,
   ): Promise<void>;
   lastInboundRespondedWithin(sessionId: string, minutes: number): Promise<boolean>;
+  /**
+   * True if the customer sent at least one INBOUND message after `since`.
+   * Used to decide whether the WhatsApp 24h customer-service window is open
+   * (free-form text allowed) or closed (an approved template is required).
+   */
+  hasInboundSince(sessionId: string, since: Date): Promise<boolean>;
   findRecentMessages(
     sessionId: string,
     limit: number,

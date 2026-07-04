@@ -1,10 +1,11 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { Queue, Worker, Job, ConnectionOptions } from 'bullmq';
-import { MetaWhatsAppClient } from './meta-whatsapp.client';
+import { Queue, Worker, Job, ConnectionOptions, UnrecoverableError } from 'bullmq';
+import { MetaApiError, MetaWhatsAppClient } from './meta-whatsapp.client';
 import {
   WhatsAppRepository,
   WHATSAPP_REPOSITORY,
 } from '../../domain/repositories/whatsapp.repository';
+import { NotificationPort, NOTIFICATION_PORT } from '../../application/ports/notification.port';
 
 function redisConnection(): ConnectionOptions {
   const url = process.env['REDIS_URL'];
@@ -24,8 +25,15 @@ export const WHATSAPP_OUTBOUND_QUEUE = 'whatsapp-outbound';
 
 export interface OutboundJobData {
   messageId: string;
+  tenantId: string;
   to: string;
   content: string;
+  /**
+   * When set, the worker sends this pre-approved template instead of free
+   * text. Used for messages outside the 24h customer-service window, where
+   * Meta rejects free-form text (error 131047).
+   */
+  template?: { name: string; params: string[] };
 }
 
 const DEFAULT_JOB_OPTIONS = {
@@ -51,6 +59,7 @@ export class WhatsAppOutboundQueue implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly metaClient: MetaWhatsAppClient,
     @Inject(WHATSAPP_REPOSITORY) private readonly whatsappRepo: WhatsAppRepository,
+    @Inject(NOTIFICATION_PORT) private readonly notification: NotificationPort,
   ) {
     this.queue = new Queue<OutboundJobData>(WHATSAPP_OUTBOUND_QUEUE, {
       connection: this.connection,
@@ -59,6 +68,52 @@ export class WhatsAppOutboundQueue implements OnModuleInit, OnModuleDestroy {
 
   async enqueue(data: OutboundJobData): Promise<void> {
     await this.queue.add('send', data, DEFAULT_JOB_OPTIONS);
+  }
+
+  /**
+   * One delivery attempt. Extracted from the Worker callback for testability.
+   * Permanent Meta errors (4xx) are rethrown as BullMQ UnrecoverableError so
+   * the queue does not waste its remaining attempts on a call that can never
+   * succeed (bad token, closed 24h window, malformed payload…).
+   */
+  async processJob(data: OutboundJobData): Promise<void> {
+    try {
+      const result = data.template
+        ? await this.metaClient.sendTemplate(data.to, data.template.name, data.template.params)
+        : await this.metaClient.sendText(data.to, data.content);
+      await this.whatsappRepo.updateMessageStatus(data.messageId, 'SENT', result.waMessageId);
+    } catch (error) {
+      if (error instanceof MetaApiError && error.isPermanent) {
+        throw Object.assign(new UnrecoverableError(error.message), {
+          metaCode: error.metaCode,
+        });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Terminal failure: mark FAILED and surface it to the tenant's admins —
+   * a silent FAILED row in the DB helps nobody notice a customer was never
+   * notified. Never throws (runs inside the worker's event handler).
+   */
+  async handleFinalFailure(data: OutboundJobData, error?: Error): Promise<void> {
+    try {
+      await this.whatsappRepo.updateMessageStatus(data.messageId, 'FAILED');
+      const metaCode = (error as { metaCode?: number | null } | undefined)?.metaCode ?? null;
+      await this.notification.notifyAdmins(data.tenantId, {
+        type: 'WHATSAPP_SEND_FAILED',
+        phone: data.to,
+        messageId: data.messageId,
+        // 131047 = outside the 24h window without an approved template.
+        metaCode,
+      });
+    } catch (notifyError) {
+      this.logger.error(
+        `Could not record/notify final failure for message ${data.messageId}`,
+        notifyError as Error,
+      );
+    }
   }
 
   onModuleInit(): void {
@@ -75,19 +130,16 @@ export class WhatsAppOutboundQueue implements OnModuleInit, OnModuleDestroy {
     }
     this.worker = new Worker<OutboundJobData>(
       WHATSAPP_OUTBOUND_QUEUE,
-      async (job: Job<OutboundJobData>) => {
-        const { messageId, to, content } = job.data;
-        const result = await this.metaClient.sendText(to, content);
-        await this.whatsappRepo.updateMessageStatus(messageId, 'SENT', result.waMessageId);
-      },
+      async (job: Job<OutboundJobData>) => this.processJob(job.data),
       { connection: this.connection },
     );
 
-    this.worker.on('failed', (job) => {
-      if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
-        void this.whatsappRepo
-          .updateMessageStatus(job.data.messageId, 'FAILED')
-          .catch(() => undefined);
+    // UnrecoverableError skips the remaining attempts, so 'failed' fires once
+    // per job either way: after the last retry, or immediately on a 4xx.
+    this.worker.on('failed', (job, error) => {
+      if (!job) return;
+      if (error instanceof UnrecoverableError || job.attemptsMade >= (job.opts.attempts ?? 1)) {
+        void this.handleFinalFailure(job.data, error);
       }
     });
   }

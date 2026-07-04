@@ -27,6 +27,8 @@ Todas las de `.env.local.example` excepto las específicas de web:
 - `ENCRYPTION_KEY`
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`
 - `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`
+- `WHATSAPP_UTILITY_TEMPLATE` (opcional) — nombre de una plantilla **utility aprobada** en Meta con un único parámetro de body (ej. `notificacion_taller`: "Actualización de tu taller: {{1}}"). Si está configurada, los mensajes fuera de la ventana de 24h se envían con esta plantilla en vez de texto libre (que Meta rechaza con error 131047). Sin configurar, se intenta texto libre y el fallo queda visible (mensaje FAILED + notificación in-app a admins).
+- `WHATSAPP_API_VERSION` (opcional, default `v21.0`) — versión de Graph API; permite el bump sin tocar código cuando Meta retire la versión actual (~2 años de soporte por versión).
 - `DEEPSEEK_API_KEY`, `GROQ_API_KEY`
 - `SENTRY_DSN`
 - `NODE_ENV=production`, `ALLOWED_ORIGINS`
@@ -212,8 +214,19 @@ Todo push a `main` corre la misma secuencia; nada se despliega si un check falla
 **Diagnóstico**:
 
 1. Verificar que `WHATSAPP_VERIFY_TOKEN` coincide entre Meta y la variable de entorno.
-2. Verificar que `webhook` está configurado en Meta Business Dashboard apuntando a `https://motoworkshop-api.onrender.com/api/whatsapp/webhook`.
+2. Verificar que `webhook` está configurado en Meta Business Dashboard apuntando a `https://motoworkshop-api.onrender.com/api/webhooks/whatsapp` (GET de verificación y POST de mensajes viven en esa ruta — `whatsapp-webhook.controller.ts`).
 3. Revisar logs de API en Render.
+
+### Mensajes salientes de WhatsApp fallan (notificación WHATSAPP_SEND_FAILED)
+
+**Síntoma**: llega una notificación in-app `WHATSAPP_SEND_FAILED`, o hay mensajes con estado `FAILED` en la sección Mensajes.
+
+**Diagnóstico** (el campo `metaCode` de la notificación indica la causa):
+
+- `metaCode: 131047` — el mensaje era iniciado por el negocio (ej. "tu moto está lista", alertas del scheduler) y el cliente no escribió en las últimas 24h. Meta solo permite plantillas aprobadas fuera de esa ventana. **Acción**: aprobar una plantilla utility en Meta Business Manager (WhatsApp Manager → Plantillas → categoría "Utilidad", body con un parámetro `{{1}}`) y configurar su nombre en `WHATSAPP_UTILITY_TEMPLATE`; el sistema la usa automáticamente cuando detecta la ventana cerrada.
+- `metaCode: 190` (o HTTP 401) — `WHATSAPP_ACCESS_TOKEN` expirado o revocado. **Importante**: el token debe ser de **System User** (Meta Business Settings → Users → System users → generar token con permisos `whatsapp_business_messaging`), que no expira. Un token de usuario normal dura 60 días y muere en silencio.
+- Otros 4xx — payload o número inválido; revisar logs (el error ya no se reintenta: los 4xx fallan rápido).
+- Sin `metaCode` — fallo de red/5xx tras 3 reintentos (30s/60s/120s de backoff); suele resolverse solo, revisar status de Meta.
 
 ### Falla el build de Cloudflare Pages: "routes not configured to run with the Edge Runtime"
 

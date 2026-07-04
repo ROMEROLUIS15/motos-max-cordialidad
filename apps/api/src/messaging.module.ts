@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from './infrastructure/persistence/prisma/prisma.module';
+import { NotificationsModule } from './notifications.module';
 
 import { WHATSAPP_REPOSITORY } from './domain/repositories/whatsapp.repository';
 import { WhatsAppPrismaRepository } from './infrastructure/persistence/prisma/repositories/whatsapp.prisma-repository';
@@ -11,11 +12,12 @@ import { WhatsAppCloudAdapter } from './infrastructure/messaging/whatsapp-cloud.
 
 /**
  * Standalone messaging infrastructure (WhatsApp Cloud + outbound queue).
- * Depends only on Prisma, so it can be imported by Workshop/Commerce/AI without
- * creating dependency cycles. Provides the real MESSAGING_PORT.
+ * Depends on Prisma and Notifications (delivery-failure alerts) — neither
+ * imports Messaging back, so Workshop/Commerce/AI can import this module
+ * without creating dependency cycles. Provides the real MESSAGING_PORT.
  */
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, NotificationsModule],
   providers: [
     { provide: WHATSAPP_REPOSITORY, useClass: WhatsAppPrismaRepository },
     MetaWhatsAppClient,

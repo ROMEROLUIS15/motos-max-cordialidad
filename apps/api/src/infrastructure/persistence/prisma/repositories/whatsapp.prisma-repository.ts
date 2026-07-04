@@ -114,6 +114,14 @@ export class WhatsAppPrismaRepository implements WhatsAppRepository {
     return outbound !== null;
   }
 
+  async hasInboundSince(sessionId: string, since: Date): Promise<boolean> {
+    const inbound = await this.prisma.message.findFirst({
+      where: { sessionId, direction: 'INBOUND', createdAt: { gte: since } },
+      select: { id: true },
+    });
+    return inbound !== null;
+  }
+
   async findRecentMessages(
     sessionId: string,
     limit: number,

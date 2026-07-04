@@ -275,13 +275,24 @@ Tenant ──┬── Branch ──┬── WorkOrder ──┬── WorkOrde
 
 ## Decisiones de diseño clave
 
-| Decisión                  | Alternativa                  | Trade-off                                                                               |
-| ------------------------- | ---------------------------- | --------------------------------------------------------------------------------------- |
-| Hexagonal + DIP           | Módulos planos por feature   | Más boilerplate, pero mejor testabilidad y reemplazabilidad                             |
-| Symbol tokens DI          | Inyección por clase concreta | Más registro manual, pero runtime-safe (TS borra interfaces)                            |
-| Python para agentes IA    | LangChain.JS / Vercel AI SDK | Ecosistema Python más maduro para LLM tooling; stack políglota más complejo             |
-| Cloudflare Pages + Render | Vercel + Railway             | Free tier más generoso (CF edge, Render Dockerfile); cold starts de ~50s en Render free |
-| AES-256-GCM aplicación    | Solo cifrado Neon en reposo  | No se puede hacer WHERE sobre campos cifrados; protección extra contra fuga de DB       |
-| BullMQ + Redis            | Cola síncrona directa        | Resiliencia ante fallos de WhatsApp/API; más infraestructura                            |
+| Decisión                   | Alternativa                    | Trade-off                                                                                                                                                                                                                                                                                                            |
+| -------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hexagonal + DIP            | Módulos planos por feature     | Más boilerplate, pero mejor testabilidad y reemplazabilidad                                                                                                                                                                                                                                                          |
+| Symbol tokens DI           | Inyección por clase concreta   | Más registro manual, pero runtime-safe (TS borra interfaces)                                                                                                                                                                                                                                                         |
+| Python para agentes IA     | LangChain.JS / Vercel AI SDK   | Ecosistema Python más maduro para LLM tooling; stack políglota más complejo                                                                                                                                                                                                                                          |
+| Cloudflare Pages + Render  | Vercel + Railway               | Free tier más generoso (CF edge, Render Dockerfile); cold starts de ~50s en Render free                                                                                                                                                                                                                              |
+| AES-256-GCM aplicación     | Solo cifrado Neon en reposo    | No se puede hacer WHERE sobre campos cifrados; protección extra contra fuga de DB                                                                                                                                                                                                                                    |
+| BullMQ + Redis             | Cola síncrona directa          | Resiliencia ante fallos de WhatsApp/API; más infraestructura                                                                                                                                                                                                                                                         |
+| WhatsApp Cloud API directo | BSP (Twilio, 360dialog, Kapso) | Sin markup por mensaje ni vendor extra; el acoplamiento a Meta queda aislado en 2 archivos (`meta-whatsapp.client.ts` + webhook controller) gracias a los puertos — cambiar de proveedor es reescribir ~170 líneas. Reevaluar BSP con embedded signup solo si Fase 3 onboardea múltiples tenants con números propios |
+
+**Ventana de 24h de WhatsApp (mensajes salientes).** Meta solo permite texto libre
+dentro de las 24h posteriores al último mensaje del cliente; fuera de esa ventana
+exige plantillas aprobadas (error 131047). Como el log de mensajes propio conoce el
+estado de la ventana, la decisión se toma **antes de encolar** (`whatsapp-cloud.adapter.ts`,
+con margen de 30 min por los reintentos): ventana abierta → texto libre; cerrada →
+plantilla utility (`WHATSAPP_UTILITY_TEMPLATE`, un parámetro con el mensaje). Los errores
+4xx de Meta no se reintentan (`UnrecoverableError` corta los reintentos de BullMQ) y todo
+fallo definitivo marca el mensaje `FAILED` **y** notifica a los admins (`WHATSAPP_SEND_FAILED`)
+— antes quedaba silencioso en la BD.
 
 Ver [ADR.md](ADR.md) para el registro detallado de cada decisión.

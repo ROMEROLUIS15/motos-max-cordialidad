@@ -97,6 +97,12 @@ export class WhatsAppCloudAdapter implements MessagingPort, WhatsAppSenderPort {
     await this.sendToPhone(tenantId, phone, customerId, content, sentBy);
   }
 
+  /**
+   * Millis of margin subtracted from the 24h window: a message enqueued at
+   * 23h59m could still be retried past the deadline by the queue's backoff.
+   */
+  private static readonly WINDOW_MARGIN_MS = 30 * 60 * 1000;
+
   /** Records an OUTBOUND message and enqueues it. Reused by manual send use case. */
   async sendToPhone(
     tenantId: string,
@@ -132,7 +138,35 @@ export class WhatsAppCloudAdapter implements MessagingPort, WhatsAppSenderPort {
       createdAt: new Date(),
     });
     await this.whatsappRepo.touchSession(session.id, new Date());
-    await this.outbound.enqueue({ messageId, to: phone, content });
+    await this.outbound.enqueue({
+      messageId,
+      tenantId,
+      to: phone,
+      content,
+      template: await this.templateIfWindowClosed(session.id, content),
+    });
     return messageId;
+  }
+
+  /**
+   * Meta only allows free-form text within 24h of the customer's last inbound
+   * message; outside that window it rejects the send (error 131047). We know
+   * the window state from our own message log, so the decision happens here,
+   * before enqueueing: closed window + configured template → send the approved
+   * utility template (WHATSAPP_UTILITY_TEMPLATE, one body param carrying the
+   * message). Without a template we still try free text — it fails visibly
+   * now (FAILED + admin notification) instead of silently.
+   */
+  private async templateIfWindowClosed(
+    sessionId: string,
+    content: string,
+  ): Promise<{ name: string; params: string[] } | undefined> {
+    const templateName = process.env['WHATSAPP_UTILITY_TEMPLATE'];
+    if (!templateName) return undefined;
+    const windowOpensAt = new Date(
+      Date.now() - (24 * 60 * 60 * 1000 - WhatsAppCloudAdapter.WINDOW_MARGIN_MS),
+    );
+    const windowOpen = await this.whatsappRepo.hasInboundSince(sessionId, windowOpensAt);
+    return windowOpen ? undefined : { name: templateName, params: [content] };
   }
 }
