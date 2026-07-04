@@ -27,7 +27,7 @@ Todas las de `.env.local.example` excepto las específicas de web:
 - `ENCRYPTION_KEY`
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`
 - `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`
-- `WHATSAPP_UTILITY_TEMPLATE` (opcional) — nombre de una plantilla **utility aprobada** en Meta con un único parámetro de body (ej. `notificacion_taller`: "Actualización de tu taller: {{1}}"). Si está configurada, los mensajes fuera de la ventana de 24h se envían con esta plantilla en vez de texto libre (que Meta rechaza con error 131047). Sin configurar, se intenta texto libre y el fallo queda visible (mensaje FAILED + notificación in-app a admins).
+- `WHATSAPP_UTILITY_TEMPLATE` (opcional) — nombre de una plantilla **utility aprobada** en Meta con un único parámetro de body. Ejemplo: nombre `notificacion_taller`, idioma **Español a secas** (el código envía `code: 'es'`; una variante como es_MX da error 132001), body: "Hola, tienes una novedad de tu taller: {{1}}. Si tienes alguna duda, responde a este mensaje." — ojo: Meta **rechaza** plantillas cuyo body empieza o termina con la variable, y solo se llenan parámetros del body (sin header con variable ni botones dinámicos). Si está configurada, los mensajes fuera de la ventana de 24h se envían con esta plantilla en vez de texto libre (que Meta rechaza con error 131047). Sin configurar, se intenta texto libre y el fallo queda visible (mensaje FAILED + notificación in-app a admins).
 - `WHATSAPP_API_VERSION` (opcional, default `v21.0`) — versión de Graph API; permite el bump sin tocar código cuando Meta retire la versión actual (~2 años de soporte por versión).
 - `DEEPSEEK_API_KEY`, `GROQ_API_KEY`
 - `SENTRY_DSN`
