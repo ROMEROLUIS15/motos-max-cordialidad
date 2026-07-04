@@ -1,9 +1,15 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { WorkOrderRepository, WORK_ORDER_REPOSITORY } from '../../../domain/repositories/work-order.repository';
+import {
+  WorkOrderRepository,
+  WORK_ORDER_REPOSITORY,
+} from '../../../domain/repositories/work-order.repository';
 import { NotificationPort, NOTIFICATION_PORT } from '../../ports/notification.port';
 import { MessagingPort, MESSAGING_PORT } from '../../ports/messaging.port';
-import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma.service';
+import {
+  TenantRepository,
+  TENANT_REPOSITORY,
+} from '../../../domain/repositories/tenant.repository';
 
 /**
  * Every 30 minutes, finds work orders within 2h of their promised delivery and
@@ -17,13 +23,13 @@ export class DeliveryAlertsScheduler {
     @Inject(WORK_ORDER_REPOSITORY) private readonly workOrderRepo: WorkOrderRepository,
     @Inject(NOTIFICATION_PORT) private readonly notification: NotificationPort,
     @Inject(MESSAGING_PORT) private readonly messaging: MessagingPort,
-    private readonly prisma: PrismaService,
+    @Inject(TENANT_REPOSITORY) private readonly tenantRepo: TenantRepository,
   ) {}
 
   @Cron('*/30 * * * *')
   async handle(): Promise<void> {
     try {
-      const tenants = await this.prisma.tenant.findMany({ select: { id: true } });
+      const tenants = await this.tenantRepo.findActive();
       for (const { id: tenantId } of tenants) {
         const orders = await this.workOrderRepo.findNearingDeadline(2, tenantId);
         for (const wo of orders) {

@@ -9,8 +9,12 @@ import { StorageModule } from './storage.module';
 // Repositories
 import { QUOTE_REPOSITORY } from './domain/repositories/quote.repository';
 import { PAYMENT_REPOSITORY } from './domain/repositories/payment.repository';
+import { CUSTOMER_REPOSITORY } from './domain/repositories/customer.repository';
+import { VEHICLE_REPOSITORY } from './domain/repositories/vehicle.repository';
 import { QuotePrismaRepository } from './infrastructure/persistence/prisma/repositories/quote.prisma-repository';
 import { PaymentPrismaRepository } from './infrastructure/persistence/prisma/repositories/payment.prisma-repository';
+import { CustomerPrismaRepository } from './infrastructure/persistence/prisma/repositories/customer.prisma-repository';
+import { VehiclePrismaRepository } from './infrastructure/persistence/prisma/repositories/vehicle.prisma-repository';
 
 // PDF port
 import { PDF_GENERATOR_PORT } from './application/ports/pdf-generator.port';
@@ -40,11 +44,22 @@ import { QuotesController } from './presentation/http/controllers/quotes.control
 import { PaymentsController } from './presentation/http/controllers/payments.controller';
 
 @Module({
-  imports: [PrismaModule, IdentityModule, WorkshopModule, MessagingModule, NotificationsModule, StorageModule],
+  imports: [
+    PrismaModule,
+    IdentityModule,
+    WorkshopModule,
+    MessagingModule,
+    NotificationsModule,
+    StorageModule,
+  ],
   controllers: [QuotesController, PaymentsController],
   providers: [
     { provide: QUOTE_REPOSITORY, useClass: QuotePrismaRepository },
     { provide: PAYMENT_REPOSITORY, useClass: PaymentPrismaRepository },
+    // Not exported by WorkshopModule's VehiclesModule/CustomersModule import chain
+    // (would create a circular import), so QuoteAssembler gets its own instances.
+    { provide: CUSTOMER_REPOSITORY, useClass: CustomerPrismaRepository },
+    { provide: VEHICLE_REPOSITORY, useClass: VehiclePrismaRepository },
     { provide: PDF_GENERATOR_PORT, useClass: ReactPdfAdapter },
     QuoteAssembler,
     CreateQuoteUseCase,

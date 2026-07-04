@@ -84,6 +84,31 @@ export interface WorkOrderWithDetails {
   total: number;
 }
 
+/** Row shape for a vehicle's service history page (parts + photo evidence, no line/customer detail). */
+export interface VehicleServiceHistoryItem {
+  id: string;
+  orderNumber: string;
+  status: WorkOrderStatus;
+  createdAt: Date;
+  promisedDeliveryAt: Date;
+  serviceType: string;
+  parts: Array<{
+    quantity: number;
+    unitPriceAtSale: number;
+    part: { name: string; sku: string };
+  }>;
+  photoEvidences: Array<{ id: string; phase: string; filename: string }>;
+}
+
+/** Row shape for a customer's recent-orders list (order + which vehicle it was for). */
+export interface CustomerWorkOrderSummary {
+  id: string;
+  orderNumber: string;
+  status: WorkOrderStatus;
+  createdAt: Date;
+  vehicle: { plate: string };
+}
+
 export interface WorkOrderRepository {
   findById(id: string, tenantId: string): Promise<WorkOrder | null>;
   findByIdWithDetails(id: string, tenantId: string): Promise<WorkOrderWithDetails | null>;
@@ -127,6 +152,17 @@ export interface WorkOrderRepository {
   ): Promise<number>;
   /** Active (non-terminal) orders tenant-wide, oldest promised delivery first. */
   findPendingByTenant(tenantId: string, branchId?: string): Promise<WorkOrder[]>;
+  /** All work orders ever done on a vehicle, newest first — for the vehicle detail page. */
+  findVehicleServiceHistory(
+    vehicleId: string,
+    tenantId: string,
+  ): Promise<VehicleServiceHistoryItem[]>;
+  /** A customer's most recent orders (across their vehicles) — for the customer profile page. */
+  findRecentByCustomer(
+    customerId: string,
+    tenantId: string,
+    limit: number,
+  ): Promise<CustomerWorkOrderSummary[]>;
   create(workOrder: WorkOrder): Promise<void>;
   save(workOrder: WorkOrder): Promise<void>;
   saveStatusHistory(entry: StatusHistoryEntry): Promise<void>;

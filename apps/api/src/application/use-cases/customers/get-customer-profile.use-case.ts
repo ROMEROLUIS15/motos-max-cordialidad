@@ -1,12 +1,25 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { CustomerRepository, CUSTOMER_REPOSITORY } from '../../../domain/repositories/customer.repository';
-import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma.service';
+import {
+  CustomerRepository,
+  CUSTOMER_REPOSITORY,
+} from '../../../domain/repositories/customer.repository';
+import {
+  VehicleRepository,
+  VEHICLE_REPOSITORY,
+} from '../../../domain/repositories/vehicle.repository';
+import {
+  WorkOrderRepository,
+  WORK_ORDER_REPOSITORY,
+} from '../../../domain/repositories/work-order.repository';
+
+const RECENT_WORK_ORDERS_LIMIT = 10;
 
 @Injectable()
 export class GetCustomerProfileUseCase {
   constructor(
     @Inject(CUSTOMER_REPOSITORY) private readonly customerRepo: CustomerRepository,
-    private readonly prisma: PrismaService,
+    @Inject(VEHICLE_REPOSITORY) private readonly vehicleRepo: VehicleRepository,
+    @Inject(WORK_ORDER_REPOSITORY) private readonly workOrderRepo: WorkOrderRepository,
   ) {}
 
   async execute(customerId: string, tenantId: string) {
@@ -14,16 +27,8 @@ export class GetCustomerProfileUseCase {
     if (!customer) throw new NotFoundException('Customer not found');
 
     const [vehicles, recentWorkOrders] = await Promise.all([
-      this.prisma.vehicle.findMany({
-        where: { currentOwnerId: customerId, tenantId, deletedAt: null },
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.workOrder.findMany({
-        where: { customerId, tenantId, deletedAt: null },
-        orderBy: { createdAt: 'desc' },
-        take: 10,
-        include: { vehicle: true },
-      }),
+      this.vehicleRepo.findByCustomer(customerId, tenantId),
+      this.workOrderRepo.findRecentByCustomer(customerId, tenantId, RECENT_WORK_ORDERS_LIMIT),
     ]);
 
     return { customer, vehicles, recentWorkOrders };

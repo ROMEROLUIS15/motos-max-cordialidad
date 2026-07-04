@@ -1,6 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma.service';
+import {
+  PasswordResetTokenRepository,
+  PASSWORD_RESET_TOKEN_REPOSITORY,
+} from '../../../domain/repositories/password-reset-token.repository';
 
 /**
  * Removes expired, unused password reset tokens every hour.
@@ -10,16 +13,14 @@ import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma
 export class CleanupExpiredTokensJob {
   private readonly logger = new Logger(CleanupExpiredTokensJob.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PASSWORD_RESET_TOKEN_REPOSITORY)
+    private readonly tokens: PasswordResetTokenRepository,
+  ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
   async handle(): Promise<void> {
-    const { count } = await this.prisma.passwordResetToken.deleteMany({
-      where: {
-        expiresAt: { lt: new Date() },
-        usedAt: null,
-      },
-    });
+    const count = await this.tokens.deleteExpiredUnused();
     this.logger.log(`cleanup-expired-tokens: deleted ${count} expired unused token(s)`);
   }
 }

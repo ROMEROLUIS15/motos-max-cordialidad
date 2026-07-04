@@ -6,7 +6,7 @@ import {
   WorkOrderPartRecord,
 } from '../../../domain/repositories/work-order.repository';
 import { InventoryPort, INVENTORY_PORT } from '../../ports/inventory.port';
-import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma.service';
+import { PartRepository, PART_REPOSITORY } from '../../../domain/repositories/part.repository';
 
 export interface AddPartToWorkOrderInput {
   tenantId: string;
@@ -20,17 +20,14 @@ export class AddPartToWorkOrderUseCase {
   constructor(
     @Inject(WORK_ORDER_REPOSITORY) private readonly workOrderRepo: WorkOrderRepository,
     @Inject(INVENTORY_PORT) private readonly inventoryPort: InventoryPort,
-    private readonly prisma: PrismaService,
+    @Inject(PART_REPOSITORY) private readonly partRepo: PartRepository,
   ) {}
 
   async execute(input: AddPartToWorkOrderInput): Promise<WorkOrderPartRecord> {
     const workOrder = await this.workOrderRepo.findById(input.workOrderId, input.tenantId);
     if (!workOrder) throw new NotFoundException('Orden de trabajo no encontrada');
 
-    const part = await this.prisma.part.findFirst({
-      where: { id: input.partId, tenantId: input.tenantId },
-      select: { salePrice: true, name: true, sku: true },
-    });
+    const part = await this.partRepo.findById(input.partId, input.tenantId);
     if (!part) throw new NotFoundException('Repuesto no encontrado');
 
     // Reserves stock; throws InsufficientStockException if not enough available.
@@ -48,7 +45,7 @@ export class AddPartToWorkOrderUseCase {
       partName: part.name,
       partSku: part.sku,
       quantity: input.quantity,
-      unitPriceAtSale: Number(part.salePrice),
+      unitPriceAtSale: part.salePrice,
     };
     await this.workOrderRepo.addPart(record);
     return record;
