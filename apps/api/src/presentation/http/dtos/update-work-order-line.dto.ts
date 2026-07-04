@@ -1,25 +1,21 @@
 import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
-export class UpdateServiceCatalogItemDto {
+export class UpdateWorkOrderLineDto {
   @IsOptional()
   @IsString()
-  name?: string;
-
-  @IsOptional()
-  @IsString()
-  description?: string | null;
+  description?: string;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  estimatedHours?: number;
+  unitPrice?: number;
 
   @IsOptional()
   @IsNumber()
   @Min(0)
-  suggestedPrice?: number;
+  estimatedHours?: number | null;
 
   @IsOptional()
   @IsString()
-  serviceType?: string;
+  technicianId?: string | null;
 }

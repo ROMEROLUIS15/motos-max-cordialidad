@@ -4,9 +4,14 @@ import { CurrentUser } from '../decorators/current-user.decorator';
 import { RequirePermission } from '../decorators/require-permission.decorator';
 import { PermissionGuard } from '../guards/permission.guard';
 import { JWTPayload } from '../../../application/ports/jwt.port';
-import { CreateCustomRoleUseCase, UpdateRolePermissionsUseCase } from '../../../application/use-cases/identity/create-custom-role.use-case';
+import {
+  CreateCustomRoleUseCase,
+  UpdateRolePermissionsUseCase,
+} from '../../../application/use-cases/identity/create-custom-role.use-case';
 import { DeleteRoleUseCase } from '../../../application/use-cases/identity/delete-role.use-case';
 import { RoleRepository, ROLE_REPOSITORY } from '../../../domain/repositories/role.repository';
+import { CreateRoleDto } from '../dtos/create-role.dto';
+import { UpdateRolePermissionsDto } from '../dtos/update-role-permissions.dto';
 
 @Controller('roles')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -26,7 +31,7 @@ export class RolesController {
 
   @Post()
   @RequirePermission('roles:CREATE')
-  async create(@CurrentUser() user: JWTPayload, @Body() body: { name: string; permissions: Array<{ module: string; action: string }> }) {
+  async create(@CurrentUser() user: JWTPayload, @Body() body: CreateRoleDto) {
     return this.createCustomRoleUseCase.execute({
       tenantId: user.tenantId,
       requestingUserId: user.sub,
@@ -40,7 +45,7 @@ export class RolesController {
   async updatePermissions(
     @Param('id') id: string,
     @CurrentUser() user: JWTPayload,
-    @Body() body: { permissions: Array<{ module: string; action: string }> },
+    @Body() body: UpdateRolePermissionsDto,
   ) {
     await this.updateRolePermissionsUseCase.execute({
       roleId: id,

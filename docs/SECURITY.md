@@ -123,9 +123,11 @@ El webhook de WhatsApp deduplica por `waMessageId` antes de procesar un mensaje 
 
 ## Validación de entrada
 
-Los endpoints de autenticación (login, registro, recuperación de contraseña) validan el body explícitamente contra un schema Zod estricto antes de tocar cualquier caso de uso. El resto de la API tipa el body con interfaces TypeScript.
+`main.ts` registra un `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })` global. Todos los `@Body()` de la API están tipados como clases DTO decoradas con `class-validator` (no interfaces TypeScript, que se borran en runtime y el pipe ignora) — cualquier campo no declarado en el DTO se descarta, y un tipo o formato incorrecto responde `400` antes de llegar al caso de uso. Los endpoints de autenticación (login, registro, recuperación de contraseña) además validan explícitamente contra un schema Zod estricto por delante del pipe global.
 
-**Hardening recomendado**: adoptar `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })` de forma global, con DTOs de clase (`class-validator`), como capa adicional de defensa en profundidad en el resto de controladores.
+**Gotcha para el próximo DTO que se agregue**: NestJS solo valida parámetros tipados como clase; un `@Body() body: { foo: string }` inline o una `interface` no tiene metadata de clase en runtime y el pipe lo deja pasar sin validar. Todo DTO nuevo debe ser una `class` con decoradores, nunca una interfaz.
+
+**Implementación**: `apps/api/src/main.ts`, `apps/api/src/presentation/http/dtos/*.dto.ts`
 
 ---
 

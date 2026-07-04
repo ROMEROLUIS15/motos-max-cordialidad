@@ -15,12 +15,10 @@ import { PermissionGuard } from '../guards/permission.guard';
 import { RequirePermission } from '../decorators/require-permission.decorator';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { JWTPayload } from '../../../application/ports/jwt.port';
-import {
-  RegisterCustomerUseCase,
-  RegisterCustomerInput,
-} from '../../../application/use-cases/customers/register-customer.use-case';
+import { RegisterCustomerUseCase } from '../../../application/use-cases/customers/register-customer.use-case';
 import { UpdateCustomerUseCase } from '../../../application/use-cases/customers/update-customer.use-case';
 import { UpdateCustomerDto } from '../dtos/update-customer.dto';
+import { RegisterCustomerDto } from '../dtos/register-customer.dto';
 import { DeactivateCustomerUseCase } from '../../../application/use-cases/customers/deactivate-customer.use-case';
 import { SearchCustomersUseCase } from '../../../application/use-cases/customers/search-customers.use-case';
 import { GetCustomerProfileUseCase } from '../../../application/use-cases/customers/get-customer-profile.use-case';
@@ -54,10 +52,7 @@ export class CustomersController {
 
   @Post()
   @RequirePermission('customers:CREATE')
-  async create(
-    @CurrentUser() user: JWTPayload,
-    @Body() body: Omit<RegisterCustomerInput, 'tenantId'>,
-  ) {
+  async create(@CurrentUser() user: JWTPayload, @Body() body: RegisterCustomerDto) {
     return this.registerCustomer.execute({ ...body, tenantId: user.tenantId });
   }
 

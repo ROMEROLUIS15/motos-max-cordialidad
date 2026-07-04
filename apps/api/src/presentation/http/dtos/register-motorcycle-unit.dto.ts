@@ -1,22 +1,22 @@
 import { IsIn, IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { MotorcycleCondition } from '../../../domain/entities/motorcycle-unit.entity';
 
-export class UpdateMotorcycleUnitDto {
+export class RegisterMotorcycleUnitDto {
   @IsOptional()
   @IsString()
   branchId?: string;
 
-  @IsOptional()
   @IsString()
-  brand?: string;
+  vin!: string;
 
-  @IsOptional()
   @IsString()
-  model?: string;
+  brand!: string;
 
-  @IsOptional()
+  @IsString()
+  model!: string;
+
   @IsInt()
-  year?: number;
+  year!: number;
 
   @IsOptional()
   @IsNumber()
@@ -26,9 +26,8 @@ export class UpdateMotorcycleUnitDto {
   @IsString()
   color?: string | null;
 
-  @IsOptional()
   @IsIn(['NEW', 'USED'])
-  condition?: MotorcycleCondition;
+  condition!: MotorcycleCondition;
 
   @IsOptional()
   @IsNumber()
@@ -43,15 +42,13 @@ export class UpdateMotorcycleUnitDto {
   @IsString()
   plate?: string | null;
 
-  @IsOptional()
   @IsNumber()
   @Min(0)
-  costPrice?: number;
+  costPrice!: number;
 
-  @IsOptional()
   @IsNumber()
   @Min(0)
-  salePrice?: number;
+  salePrice!: number;
 
   @IsOptional()
   @IsString()

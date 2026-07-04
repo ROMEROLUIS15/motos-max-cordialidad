@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Get,
@@ -21,23 +20,9 @@ import {
   AssignHomeServiceRequestUseCase,
   UpdateHomeServiceStatusUseCase,
 } from '../../../application/use-cases/home-services/home-services.use-cases';
-
-interface CreateBody {
-  customerName: string;
-  customerPhone: string;
-  address: string;
-  problemDesc: string;
-  serviceType: string;
-  customerId?: string;
-  branchId?: string;
-}
-
-function requireString(value: unknown, field: string): string {
-  if (typeof value !== 'string' || value.trim() === '') {
-    throw new BadRequestException(`${field} is required`);
-  }
-  return value;
-}
+import { CreateHomeServiceRequestDto } from '../dtos/create-home-service-request.dto';
+import { AssignHomeServiceDto } from '../dtos/assign-home-service.dto';
+import { UpdateHomeServiceStatusDto } from '../dtos/update-home-service-status.dto';
 
 /**
  * Home-service requests management (web). Reuses work_orders permissions since
@@ -70,16 +55,16 @@ export class HomeServicesController {
 
   @Post()
   @RequirePermission('work_orders:CREATE')
-  async createRequest(@CurrentUser() user: JWTPayload, @Body() body: CreateBody) {
+  async createRequest(@CurrentUser() user: JWTPayload, @Body() body: CreateHomeServiceRequestDto) {
     return this.create.execute({
       tenantId: user.tenantId,
       branchId: body.branchId ?? user.branchId ?? null,
       customerId: body.customerId ?? null,
-      customerName: requireString(body?.customerName, 'customerName'),
-      customerPhone: requireString(body?.customerPhone, 'customerPhone'),
-      address: requireString(body?.address, 'address'),
-      problemDesc: requireString(body?.problemDesc, 'problemDesc'),
-      serviceType: requireString(body?.serviceType, 'serviceType'),
+      customerName: body.customerName,
+      customerPhone: body.customerPhone,
+      address: body.address,
+      problemDesc: body.problemDesc,
+      serviceType: body.serviceType,
     });
   }
 
@@ -88,13 +73,9 @@ export class HomeServicesController {
   async assignTechnician(
     @CurrentUser() user: JWTPayload,
     @Param('id') id: string,
-    @Body() body: { assignedTo: string },
+    @Body() body: AssignHomeServiceDto,
   ) {
-    const updated = await this.assign.execute(
-      id,
-      user.tenantId,
-      requireString(body?.assignedTo, 'assignedTo'),
-    );
+    const updated = await this.assign.execute(id, user.tenantId, body.assignedTo);
     if (!updated) throw new NotFoundException('Home-service request not found');
     return updated;
   }
@@ -104,13 +85,9 @@ export class HomeServicesController {
   async changeStatus(
     @CurrentUser() user: JWTPayload,
     @Param('id') id: string,
-    @Body() body: { status: string },
+    @Body() body: UpdateHomeServiceStatusDto,
   ) {
-    const updated = await this.updateStatus.execute(
-      id,
-      user.tenantId,
-      requireString(body?.status, 'status'),
-    );
+    const updated = await this.updateStatus.execute(id, user.tenantId, body.status);
     if (!updated) throw new NotFoundException('Home-service request not found');
     return updated;
   }

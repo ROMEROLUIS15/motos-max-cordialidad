@@ -11,6 +11,7 @@ import {
   ListServiceCatalogItemsUseCase,
 } from '../../../application/use-cases/inventory/service-catalog.use-case';
 import { UpdateServiceCatalogItemDto } from '../dtos/update-service-catalog-item.dto';
+import { CreateServiceCatalogItemDto } from '../dtos/create-service-catalog-item.dto';
 
 @Controller('service-catalog')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -44,17 +45,7 @@ export class ServiceCatalogController {
 
   @Post()
   @RequirePermission('inventory:CREATE')
-  async create(
-    @CurrentUser() user: JWTPayload,
-    @Body()
-    body: {
-      name: string;
-      description?: string;
-      estimatedHours: number;
-      suggestedPrice: number;
-      serviceType: string;
-    },
-  ) {
+  async create(@CurrentUser() user: JWTPayload, @Body() body: CreateServiceCatalogItemDto) {
     return this.createItem.execute({ ...body, tenantId: user.tenantId });
   }
 

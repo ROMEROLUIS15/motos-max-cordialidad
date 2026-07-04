@@ -23,6 +23,8 @@ import { RefreshTokenUseCase } from '../../../application/use-cases/identity/ref
 import { ResetPasswordUseCase } from '../../../application/use-cases/identity/reset-password.use-case';
 import { RevokeTokenUseCase } from '../../../application/use-cases/identity/revoke-token.use-case';
 import { PrismaService } from '../../../infrastructure/persistence/prisma/prisma.service';
+import { RefreshTokenDto } from '../dtos/refresh-token.dto';
+import { LogoutDto } from '../dtos/logout.dto';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -87,14 +89,14 @@ export class AuthController {
   @HttpCode(200)
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  async refresh(@Body() body: { refreshToken: string }) {
+  async refresh(@Body() body: RefreshTokenDto) {
     return this.refreshTokenUseCase.execute(body);
   }
 
   @Post('logout')
   @HttpCode(204)
   @UseGuards(JwtAuthGuard)
-  async logout(@Body() body: { refreshToken: string }, @CurrentUser() _user: JWTPayload) {
+  async logout(@Body() body: LogoutDto, @CurrentUser() _user: JWTPayload) {
     if (body.refreshToken) {
       await this.revokeTokenUseCase.execute({ refreshToken: body.refreshToken });
     }

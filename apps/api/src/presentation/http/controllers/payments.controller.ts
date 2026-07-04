@@ -4,12 +4,16 @@ import { PermissionGuard } from '../guards/permission.guard';
 import { RequirePermission } from '../decorators/require-permission.decorator';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { JWTPayload } from '../../../application/ports/jwt.port';
-import { PaymentRepository, PAYMENT_REPOSITORY } from '../../../domain/repositories/payment.repository';
+import {
+  PaymentRepository,
+  PAYMENT_REPOSITORY,
+} from '../../../domain/repositories/payment.repository';
 import {
   RegisterPaymentUseCase,
   GetPaymentSummaryUseCase,
   SearchPaymentsUseCase,
 } from '../../../application/use-cases/commerce/payments.use-case';
+import { RegisterPaymentDto } from '../dtos/register-payment.dto';
 
 @Controller('payments')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -45,10 +49,7 @@ export class PaymentsController {
 
   @Post()
   @RequirePermission('payments:CREATE')
-  async create(
-    @CurrentUser() user: JWTPayload,
-    @Body() body: { workOrderId: string; amount: number; paymentMethod: string; reference?: string; notes?: string },
-  ) {
+  async create(@CurrentUser() user: JWTPayload, @Body() body: RegisterPaymentDto) {
     return this.registerPayment.execute({
       tenantId: user.tenantId,
       workOrderId: body.workOrderId,

@@ -2,15 +2,13 @@ import { Body, Controller, Get, Inject, Param, Post, Put, UseGuards } from '@nes
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { JWTPayload } from '../../../application/ports/jwt.port';
-import {
-  CreateBranchUseCase,
-  CreateBranchInput,
-} from '../../../application/use-cases/identity/create-branch.use-case';
+import { CreateBranchUseCase } from '../../../application/use-cases/identity/create-branch.use-case';
 import {
   BranchRepository,
   BRANCH_REPOSITORY,
 } from '../../../domain/repositories/branch.repository';
 import { UpdateBranchDto } from '../dtos/update-branch.dto';
+import { CreateBranchDto } from '../dtos/create-branch.dto';
 
 @Controller('branches')
 @UseGuards(JwtAuthGuard)
@@ -26,7 +24,7 @@ export class BranchesController {
   }
 
   @Post()
-  async create(@CurrentUser() user: JWTPayload, @Body() body: Omit<CreateBranchInput, 'tenantId'>) {
+  async create(@CurrentUser() user: JWTPayload, @Body() body: CreateBranchDto) {
     return this.createBranchUseCase.execute({ ...body, tenantId: user.tenantId });
   }
 

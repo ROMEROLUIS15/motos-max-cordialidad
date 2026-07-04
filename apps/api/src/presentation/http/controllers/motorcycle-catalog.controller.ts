@@ -24,6 +24,7 @@ import {
   MOTORCYCLE_BRANDS,
   MotorcycleCatalogEntry,
 } from '../../../infrastructure/reference/motorcycle-catalog.data';
+import { AddCustomMotorcycleModelDto } from '../dtos/add-custom-motorcycle-model.dto';
 
 /**
  * Motorcycle make/model catalog (Colombia). Combines a curated read-only base
@@ -79,10 +80,7 @@ export class MotorcycleCatalogController {
 
   @Post('custom')
   @RequirePermission('vehicles:CREATE')
-  async addCustom(
-    @CurrentUser() user: JWTPayload,
-    @Body() body: { brand: string; model: string; yearFrom?: number; yearTo?: number | null },
-  ) {
+  async addCustom(@CurrentUser() user: JWTPayload, @Body() body: AddCustomMotorcycleModelDto) {
     return this.customRepo.create({
       tenantId: user.tenantId,
       brand: body.brand.trim(),

@@ -21,9 +21,9 @@ import {
   DeactivatePartUseCase,
   SearchPartsUseCase,
   GetPartDetailUseCase,
-  RegisterPartInput,
 } from '../../../application/use-cases/inventory/parts.use-case';
 import { UpdatePartDto } from '../dtos/update-part.dto';
+import { RegisterPartDto } from '../dtos/register-part.dto';
 
 @Controller('parts')
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -58,10 +58,7 @@ export class PartsController {
 
   @Post()
   @RequirePermission('inventory:CREATE')
-  async create(
-    @CurrentUser() user: JWTPayload,
-    @Body() body: Omit<RegisterPartInput, 'tenantId' | 'branchId'> & { branchId?: string },
-  ) {
+  async create(@CurrentUser() user: JWTPayload, @Body() body: RegisterPartDto) {
     return this.registerPart.execute({
       ...body,
       tenantId: user.tenantId,

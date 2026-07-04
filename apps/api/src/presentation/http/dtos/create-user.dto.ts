@@ -1,27 +1,23 @@
-import { IsBoolean, IsEmail, IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, Matches, MinLength } from 'class-validator';
 
-export class UpdateUserDto {
+export class CreateUserDto {
   @IsOptional()
   @IsString()
-  fullName?: string;
+  branchId?: string;
 
-  @IsOptional()
   @IsString()
-  branchId?: string | null;
+  roleId!: string;
 
-  @IsOptional()
-  @IsBoolean()
-  isActive?: boolean;
-
-  @IsOptional()
   @IsEmail()
-  email?: string;
+  email!: string;
 
-  @IsOptional()
   @IsString()
   @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
   @Matches(/[A-Z]/, { message: 'Debe contener al menos una letra mayúscula' })
   @Matches(/[a-z]/, { message: 'Debe contener al menos una letra minúscula' })
   @Matches(/[0-9]/, { message: 'Debe contener al menos un número' })
-  password?: string;
+  password!: string;
+
+  @IsString()
+  fullName!: string;
 }
