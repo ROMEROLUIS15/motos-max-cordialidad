@@ -54,3 +54,4 @@ prisma/migrations/*.lock
 
 # pnpm
 .pnpm-store/
+.playwright-mcp/
