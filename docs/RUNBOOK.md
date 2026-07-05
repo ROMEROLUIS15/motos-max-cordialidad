@@ -88,17 +88,20 @@ El auto-deploy nativo de Render está deshabilitado a propósito. El job `deploy
 
 ### Web (Next.js) — Cloudflare Pages
 
-El deploy de producción corre en el job `deploy-web` de `ci.yml`, gated por los mismos checks que el API, usando `cloudflare/wrangler-action@v4` con flags de CLI (`--project-name`, `--branch=main`):
+El deploy de producción corre en el job `deploy-web` de `ci.yml`, gated por los mismos checks que el API. Desde 2026-07-05 el job **no construye ni sube artefactos**: dispara el **build server-side de Cloudflare** vía la API de Pages y espera el resultado:
 
 ```bash
-cd apps/web
-npx @cloudflare/next-on-pages@1   # build para el runtime de Cloudflare
-wrangler pages deploy .vercel/output/static --project-name=... --branch=main
+# 1. Crear el deployment (Cloudflare clona el repo y builda con su propio entorno)
+POST /accounts/{account}/pages/projects/motos-max-cordialidad/deployments  -F branch=main
+# 2. Poll de latest_stage hasta deploy:success (o fallo)
+# 3. Verificación post-deploy: GET /customers/<uuid> debe responder ≠ 500
 ```
 
-> **No crear `apps/web/wrangler.toml`.** `wrangler pages deploy` sincroniza cualquier `wrangler.toml` presente con la configuración del proyecto en el dashboard de Cloudflare — incluyendo `compatibility_flags` y `destination_dir`. Un archivo desactualizado sobreescribe esa configuración en cada deploy manual, aunque el archivo en sí parezca correcto (sus rutas son relativas a `apps/web/`, incompatibles con la integración Git que usa la raíz del repo como root). Todos los parámetros van por flags de CLI.
+El paso 3 existe porque un deploy puede "succeed" con el worker roto (incidente 2026-07-04: `compatibility_date` de producción desactualizada → todas las rutas dinámicas en 500 mientras las estáticas respondían 200 y el smoke test pasaba). Un smoke test de rutas estáticas **no** detecta un worker edge roto.
 
-`.github/workflows/pages.yml` (`workflow_dispatch`, manual) queda como respaldo funcional si el job de CI necesita re-ejecutarse de forma aislada.
+> **No crear `apps/web/wrangler.toml`.** `wrangler pages deploy` sincroniza cualquier `wrangler.toml` presente con la configuración del proyecto en el dashboard de Cloudflare — incluyendo `compatibility_flags`, `compatibility_date` y `destination_dir`. Así fue como la config de producción quedó pisada con una fecha de 2024 (ver troubleshooting). El flujo actual ya no usa wrangler, pero la advertencia sigue vigente para cualquier deploy manual.
+
+`.github/workflows/pages.yml` (`workflow_dispatch`, manual) queda como respaldo funcional — usa el mismo mecanismo de build server-side.
 
 ### Agents (Python) — Render
 
