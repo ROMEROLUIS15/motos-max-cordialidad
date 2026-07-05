@@ -208,10 +208,23 @@ export default function WorkOrderDetailPage() {
 
       <Card>
         <CardContent className="p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold">Total</h2>
-            <span className="tnum text-xl font-semibold">{money(detail.total)}</span>
-          </div>
+          {/* Desglose completo: el total debe ser verificable a simple vista. */}
+          <dl className="space-y-1.5 text-sm">
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">Servicios</dt>
+              <dd className="tnum">{money(detail.lines.reduce((s, l) => s + l.unitPrice, 0))}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">Repuestos</dt>
+              <dd className="tnum">
+                {money(detail.parts.reduce((s, p) => s + p.quantity * p.unitPriceAtSale, 0))}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between border-t border-border pt-1.5">
+              <dt className="text-base font-semibold">Total</dt>
+              <dd className="tnum text-xl font-semibold">{money(detail.total)}</dd>
+            </div>
+          </dl>
           <h3 className="mb-2 mt-5 text-sm font-medium text-muted-foreground">
             Historial de estado
           </h3>

@@ -108,7 +108,11 @@ export class ReactPdfAdapter implements PdfGeneratorPort {
         ]),
         h(View, { key: 'tot', style: s.section }, [
           totalLine('Subtotal', money(data.subtotal)),
-          totalLine(`IVA (${data.vatPercentage}%)`, money(data.vatAmount)),
+          // Tenants that do not charge VAT (vatPercentage=0) get a clean
+          // quote without a confusing "IVA (0%) $0" row.
+          ...(data.vatAmount > 0
+            ? [totalLine(`IVA (${data.vatPercentage}%)`, money(data.vatAmount))]
+            : []),
           totalLine('Total', money(data.total), true),
         ]),
         data.termsConditions

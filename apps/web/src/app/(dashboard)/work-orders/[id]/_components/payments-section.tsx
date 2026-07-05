@@ -83,13 +83,17 @@ export function PaymentsSection({
 
       {summary && (
         <div className="mb-4">
-          <div className="mb-1.5 flex justify-between text-sm">
+          <div className="mb-1.5 flex flex-wrap justify-between gap-2 text-sm">
             <span className="text-muted-foreground">
-              Pagado:{' '}
+              Total:{' '}
+              <span className="tnum font-medium text-foreground">{money(summary.orderTotal)}</span>
+            </span>
+            <span className="text-muted-foreground">
+              Abonado:{' '}
               <span className="tnum font-medium text-foreground">{money(summary.totalPaid)}</span>
             </span>
             <span className="text-muted-foreground">
-              Saldo:{' '}
+              Restante:{' '}
               <span className="tnum font-medium text-foreground">{money(summary.balance)}</span>
             </span>
           </div>
