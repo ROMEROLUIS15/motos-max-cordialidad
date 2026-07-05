@@ -120,6 +120,18 @@ describe('QuoteAssembler', () => {
     expect(result.total).toBe(83_300);
   });
 
+  it('rounds the VAT to whole pesos — COP has no usable cents', async () => {
+    // 1.005 * 19% = 190,95 → must round to 191, never produce $190,95.
+    const { assembler, workOrderRepo } = make();
+    workOrderRepo.findByIdWithDetails.mockResolvedValue({ ...makeDetails(), total: 1_005 });
+
+    const result = await assembler.assemble('wo-1', 'tenant-1', new Date());
+
+    expect(Number.isInteger(result.vatAmount)).toBe(true);
+    expect(result.vatAmount).toBe(191);
+    expect(result.total).toBe(1_196);
+  });
+
   it('uses the part name already denormalized on the work order line and totals by quantity * unitPriceAtSale', async () => {
     const { assembler } = make();
     const result = await assembler.assemble('wo-1', 'tenant-1', new Date());

@@ -54,7 +54,10 @@ export class QuoteAssembler {
 
     const subtotal = details.total;
     const vatPercentage = tenant.vatPercentage;
-    const vatAmount = Math.round(subtotal * vatPercentage) / 100;
+    // Round to whole pesos (COP has no usable cents): the previous form
+    // `Math.round(subtotal * vat) / 100` rounded BEFORE dividing and could
+    // yield fractional totals like $190,95.
+    const vatAmount = Math.round((subtotal * vatPercentage) / 100);
     const total = subtotal + vatAmount;
 
     const pdfData: QuotePdfData = {

@@ -204,7 +204,7 @@ export default function WorkOrderDetailPage() {
       <PartsSection detail={detail} workOrderId={id} busy={busy} run={run} />
       <EvidencesSection evidences={evidences} workOrderId={id} busy={busy} run={run} />
       <QuotesSection workOrderId={id} woStatus={wo.status} />
-      <PaymentsSection workOrderId={id} />
+      <PaymentsSection workOrderId={id} orderTotal={detail.total} />
 
       <Card>
         <CardContent className="p-5">

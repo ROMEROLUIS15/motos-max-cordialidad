@@ -15,7 +15,18 @@ import { Input, fieldBase } from '@/components/ui/input';
 import { SectionCard } from './section-card';
 import { money } from './types';
 
-export function PaymentsSection({ workOrderId }: { workOrderId: string }) {
+export function PaymentsSection({
+  workOrderId,
+  orderTotal,
+}: {
+  workOrderId: string;
+  /**
+   * Current order total from the detail payload. Only used as a refresh
+   * signal: when a service line or part changes the total, the summary
+   * (Pagado/Saldo) is re-fetched so it never shows a stale balance.
+   */
+  orderTotal?: number;
+}) {
   const [summary, setSummary] = useState<PaymentSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -31,7 +42,7 @@ export function PaymentsSection({ workOrderId }: { workOrderId: string }) {
   }, [workOrderId]);
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, orderTotal]);
 
   const register = async () => {
     setBusy(true);

@@ -26,17 +26,19 @@ export function EvidencesSection({
 
   return (
     <SectionCard title="Evidencias fotográficas">
-      <div className="space-y-4">
-        {PHOTO_PHASES.map((ph) => {
-          const items = evidences.filter((e) => e.phase === ph);
-          return (
-            <div key={ph}>
-              <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {ph}
-              </h3>
-              {items.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Sin fotos</p>
-              ) : (
+      {/* Only phases that actually have photos are rendered — three "Sin
+          fotos" placeholders were redundant noise. */}
+      {evidences.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Sin fotos aún</p>
+      ) : (
+        <div className="space-y-4">
+          {PHOTO_PHASES.filter((ph) => evidences.some((e) => e.phase === ph)).map((ph) => {
+            const items = evidences.filter((e) => e.phase === ph);
+            return (
+              <div key={ph}>
+                <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  {ph}
+                </h3>
                 <div className="flex flex-wrap gap-3">
                   {items.map((e) => (
                     <div key={e.id} className="group relative">
@@ -60,11 +62,11 @@ export function EvidencesSection({
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:flex-wrap sm:items-center">
         <select
