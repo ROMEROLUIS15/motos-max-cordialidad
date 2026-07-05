@@ -271,43 +271,65 @@ jobs:
   # only for pushes to main (never PRs). The Cloudflare Git integration's
   # automatic production builds are disabled — this job is the deploy path.
   # The API/agents (Render) gate themselves via autoDeployTrigger: checksPass.
+  #
+  # INCIDENT 2026-07-04: building next-on-pages in Actions and uploading the
+  # artifact with `wrangler pages deploy` produced a worker whose dynamic edge
+  # routes ([id] pages) crashed at runtime ("Could not find the module in the
+  # React Server Consumer Manifest") — every click into a detail page returned
+  # 500 in production, while the SAME code built by Cloudflare's own build
+  # environment worked (environment drift; next-on-pages shells out to the
+  # unpinned vercel CLI). Fix: keep the gate but trigger Cloudflare's
+  # SERVER-SIDE build via the Pages API instead of uploading a local build.
+  # Never reintroduce the wrangler upload without verifying a dynamic route
+  # (e.g. /customers/<uuid>) returns non-500 on the resulting deployment.
   deploy-web:
     name: Deploy Web (Cloudflare Pages)
     needs: [typecheck, test, lint, agents, e2e-api, e2e-web, secrets, audit]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - name: Trigger Cloudflare Pages build (server-side)
+        run: |
+          resp=$(curl -sf -X POST \
+            "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/pages/projects/motos-max-cordialidad/deployments" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -F "branch=main")
+          id=$(echo "$resp" | jq -r '.result.id // empty')
+          if [ -z "$id" ]; then
+            echo "::error::Could not create Pages deployment: $resp"
+            exit 1
+          fi
+          echo "DEPLOYMENT_ID=$id" >> "$GITHUB_ENV"
+          echo "Triggered Pages deployment $id"
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+      - name: Wait for Cloudflare build to go live
+        run: |
+          for i in $(seq 1 40); do
+            stage=$(curl -sf \
+              "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/pages/projects/motos-max-cordialidad/deployments/$DEPLOYMENT_ID" \
+              -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+              | jq -r '.result.latest_stage | .name + ":" + .status')
+            echo "[$i] $stage"
+            case "$stage" in
+              deploy:success) exit 0 ;;
+              *:failure) echo "::error::Cloudflare Pages build failed at $stage"; exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "::error::Timed out waiting for the Cloudflare Pages build"
+          exit 1
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          # wrangler 4.x requires Node >= 22
-          node-version: '22'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build web (next-on-pages)
-        run: cd apps/web && npx @cloudflare/next-on-pages@1
-        env:
-          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://motoworkshop-api.onrender.com' }}
-
-      # WARNING: do NOT add a wrangler.toml under apps/web — wrangler would
-      # sync it into the Cloudflare project settings and break them (see
-      # pages.yml for the full story). CLI flags only.
-      - name: Publish to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/web
-          command: pages deploy .vercel/output/static --project-name=motos-max-cordialidad --branch=main
+      # A deploy can "succeed" while dynamic routes crash (see incident above):
+      # verify a dynamic edge route responds non-500 before declaring victory.
+      - name: Verify dynamic route (edge worker health)
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://motos-max-cordialidad.pages.dev/customers/00000000-0000-0000-0000-000000000000")
+          echo "GET /customers/<uuid> -> $code"
+          if [ "$code" = "500" ]; then
+            echo "::error::Dynamic routes are crashing (500) — the edge worker is broken."
+            exit 1
+          fi
 
   # Post-deploy smoke test: a deploy that reports "success" can still serve a
   # broken site (it happened: a config sync wiped the nodejs_compat flag and

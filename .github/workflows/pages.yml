@@ -1,66 +1,60 @@
 name: Deploy to Cloudflare Pages
 
-# Manual fallback deploy. The Cloudflare Pages Git integration is what deploys
-# on every push to main — keep this workflow_dispatch-only to avoid double
-# deploys. Secrets CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID are configured.
+# Manual fallback deploy. CI (ci.yml deploy-web) is what deploys on every push
+# to main — keep this workflow_dispatch-only to avoid double deploys.
+#
+# INCIDENT 2026-07-04: this workflow used to build next-on-pages in Actions
+# and upload the artifact with `wrangler pages deploy`. That artifact's worker
+# crashed on every dynamic route ([id] pages → 500) while the same code built
+# by Cloudflare's own build environment worked. Deploys now trigger the
+# server-side Pages build via API — same method as ci.yml. Do not bring the
+# wrangler upload back (and never add a wrangler.toml under apps/web: wrangler
+# would sync it into the project settings and clobber them).
 on:
   workflow_dispatch:
-
-env:
-  # wrangler 4.x requires Node >= 22 (deploy step)
-  NODE_VERSION: '22'
-  PNPM_VERSION: '9'
 
 jobs:
   deploy-pages:
     name: Deploy Web to Cloudflare Pages
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - name: Trigger Cloudflare Pages build (server-side)
+        run: |
+          resp=$(curl -sf -X POST \
+            "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/pages/projects/motos-max-cordialidad/deployments" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -F "branch=main")
+          id=$(echo "$resp" | jq -r '.result.id // empty')
+          if [ -z "$id" ]; then
+            echo "::error::Could not create Pages deployment: $resp"
+            exit 1
+          fi
+          echo "DEPLOYMENT_ID=$id" >> "$GITHUB_ENV"
+          echo "Triggered Pages deployment $id"
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+      - name: Wait for Cloudflare build to go live
+        run: |
+          for i in $(seq 1 40); do
+            stage=$(curl -sf \
+              "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/pages/projects/motos-max-cordialidad/deployments/$DEPLOYMENT_ID" \
+              -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+              | jq -r '.result.latest_stage | .name + ":" + .status')
+            echo "[$i] $stage"
+            case "$stage" in
+              deploy:success) exit 0 ;;
+              *:failure) echo "::error::Cloudflare Pages build failed at $stage"; exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "::error::Timed out waiting for the Cloudflare Pages build"
+          exit 1
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # Same build the Cloudflare Git integration runs: next-on-pages wraps
-      # `next build` and emits the static output Pages expects. Publishing raw
-      # `.next` does NOT work on Cloudflare Pages.
-      - name: Build web (next-on-pages)
-        run: cd apps/web && npx @cloudflare/next-on-pages@1
-        env:
-          # The app appends /api/... itself — this must be the bare API origin.
-          # Falls back to the production API so a missing repo var never ships
-          # a build pointing at localhost.
-          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://motoworkshop-api.onrender.com' }}
-
-      # wrangler-action replaces the deprecated cloudflare/pages-action.
-      # workingDirectory makes it use the wrangler already installed in
-      # apps/web devDependencies — installing from the action fails in a pnpm
-      # workspace root (ERR_PNPM_ADDING_TO_ROOT).
-      # --branch=main marks it as a production deployment on the Pages project.
-      #
-      # WARNING: do NOT add a wrangler.toml under apps/web. When one exists,
-      # `wrangler pages deploy` SYNCS it into the Cloudflare project settings
-      # with paths relative to apps/web, clobbering the Git-integration build
-      # config (root-relative destination_dir, nodejs_compat flag) and breaking
-      # the automatic deploys. All deploy parameters belong on the CLI below;
-      # project settings live in the Cloudflare dashboard/API only.
-      - name: Publish to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/web
-          command: pages deploy .vercel/output/static --project-name=motos-max-cordialidad --branch=main
+      - name: Verify dynamic route (edge worker health)
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://motos-max-cordialidad.pages.dev/customers/00000000-0000-0000-0000-000000000000")
+          echo "GET /customers/<uuid> -> $code"
+          if [ "$code" = "500" ]; then
+            echo "::error::Dynamic routes are crashing (500) — the edge worker is broken."
+            exit 1
+          fi
