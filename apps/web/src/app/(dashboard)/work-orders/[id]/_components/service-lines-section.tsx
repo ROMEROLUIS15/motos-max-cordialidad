@@ -89,13 +89,36 @@ export function ServiceLinesSection({
         )}
         {detail.lines.map((l) => (
           <li key={l.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-            <span className="flex min-w-0 flex-col">
+            <span className="flex min-w-0 flex-col gap-1">
               <span className="text-foreground/90">{l.description}</span>
-              {l.technicianId && (
-                <span className="text-xs text-muted-foreground">
-                  Mecánico: {nameOf(l.technicianId)}
-                </span>
-              )}
+              {/* Mecánico editable en línea: antes solo se podía asignar al
+                  crear la línea y las existentes quedaban sin forma de cambiarlo. */}
+              <select
+                value={l.technicianId ?? ''}
+                disabled={busy}
+                onChange={(e) =>
+                  run(() =>
+                    apiSend(`/api/work-orders/${workOrderId}/lines/${l.id}`, 'PUT', {
+                      technicianId: e.target.value || null,
+                    }),
+                  )
+                }
+                className={cn(
+                  fieldBase,
+                  'h-7 w-fit max-w-[200px] cursor-pointer px-2 py-0 text-xs',
+                )}
+                aria-label={`Mecánico de ${l.description}`}
+              >
+                <option value="">Sin mecánico</option>
+                {technicians.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.fullName}
+                  </option>
+                ))}
+                {l.technicianId && !technicians.some((t) => t.id === l.technicianId) && (
+                  <option value={l.technicianId}>{nameOf(l.technicianId)}</option>
+                )}
+              </select>
             </span>
             <span className="flex items-center gap-3">
               <span className="tnum font-medium">{money(l.unitPrice)}</span>

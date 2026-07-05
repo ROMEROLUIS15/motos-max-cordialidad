@@ -13,6 +13,7 @@ import {
   type WorkOrderDetail,
   type PhotoEvidence,
 } from '@/types/workshop';
+import type { PaymentSummary } from '@/types/commerce';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,9 +34,13 @@ export default function WorkOrderDetailPage() {
   const { technicians, nameOf } = useTeam();
   const [detail, setDetail] = useState<WorkOrderDetail | null>(null);
   const [evidences, setEvidences] = useState<PhotoEvidence[]>([]);
+  const [summary, setSummary] = useState<PaymentSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Single source of financial truth: every mutation goes through run() →
+  // load(), which refreshes detail AND the payment summary together so
+  // Servicios/Repuestos/Total/Abonado/Restante never drift apart.
   const load = useCallback(async () => {
     try {
       const [d, ev] = await Promise.all([
@@ -46,6 +51,12 @@ export default function WorkOrderDetailPage() {
       setEvidences(ev);
     } catch (e) {
       setError((e as Error).message);
+    }
+    // Summary failure must not blank the whole page — degrade to detail-only.
+    try {
+      setSummary(await apiGet<PaymentSummary>(`/api/payments/summary/${id}`));
+    } catch {
+      setSummary(null);
     }
   }, [id]);
 
@@ -204,11 +215,12 @@ export default function WorkOrderDetailPage() {
       <PartsSection detail={detail} workOrderId={id} busy={busy} run={run} />
       <EvidencesSection evidences={evidences} workOrderId={id} busy={busy} run={run} />
       <QuotesSection workOrderId={id} woStatus={wo.status} />
-      <PaymentsSection workOrderId={id} orderTotal={detail.total} />
+      <PaymentsSection workOrderId={id} summary={summary} onChanged={() => void load()} />
 
       <Card>
         <CardContent className="p-5">
-          {/* Desglose completo: el total debe ser verificable a simple vista. */}
+          {/* Desglose financiero completo — una sola tarjeta donde todo cuadra:
+              Servicios + Repuestos = Total; Total − Abonado = Restante. */}
           <dl className="space-y-1.5 text-sm">
             <div className="flex items-center justify-between">
               <dt className="text-muted-foreground">Servicios</dt>
@@ -221,8 +233,18 @@ export default function WorkOrderDetailPage() {
               </dd>
             </div>
             <div className="flex items-center justify-between border-t border-border pt-1.5">
-              <dt className="text-base font-semibold">Total</dt>
-              <dd className="tnum text-xl font-semibold">{money(detail.total)}</dd>
+              <dt className="font-medium">Total</dt>
+              <dd className="tnum font-semibold">{money(detail.total)}</dd>
+            </div>
+            <div className="flex items-center justify-between">
+              <dt className="text-muted-foreground">Abonado</dt>
+              <dd className="tnum text-success">{money(summary?.totalPaid ?? 0)}</dd>
+            </div>
+            <div className="flex items-center justify-between border-t border-border pt-1.5">
+              <dt className="text-base font-semibold">Restante</dt>
+              <dd className="tnum text-xl font-semibold">
+                {money(summary ? summary.balance : detail.total)}
+              </dd>
             </div>
           </dl>
           <h3 className="mb-2 mt-5 text-sm font-medium text-muted-foreground">

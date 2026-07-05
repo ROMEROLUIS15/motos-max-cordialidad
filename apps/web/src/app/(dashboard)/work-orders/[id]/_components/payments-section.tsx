@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
-import { apiGet, apiSend } from '@/lib/api';
+import { apiSend } from '@/lib/api';
 import {
   PAYMENT_METHODS,
   PAYMENT_METHOD_LABELS,
@@ -15,34 +15,26 @@ import { Input, fieldBase } from '@/components/ui/input';
 import { SectionCard } from './section-card';
 import { money } from './types';
 
+/**
+ * Presentational: the summary (Total/Abonado/Restante) is owned by the page
+ * so the financial breakdown card and this section can never disagree.
+ * `onChanged` asks the page to refresh everything after a new payment.
+ */
 export function PaymentsSection({
   workOrderId,
-  orderTotal,
+  summary,
+  onChanged,
 }: {
   workOrderId: string;
-  /**
-   * Current order total from the detail payload. Only used as a refresh
-   * signal: when a service line or part changes the total, the summary
-   * (Pagado/Saldo) is re-fetched so it never shows a stale balance.
-   */
-  orderTotal?: number;
+  summary: PaymentSummary | null;
+  onChanged: () => void;
 }) {
-  const [summary, setSummary] = useState<PaymentSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('CASH');
   const [reference, setReference] = useState('');
   const [busy, setBusy] = useState(false);
-
-  const load = useCallback(() => {
-    apiGet<PaymentSummary>(`/api/payments/summary/${workOrderId}`)
-      .then(setSummary)
-      .catch((e) => setError((e as Error).message));
-  }, [workOrderId]);
-  useEffect(() => {
-    void load();
-  }, [load, orderTotal]);
 
   const register = async () => {
     setBusy(true);
@@ -57,7 +49,7 @@ export function PaymentsSection({
       setAmount('');
       setReference('');
       setShowForm(false);
-      load();
+      onChanged();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -83,17 +75,15 @@ export function PaymentsSection({
 
       {summary && (
         <div className="mb-4">
-          <div className="mb-1.5 flex flex-wrap justify-between gap-2 text-sm">
-            <span className="text-muted-foreground">
-              Total:{' '}
+          <div className="mb-1.5 flex justify-between text-sm text-muted-foreground">
+            <span>
+              Abonado{' '}
+              <span className="tnum font-medium text-foreground">{money(summary.totalPaid)}</span>
+              {' de '}
               <span className="tnum font-medium text-foreground">{money(summary.orderTotal)}</span>
             </span>
-            <span className="text-muted-foreground">
-              Abonado:{' '}
-              <span className="tnum font-medium text-foreground">{money(summary.totalPaid)}</span>
-            </span>
-            <span className="text-muted-foreground">
-              Restante:{' '}
+            <span>
+              Restante{' '}
               <span className="tnum font-medium text-foreground">{money(summary.balance)}</span>
             </span>
           </div>
