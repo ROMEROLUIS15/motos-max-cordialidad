@@ -250,6 +250,16 @@ Todo push a `main` corre la misma secuencia; nada se despliega si un check falla
 
 **Local Windows**: `npx @cloudflare/next-on-pages` / `pnpm dlx @cloudflare/next-on-pages` fallan con `spawn npx/pnpm ENOENT` — es un bug conocido del Vercel CLI (que next-on-pages invoca internamente) en Windows, no del proyecto. Verificar solo con `next build` local; el build real de Cloudflare corre en CI.
 
+### Rutas dinámicas ([id]) devuelven 500 en producción pero los previews funcionan
+
+**Síntoma**: `/work-orders/<id>`, `/customers/<id>`, `/vehicles/<id>` responden `Internal Server Error` (texto plano, header `x-matched-path` presente) en `motos-max-cordialidad.pages.dev`, mientras las rutas estáticas (`/`, `/login`) dan 200 — y el MISMO commit desplegado como preview (URL `<hash>.motos-max-cordialidad.pages.dev` de una rama) funciona.
+
+**Causa (incidente 2026-07-04)**: la config de **producción** del proyecto Pages difiere de la de preview. En el incidente real, `deployment_configs.production.compatibility_date` quedó en `2024-01-01` (residuo de la recuperación del incidente del wrangler.toml) — el worker corría con runtime de 2024, incapaz de ejecutar Next 15.5. Los previews tenían la fecha correcta, lo que hizo que todo bisect por commit diera "verde" y despistara hacia el código.
+
+**Diagnóstico**: comparar ambas configs — `GET /accounts/{account}/pages/projects/motos-max-cordialidad` → `deployment_configs.preview` vs `.production` (compatibility_date, compatibility_flags, env_vars).
+
+**Acción**: `PATCH` al proyecto igualando production a preview (compatibility*date, `compatibility_flags:["nodejs_compat"]`, env vars `NEXT_PUBLIC*\*`), luego re-desplegar (`POST .../deployments -F branch=main`). El paso "Verify dynamic route" del CI existe precisamente para atrapar esto: un smoke test de rutas estáticas NO detecta un worker roto.
+
 ### E2E de Web fallan en bucle con "Demasiados intentos. Intenta de nuevo en 5 minutos."
 
 **Causa**: `POST /api/auth/login` tiene throttle real de 5 intentos / 5 minutos por IP (ver [SECURITY.md](SECURITY.md#rate-limiting)). Cada spec de `apps/web/e2e/*.spec.ts` hace login real contra la API local — correr toda la suite varias veces seguidas (o en paralelo con varios workers) agota la cuota.

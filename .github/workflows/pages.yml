@@ -3,13 +3,15 @@ name: Deploy to Cloudflare Pages
 # Manual fallback deploy. CI (ci.yml deploy-web) is what deploys on every push
 # to main — keep this workflow_dispatch-only to avoid double deploys.
 #
-# INCIDENT 2026-07-04: this workflow used to build next-on-pages in Actions
-# and upload the artifact with `wrangler pages deploy`. That artifact's worker
-# crashed on every dynamic route ([id] pages → 500) while the same code built
-# by Cloudflare's own build environment worked. Deploys now trigger the
-# server-side Pages build via API — same method as ci.yml. Do not bring the
-# wrangler upload back (and never add a wrangler.toml under apps/web: wrangler
-# would sync it into the project settings and clobber them).
+# INCIDENT 2026-07-04: production's Cloudflare deployment config carried
+# compatibility_date 2024-01-01 (residue of the wrangler.toml config-sync
+# incident) — every production deploy ran the worker under a 2024 runtime and
+# all dynamic [id] routes returned 500, while previews (correct date) worked.
+# Fixed via PATCH on deployment_configs.production. Deploys now trigger the
+# server-side Pages build via API — same method as ci.yml — and verify a
+# dynamic route afterwards. Never add a wrangler.toml under apps/web:
+# wrangler would sync it into the project settings and clobber them (that is
+# exactly how the bad compatibility_date got there).
 on:
   workflow_dispatch:
 
