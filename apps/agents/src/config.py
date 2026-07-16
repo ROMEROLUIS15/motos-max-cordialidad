@@ -17,6 +17,9 @@ from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b"
+
+
 def _find_env_file() -> str | None:
     """Walk up from this file looking for a repo-root ``.env.local``."""
     here = Path(__file__).resolve()
@@ -47,6 +50,10 @@ class Settings(BaseSettings):
     # LLM providers (DeepSeek primary, Groq fallback).
     DEEPSEEK_API_KEY: str = ""
     GROQ_API_KEY: str = ""
+    # Overridable so a Groq model deprecation is a config change, not a deploy.
+    # An empty value falls back to the default (the shared .env.local ships the
+    # key blank, which would otherwise mean "no model").
+    GROQ_MODEL: str = DEFAULT_GROQ_MODEL
 
     # Cloudflare R2 (reports upload).
     R2_ACCOUNT_ID: str = ""

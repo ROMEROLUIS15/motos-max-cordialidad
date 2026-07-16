@@ -37,6 +37,27 @@ def test_provider_order_is_deepseek_then_groq() -> None:
     assert factory.providers == ["deepseek", "groq"]
 
 
+def test_groq_uses_the_default_model() -> None:
+    factory = LLMFactory(_settings(), client_builder=lambda cfg, t: _FakeClient(content="x"))
+    groq = next(c for c in factory._configs if c.name == "groq")
+    assert groq.model == "openai/gpt-oss-120b"
+
+
+def test_groq_model_is_overridable_via_settings() -> None:
+    settings = Settings(DEEPSEEK_API_KEY="dk", GROQ_API_KEY="gk", GROQ_MODEL="qwen/qwen3.6-27b")
+    factory = LLMFactory(settings, client_builder=lambda cfg, t: _FakeClient(content="x"))
+    groq = next(c for c in factory._configs if c.name == "groq")
+    assert groq.model == "qwen/qwen3.6-27b"
+
+
+def test_groq_model_falls_back_to_default_when_blank() -> None:
+    # The shared .env.local ships GROQ_MODEL blank; that must not mean "no model".
+    settings = Settings(DEEPSEEK_API_KEY="dk", GROQ_API_KEY="gk", GROQ_MODEL="")
+    factory = LLMFactory(settings, client_builder=lambda cfg, t: _FakeClient(content="x"))
+    groq = next(c for c in factory._configs if c.name == "groq")
+    assert groq.model == "openai/gpt-oss-120b"
+
+
 async def test_uses_primary_when_it_succeeds() -> None:
     used: list[str] = []
 

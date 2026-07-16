@@ -59,6 +59,10 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
+      # Optional override of the Groq model (code default: openai/gpt-oss-120b).
+      # Set it in the dashboard when Groq deprecates a model — no deploy needed.
+      - key: GROQ_MODEL
+        sync: false
       - key: SENTRY_DSN
         sync: false
       # URL of the Python agents service (admin WhatsApp routing). Set in the
@@ -116,6 +120,10 @@ services:
       - key: DEEPSEEK_API_KEY
         sync: false
       - key: GROQ_API_KEY
+        sync: false
+      # Optional override of the Groq model (code default: openai/gpt-oss-120b).
+      # Set it in the dashboard when Groq deprecates a model — no deploy needed.
+      - key: GROQ_MODEL
         sync: false
       - key: R2_ACCOUNT_ID
         sync: false

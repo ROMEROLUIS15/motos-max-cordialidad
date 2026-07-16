@@ -30,6 +30,7 @@ Todas las de `.env.local.example` excepto las específicas de web:
 - `WHATSAPP_UTILITY_TEMPLATE` (opcional) — nombre de una plantilla **utility aprobada** en Meta con un único parámetro de body. Ejemplo: nombre `notificacion_taller`, idioma **Español a secas** (el código envía `code: 'es'`; una variante como es_MX da error 132001), body: "Hola, tienes una novedad de tu taller: {{1}}. Si tienes alguna duda, responde a este mensaje." — ojo: Meta **rechaza** plantillas cuyo body empieza o termina con la variable, y solo se llenan parámetros del body (sin header con variable ni botones dinámicos). Si está configurada, los mensajes fuera de la ventana de 24h se envían con esta plantilla en vez de texto libre (que Meta rechaza con error 131047). Sin configurar, se intenta texto libre y el fallo queda visible (mensaje FAILED + notificación in-app a admins).
 - `WHATSAPP_API_VERSION` (opcional, default `v21.0`) — versión de Graph API; permite el bump sin tocar código cuando Meta retire la versión actual (~2 años de soporte por versión).
 - `DEEPSEEK_API_KEY`, `GROQ_API_KEY`
+- `GROQ_MODEL` (opcional, default `openai/gpt-oss-120b`) — modelo de Groq; permite el cambio sin tocar código cuando Groq deprecie el modelo actual (avisan por email con ~1 mes de margen). Modelos vigentes en https://console.groq.com/docs/models. Debe soportar tool calling (lo usa el RouterAgent). Vacío = default.
 - `SENTRY_DSN`
 - `NODE_ENV=production`, `ALLOWED_ORIGINS`
 - `AGENTS_BASE_URL`, `SERVICE_TOKEN_TTL_SECONDS`
@@ -51,6 +52,7 @@ Configurado en el dashboard de Cloudflare Pages > Settings > Environment variabl
 - `JWT_SECRET` (compartido con API, para firmar/verificar service tokens)
 - `API_BASE_URL=https://motoworkshop-api.onrender.com`
 - `DEEPSEEK_API_KEY`, `GROQ_API_KEY`
+- `GROQ_MODEL` (opcional, default `openai/gpt-oss-120b`) — igual que en la API; ambos servicios lo leen por separado, así que un cambio de modelo hay que hacerlo **en los dos**
 - `SENTRY_DSN`
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`
 - `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`
