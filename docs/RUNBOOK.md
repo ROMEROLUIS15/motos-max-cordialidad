@@ -52,7 +52,7 @@ Configurado en el dashboard de Cloudflare Pages > Settings > Environment variabl
 - `JWT_SECRET` (compartido con API, para firmar/verificar service tokens)
 - `API_BASE_URL=https://motoworkshop-api.onrender.com`
 - `DEEPSEEK_API_KEY`, `GROQ_API_KEY`
-- `GROQ_MODEL` (opcional, default `openai/gpt-oss-120b`) — igual que en la API; ambos servicios lo leen por separado, así que un cambio de modelo hay que hacerlo **en los dos**
+- `GROQ_MODEL` (opcional, default `openai/gpt-oss-120b`) — igual que en la API; ambos servicios lo leen por separado, así que un cambio de modelo hay que hacerlo **en los dos**. Un cambio de variable en Render **no aplica hasta el próximo deploy** (`autoDeployTrigger: off`): tras cambiarla, redesplegar. El modelo que el proceso está usando de verdad se comprueba con `curl https://motoworkshop-agents.onrender.com/health` → campo `llm.fallback` (la API no expone el suyo; usa el mismo valor)
 - `SENTRY_DSN`
 - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`
 - `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`
@@ -146,10 +146,10 @@ En **producción**, la migración se ejecuta automáticamente dentro del `CMD` d
 
 ## Health Checks
 
-| Servicio      | Endpoint          | Respuesta esperada                                   |
-| ------------- | ----------------- | ---------------------------------------------------- |
-| API NestJS    | `GET /api/health` | `200 { "status": "ok" }`                             |
-| Agents Python | `GET /health`     | `200 { "status": "ok", "redis": true, "api": true }` |
+| Servicio      | Endpoint          | Respuesta esperada                                                                                                             |
+| ------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| API NestJS    | `GET /api/health` | `200 { "status": "ok" }`                                                                                                       |
+| Agents Python | `GET /health`     | `200 { "status": "ok", "redis": true, "api": true, "llm": { "primary": "deepseek-chat", "fallback": "openai/gpt-oss-120b" } }` |
 
 Render usa estos endpoints para determinar si el servicio está vivo, y el job `smoke-web`/keep-alive los consulta cada 10 minutos para evitar que el plan free entre en sleep.
 

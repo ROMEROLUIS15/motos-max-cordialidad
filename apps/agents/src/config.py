@@ -66,6 +66,11 @@ class Settings(BaseSettings):
     ADMIN_SESSION_TTL_SECONDS: int = 7200  # 2 hours
     SCHEDULER_ENABLED: bool = True  # disable for a second instance or local runs
 
+    @property
+    def groq_model(self) -> str:
+        """Model to use for Groq, treating a blank value as unset."""
+        return self.GROQ_MODEL or DEFAULT_GROQ_MODEL
+
     @model_validator(mode="after")
     def _check_prod_secrets(self) -> Settings:
         if os.getenv("NODE_ENV") == "production" or os.getenv("ENV") == "production":
