@@ -46,7 +46,7 @@ def _build_configs(settings: Settings) -> list[ProviderConfig]:
             ProviderConfig(
                 name="groq",
                 base_url="https://api.groq.com/openai/v1",
-                model="llama-3.3-70b-versatile",
+                model="openai/gpt-oss-120b",
                 api_key=settings.GROQ_API_KEY,
             )
         )

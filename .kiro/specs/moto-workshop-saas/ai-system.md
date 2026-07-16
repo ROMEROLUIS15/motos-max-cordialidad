@@ -178,7 +178,7 @@ interface GetVehicleHistoryOutput {
 
 // Tool: createAppointment
 interface CreateAppointmentInput {
-  customerId: string;   // UUID
+  customerId: string; // UUID
   requestedDate: string; // ISO 8601
   serviceType: ServiceType;
   notes?: string;
@@ -196,7 +196,7 @@ interface CreateQuoteInput {
 interface CreateQuoteOutput {
   quoteNumber: string;
   total: number;
-  pdfUrl: string;      // URL pre-firmada 24h
+  pdfUrl: string; // URL pre-firmada 24h
   validUntil: string;
 }
 
@@ -244,7 +244,7 @@ interface LLMProviderConfig {
   };
   secondary: {
     provider: 'groq';
-    model: 'llama-3.1-70b-versatile'; // o equivalente disponible
+    model: 'openai/gpt-oss-120b'; // o equivalente disponible
     timeout: 10_000; // ms
     maxRetries: 1;
   };
@@ -255,13 +255,13 @@ interface LLMProviderConfig {
 
 ## Límites y Protecciones
 
-| Límite | Valor | Consecuencia si se supera |
-|--------|-------|--------------------------|
-| Invocaciones de Tools por mensaje | 5 | Escalar a recepcionista |
-| Timeout por Tool | 5 segundos | Error de timeout al LLM |
-| Timeout por llamada LLM | 10 segundos | Fallback al proveedor secundario |
-| Intentos de resolución consecutivos | 3 | Escalar a recepcionista |
-| Acceso a datos sin verificar identidad | Solo `getBusinessInformation` | N/A — restricción de diseño |
+| Límite                                 | Valor                         | Consecuencia si se supera        |
+| -------------------------------------- | ----------------------------- | -------------------------------- |
+| Invocaciones de Tools por mensaje      | 5                             | Escalar a recepcionista          |
+| Timeout por Tool                       | 5 segundos                    | Error de timeout al LLM          |
+| Timeout por llamada LLM                | 10 segundos                   | Fallback al proveedor secundario |
+| Intentos de resolución consecutivos    | 3                             | Escalar a recepcionista          |
+| Acceso a datos sin verificar identidad | Solo `getBusinessInformation` | N/A — restricción de diseño      |
 
 ---
 
@@ -274,7 +274,7 @@ interface AIInvocationLog {
   timestamp: string;
   traceId: string;
   tenantId: string;
-  sessionId: string;       // WhatsAppSession.id
+  sessionId: string; // WhatsAppSession.id
   provider: 'deepseek' | 'groq' | 'fallback';
   toolName?: string;
   toolInput?: Record<string, unknown>; // sin datos sensibles
@@ -315,11 +315,13 @@ escalate_to_human:
 La arquitectura de Fase 1 está diseñada para que la adición de agentes especializados no requiera modificar los contratos de Tools existentes:
 
 **Fase 2 — Adición de agentes especializados:**
+
 - Cada agente especializado tiene su propio conjunto de Tools.
 - El RouterAgent actualiza su lógica de clasificación para delegar al agente correcto.
 - Los casos de uso del dominio no cambian.
 
 **Fase 3 — SupervisorAgent:**
+
 - El SupervisorAgent recibe la intención clasificada y coordina múltiples agentes especializados.
 - Puede invocar Tools de diferentes agentes en secuencia o en paralelo.
 - Los resultados se consolidan antes de generar la respuesta al cliente.

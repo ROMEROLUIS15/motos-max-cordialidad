@@ -502,7 +502,7 @@ def get_deepseek_llm() -> ChatOpenAI:
 @lru_cache(maxsize=1)
 def get_groq_llm() -> ChatOpenAI:
     return ChatOpenAI(
-        model="llama-3.1-70b-versatile",
+        model="openai/gpt-oss-120b",
         base_url="https://api.groq.com/openai/v1",
         api_key=settings.GROQ_API_KEY,
         timeout=10,
