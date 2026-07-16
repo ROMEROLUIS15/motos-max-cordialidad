@@ -16,7 +16,6 @@ from pathlib import Path
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b"
 
 
