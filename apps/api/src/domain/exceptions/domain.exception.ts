@@ -34,9 +34,18 @@ export class VehicleHasActiveOrderException extends DomainException {
 }
 
 export class InsufficientStockException extends DomainException {
-  constructor(partId: string, requested: number, available: number) {
+  /**
+   * The message reaches the user, so it never carries internal IDs (same rule as
+   * VehicleHasActiveOrderException). Callers always know which part they acted
+   * on — the UI names it. `partId` stays readable for logs and Sentry.
+   */
+  constructor(
+    public readonly partId: string,
+    public readonly requested: number,
+    public readonly available: number,
+  ) {
     super(
-      `Stock insuficiente para el repuesto ${partId}: solicitado ${requested}, disponible ${available}`,
+      `Stock insuficiente para el repuesto: solicitado ${requested}, disponible ${available}`,
       'INSUFFICIENT_STOCK',
     );
   }
