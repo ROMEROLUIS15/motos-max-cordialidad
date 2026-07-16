@@ -180,33 +180,34 @@ pnpm --filter @motoworkshop/api db:seed
 
 ## Variables de entorno
 
-| Variable                   | Descripción                                   | Obligatoria en producción  |
-| -------------------------- | --------------------------------------------- | -------------------------- |
-| `DATABASE_URL`             | URL de conexión PostgreSQL (Neon)             | Sí                         |
-| `REDIS_URL`                | URL de conexión Redis                         | Sí                         |
-| `JWT_SECRET`               | Secreto para firmar JWT (≥ 32 chars)          | Sí                         |
-| `JWT_EXPIRES_IN`           | Expiración del access token (ej. `15m`)       | No                         |
-| `JWT_REFRESH_EXPIRES_IN`   | Expiración del refresh token                  | No                         |
-| `ENCRYPTION_KEY`           | Clave AES-256-GCM en hex (64 chars)           | Sí                         |
-| `R2_ACCOUNT_ID`            | ID de cuenta Cloudflare R2                    | Sí                         |
-| `R2_ACCESS_KEY_ID`         | Access Key R2                                 | Sí                         |
-| `R2_SECRET_ACCESS_KEY`     | Secret Key R2                                 | Sí                         |
-| `R2_BUCKET_NAME`           | Nombre del bucket R2                          | Sí                         |
-| `R2_PUBLIC_URL`            | URL pública del bucket R2                     | Sí                         |
-| `WHATSAPP_PHONE_NUMBER_ID` | ID de número de teléfono WhatsApp Business    | Sí                         |
-| `WHATSAPP_ACCESS_TOKEN`    | Token de acceso WhatsApp Cloud API            | Sí                         |
-| `WHATSAPP_VERIFY_TOKEN`    | Token de verificación del webhook             | Sí                         |
-| `WHATSAPP_APP_SECRET`      | App Secret de Meta                            | Sí                         |
-| `RESEND_API_KEY`           | API Key de Resend (envío de correo)           | Sí                         |
-| `DEEPSEEK_API_KEY`         | API Key de DeepSeek                           | Sí (al menos un proveedor) |
-| `GROQ_API_KEY`             | API Key de Groq (fallback de LLM)             | No                         |
-| `SENTRY_DSN`               | DSN de Sentry                                 | No                         |
-| `NODE_ENV`                 | `development` / `production`                  | Sí                         |
-| `ALLOWED_ORIGINS`          | Orígenes CORS permitidos (separados por coma) | Sí                         |
-| `AGENTS_BASE_URL`          | URL del microservicio de agentes              | Sí                         |
-| `API_BASE_URL`             | URL de la API, consumida por los agentes      | Sí                         |
-| `SCHEDULER_ENABLED`        | Habilita el scheduler de reportes/alertas     | No                         |
-| `TZ`                       | Zona horaria (ej. `America/Bogota`)           | No                         |
+| Variable                   | Descripción                                    | Obligatoria en producción  |
+| -------------------------- | ---------------------------------------------- | -------------------------- |
+| `DATABASE_URL`             | URL de conexión PostgreSQL (Neon)              | Sí                         |
+| `REDIS_URL`                | URL de conexión Redis                          | Sí                         |
+| `JWT_SECRET`               | Secreto para firmar JWT (≥ 32 chars)           | Sí                         |
+| `JWT_EXPIRES_IN`           | Expiración del access token (ej. `15m`)        | No                         |
+| `JWT_REFRESH_EXPIRES_IN`   | Expiración del refresh token                   | No                         |
+| `ENCRYPTION_KEY`           | Clave AES-256-GCM en hex (64 chars)            | Sí                         |
+| `R2_ACCOUNT_ID`            | ID de cuenta Cloudflare R2                     | Sí                         |
+| `R2_ACCESS_KEY_ID`         | Access Key R2                                  | Sí                         |
+| `R2_SECRET_ACCESS_KEY`     | Secret Key R2                                  | Sí                         |
+| `R2_BUCKET_NAME`           | Nombre del bucket R2                           | Sí                         |
+| `R2_PUBLIC_URL`            | URL pública del bucket R2                      | Sí                         |
+| `WHATSAPP_PHONE_NUMBER_ID` | ID de número de teléfono WhatsApp Business     | Sí                         |
+| `WHATSAPP_ACCESS_TOKEN`    | Token de acceso WhatsApp Cloud API             | Sí                         |
+| `WHATSAPP_VERIFY_TOKEN`    | Token de verificación del webhook              | Sí                         |
+| `WHATSAPP_APP_SECRET`      | App Secret de Meta                             | Sí                         |
+| `RESEND_API_KEY`           | API Key de Resend (envío de correo)            | Sí                         |
+| `DEEPSEEK_API_KEY`         | API Key de DeepSeek                            | Sí (al menos un proveedor) |
+| `GROQ_API_KEY`             | API Key de Groq (fallback de LLM)              | No                         |
+| `GROQ_MODEL`               | Modelo de Groq (default `openai/gpt-oss-120b`) | No                         |
+| `SENTRY_DSN`               | DSN de Sentry                                  | No                         |
+| `NODE_ENV`                 | `development` / `production`                   | Sí                         |
+| `ALLOWED_ORIGINS`          | Orígenes CORS permitidos (separados por coma)  | Sí                         |
+| `AGENTS_BASE_URL`          | URL del microservicio de agentes               | Sí                         |
+| `API_BASE_URL`             | URL de la API, consumida por los agentes       | Sí                         |
+| `SCHEDULER_ENABLED`        | Habilita el scheduler de reportes/alertas      | No                         |
+| `TZ`                       | Zona horaria (ej. `America/Bogota`)            | No                         |
 
 ---
 

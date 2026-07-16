@@ -8,7 +8,8 @@ export class GroqAdapter extends OpenAICompatibleAdapter {
       name: 'groq',
       baseUrl: 'https://api.groq.com/openai/v1',
       apiKey: process.env['GROQ_API_KEY'] ?? '',
-      model: 'llama-3.3-70b-versatile',
+      // Overridable so a Groq model deprecation is a config change, not a deploy.
+      model: process.env['GROQ_MODEL'] || 'openai/gpt-oss-120b',
       timeoutMs: 10_000,
     });
   }
