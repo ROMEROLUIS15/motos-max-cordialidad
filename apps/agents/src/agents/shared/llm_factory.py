@@ -13,7 +13,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from ...config import DEFAULT_GROQ_MODEL, Settings, get_settings
+from ...config import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ def _build_configs(settings: Settings) -> list[ProviderConfig]:
             ProviderConfig(
                 name="groq",
                 base_url="https://api.groq.com/openai/v1",
-                model=settings.GROQ_MODEL or DEFAULT_GROQ_MODEL,
+                model=settings.groq_model,
                 api_key=settings.GROQ_API_KEY,
             )
         )
