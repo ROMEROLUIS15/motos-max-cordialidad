@@ -82,7 +82,8 @@ import { RATE_LIMIT_PER_HOUR, RATE_LIMIT_PER_MINUTE } from './presentation/http/
     { provide: APP_FILTER, useClass: DomainExceptionFilter },
     { provide: APP_FILTER, useClass: ThrottlerExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: TraceIdInterceptor },
-    // Path-aware global guard: keys by IP+path so each route has its own counter.
+    // Keys by caller (user when authenticated, IP when not) + path, so each
+    // route has its own counter and a shared office IP is not a shared quota.
     // Per-route @Throttle() overrides still apply on top of this.
     { provide: APP_GUARD, useClass: GlobalThrottlerGuard },
   ],
