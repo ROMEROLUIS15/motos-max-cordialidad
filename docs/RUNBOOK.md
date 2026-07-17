@@ -271,6 +271,23 @@ Todo push a `main` corre la misma secuencia; nada se despliega si un check falla
 
 **Acción**: esperar a que expire la ventana (o hacer polling: `curl -X POST .../api/auth/login` hasta que deje de responder `429`) antes de reintentar. No es un bug de los tests; es el rate-limit funcionando como se diseñó.
 
+### La app responde 429 con uso normal (o una pantalla deja de refrescarse sola)
+
+**Síntoma**: peticiones rechazadas con `429` sin que nadie esté haciendo nada raro. La variante silenciosa es peor: la campana de notificaciones o una pantalla que se auto-refresca deja de actualizarse, sin error visible — un refresco en segundo plano que recibe `429` no tiene a nadie mirando.
+
+**Causa habitual**: el techo horario de una ruta quedó por debajo del tráfico que el propio cliente genera. El frontend refresca varias pantallas por temporizador (`usePolling`), así que una pestaña abierta produce peticiones constantes sin intervención del usuario: a 30 s de intervalo son 120/hora **por pantalla**.
+
+**Diagnóstico**:
+
+```bash
+# ¿Qué ruta está siendo limitada? El 429 responde con el header estándar
+curl -i -H "Authorization: Bearer $TOKEN" https://motoworkshop-api.onrender.com/api/notifications/unread-count | head -12
+```
+
+**Acción**: no subir el número a ojo. El techo se deriva del intervalo del cliente en `apps/api/src/presentation/http/rate-limit.policy.ts`, y `rate-limit.policy.spec.ts` verifica en CI que ningún intervalo de `apps/web` se acerque al límite. Si una pantalla nueva empieza a hacer polling más rápido, ese test falla y señala el archivo: la corrección es ajustar el intervalo o el margen, en el mismo sitio donde vive la fórmula. Ver [ADR-012](ADR.md) y [SECURITY.md](SECURITY.md#rate-limiting).
+
+**Nota sobre la clave**: el contador va por **usuario** en rutas autenticadas, no por IP, así que los empleados de un mismo taller no comparten cuota aunque salgan por el mismo router. Si aparecen `429` en rutas anónimas (login, forgot-password), ahí la clave sí es la IP y el límite estricto es intencional.
+
 ### Scheduler no ejecuta reportes
 
 **Síntoma**: No se generan reportes semanales/mensuales.

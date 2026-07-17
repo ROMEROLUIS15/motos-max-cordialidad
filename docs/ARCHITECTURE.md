@@ -128,24 +128,24 @@ constructor(
 
 ## Módulos NestJS
 
-| Módulo                | Puerto                                     | Responsabilidad                        |
-| --------------------- | ------------------------------------------ | -------------------------------------- |
-| `IdentityModule`      | —                                          | Autenticación, JWT, roles, permisos    |
-| `CustomersModule`     | `CUSTOMERS_MODULE`                         | CRUD clientes + WhatsApp session       |
-| `VehiclesModule`      | —                                          | CRUD vehículos + historial             |
-| `WorkshopModule`      | —                                          | Órdenes de trabajo, estados, partes    |
-| `InventoryModule`     | —                                          | Partes, stock por sucursal             |
-| `CommerceModule`      | —                                          | Ventas de motos, órdenes de venta      |
-| `MessagingModule`     | `WHATSAPP_SENDER_PORT`                     | WhatsApp Cloud API (envío + webhook)   |
-| `AiModule`            | `ROUTER_AGENT_PORT`, `AGENTS_SERVICE_PORT` | RouterAgent LLM + tool execution       |
-| `AgentsModule`        | —                                          | Service-to-service con Python          |
-| `NotificationsModule` | —                                          | Notificaciones in-app + WebSocket      |
-| `DashboardModule`     | —                                          | Resúmenes y métricas                   |
-| `SettingsModule`      | —                                          | Configuración del tenant               |
-| `SalesModule`         | —                                          | Módulo de ventas (catálogo + unidades) |
-| `HomeServicesModule`  | —                                          | Servicios a domicilio                  |
-| `AuditModule`         | —                                          | Auditoría de acciones                  |
-| `ReferenceModule`     | —                                          | Tablas de referencia (modelos, etc.)   |
+| Módulo                | Puerto                                     | Responsabilidad                                                                                                     |
+| --------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `IdentityModule`      | —                                          | Autenticación, JWT, roles, permisos                                                                                 |
+| `CustomersModule`     | `CUSTOMERS_MODULE`                         | CRUD clientes + WhatsApp session                                                                                    |
+| `VehiclesModule`      | —                                          | CRUD vehículos + historial                                                                                          |
+| `WorkshopModule`      | —                                          | Órdenes de trabajo, estados, partes                                                                                 |
+| `InventoryModule`     | —                                          | Partes, stock por sucursal                                                                                          |
+| `CommerceModule`      | —                                          | Ventas de motos, órdenes de venta                                                                                   |
+| `MessagingModule`     | `WHATSAPP_SENDER_PORT`                     | WhatsApp Cloud API (envío + webhook)                                                                                |
+| `AiModule`            | `ROUTER_AGENT_PORT`, `AGENTS_SERVICE_PORT` | RouterAgent LLM + tool execution                                                                                    |
+| `AgentsModule`        | —                                          | Service-to-service con Python                                                                                       |
+| `NotificationsModule` | —                                          | Notificaciones in-app (API REST + gateway WebSocket; el cliente web consume hoy el REST por temporizador — ADR-012) |
+| `DashboardModule`     | —                                          | Resúmenes y métricas                                                                                                |
+| `SettingsModule`      | —                                          | Configuración del tenant                                                                                            |
+| `SalesModule`         | —                                          | Módulo de ventas (catálogo + unidades)                                                                              |
+| `HomeServicesModule`  | —                                          | Servicios a domicilio                                                                                               |
+| `AuditModule`         | —                                          | Auditoría de acciones                                                                                               |
+| `ReferenceModule`     | —                                          | Tablas de referencia (modelos, etc.)                                                                                |
 
 ---
 

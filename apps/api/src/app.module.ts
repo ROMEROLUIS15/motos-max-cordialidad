@@ -26,19 +26,25 @@ import { ReferenceModule } from './reference.module';
 import { DomainExceptionFilter } from './presentation/http/filters/domain-exception.filter';
 import { SentryExceptionFilter } from './presentation/http/filters/sentry-exception.filter';
 import { ThrottlerExceptionFilter } from './presentation/http/filters/throttler-exception.filter';
+import { RATE_LIMIT_PER_HOUR, RATE_LIMIT_PER_MINUTE } from './presentation/http/rate-limit.policy';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot({
       throttlers: [
-        // Short window: 60 requests/minute per IP (general protection).
+        // Short window: absorbs bursts. A page load fans out to several routes,
+        // but each route has its own counter (see GlobalThrottlerGuard), so this
+        // is 60/minute per route per caller.
         // MUST be named 'default' — route-level @Throttle({ default: {...} })
         // overrides target the throttler by name; two unnamed entries both
         // resolve to 'default' and the override becomes ambiguous.
-        { name: 'default', ttl: 60_000, limit: 60 },
-        // Circuit breaker: 100 requests/hour per IP (coordinated brute-force)
-        { name: 'hourly', ttl: 3_600_000, limit: 100 },
+        { name: 'default', ttl: 60_000, limit: RATE_LIMIT_PER_MINUTE },
+        // Long window: a circuit breaker against sustained abuse. The ceiling is
+        // derived from what the web client itself does — it polls some routes on
+        // a timer — with headroom on top; see RATE_LIMIT_PER_HOUR and the test
+        // that keeps both numbers in agreement.
+        { name: 'hourly', ttl: 3_600_000, limit: RATE_LIMIT_PER_HOUR },
       ],
       // E2E tests run the whole suite from one IP and would trip real limits.
       // Under NODE_ENV=test throttling is skipped UNLESS the request opts in
@@ -76,7 +82,8 @@ import { ThrottlerExceptionFilter } from './presentation/http/filters/throttler-
     { provide: APP_FILTER, useClass: DomainExceptionFilter },
     { provide: APP_FILTER, useClass: ThrottlerExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: TraceIdInterceptor },
-    // Path-aware global guard: keys by IP+path so each route has its own counter.
+    // Keys by caller (user when authenticated, IP when not) + path, so each
+    // route has its own counter and a shared office IP is not a shared quota.
     // Per-route @Throttle() overrides still apply on top of this.
     { provide: APP_GUARD, useClass: GlobalThrottlerGuard },
   ],

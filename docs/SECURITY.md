@@ -55,19 +55,25 @@ Misma lógica que HTTP CORS. El gateway de WebSocket (`NotificationsGateway`) le
 
 ## Rate Limiting
 
-| Ámbito                               | Límite       | Ventana    | Clave      | Implementación                                  |
-| ------------------------------------ | ------------ | ---------- | ---------- | ----------------------------------------------- |
-| Global (todas las rutas)             | 60 requests  | 1 minuto   | IP + ruta  | `GlobalThrottlerGuard` como `APP_GUARD`         |
-| Global — circuito de contención      | 100 requests | 1 hora     | IP + ruta  | Segundo throttler nombrado (`hourly`)           |
-| `POST /api/auth/login`               | 5 requests   | 5 minutos  | IP         | `@Throttle()`                                   |
-| `POST /api/auth/refresh`             | 10 requests  | 1 minuto   | IP         | `@Throttle()`                                   |
-| `POST /api/auth/forgot-password`     | 3 requests   | 15 minutos | IP + email | `ForgotPasswordThrottlerGuard` (guard dedicado) |
-| `POST /api/auth/reset-password`      | 5 requests   | 15 minutos | IP         | `@Throttle()`                                   |
-| `POST /api/tenants` (alta de taller) | 3 requests   | 5 minutos  | IP         | `@Throttle()`                                   |
+| Ámbito                               | Límite       | Ventana    | Clave         | Implementación                                  |
+| ------------------------------------ | ------------ | ---------- | ------------- | ----------------------------------------------- |
+| Global (todas las rutas)             | 60 requests  | 1 minuto   | sujeto + ruta | `GlobalThrottlerGuard` como `APP_GUARD`         |
+| Global — circuito de contención      | 600 requests | 1 hora     | sujeto + ruta | Segundo throttler nombrado (`hourly`)           |
+| `POST /api/auth/login`               | 5 requests   | 5 minutos  | IP            | `@Throttle()`                                   |
+| `POST /api/auth/refresh`             | 10 requests  | 1 minuto   | IP            | `@Throttle()`                                   |
+| `POST /api/auth/forgot-password`     | 3 requests   | 15 minutos | IP + email    | `ForgotPasswordThrottlerGuard` (guard dedicado) |
+| `POST /api/auth/reset-password`      | 5 requests   | 15 minutos | IP            | `@Throttle()`                                   |
+| `POST /api/tenants` (alta de taller) | 3 requests   | 5 minutos  | IP            | `@Throttle()`                                   |
 
-El guard global calcula la clave como `IP + ruta`, no solo IP — así un pico de tráfico en un endpoint no consume la cuota de los demás. El endpoint de `forgot-password` usa un guard propio en vez del throttler global porque necesita una clave compuesta (`IP + email`) para no bloquear a todos los usuarios detrás de una misma IP corporativa/NAT.
+**Sujeto**: en rutas autenticadas es el usuario (`sub` del JWT); en rutas anónimas, la IP. Los usuarios de un taller comparten la IP pública del router, así que una cuota por IP sería una cuota por taller, más estrecha cuanto más crece el equipo. En una ruta autenticada la IP no aporta nada —el llamador ya presentó credenciales válidas— y el sujeto relevante es la persona. En las anónimas la IP es la única identidad disponible y la que importa frente a fuerza bruta; `ForgotPasswordThrottlerGuard` aplica el mismo criterio con su clave `IP + email`.
 
-**Implementación**: `apps/api/src/presentation/http/guards/global-throttler.guard.ts`, `apps/api/src/presentation/http/guards/forgot-password-throttler.guard.ts`, `apps/api/src/presentation/http/controllers/auth.controller.ts`, `apps/api/src/presentation/http/controllers/tenants.controller.ts`
+El `sub` se lee del JWT **sin verificar la firma**: el guard global corre antes que el `JwtAuthGuard` de ruta, así que todavía no hay usuario verificado. Es seguro para una clave de contador — un `sub` falsificado falla la autenticación aguas abajo y devuelve `401` sin datos, de modo que lo único que puede alterar es en qué cubeta se cuenta una petición que va a fallar igual. Un token ausente o ilegible cae a la IP.
+
+**La ruta forma parte de la clave**, así que un pico en un endpoint no consume la cuota de los demás y los `@Throttle()` por ruta son independientes entre sí.
+
+**Los techos globales se derivan del cliente, no se eligen a ojo.** El frontend refresca varias pantallas por temporizador (`usePolling`), lo que produce tráfico de fondo constante con la app abierta: un techo por debajo de esa tasa estrangularía el uso normal, y lo haría en silencio — un refresco en segundo plano que recibe `429` no muestra ningún error, solo deja de actualizarse. `rate-limit.policy.ts` calcula el techo horario como `(3.600.000 / intervalo) × margen` y `rate-limit.policy.spec.ts` lee los intervalos reales de `apps/web` y falla si alguno se acerca al límite. Ver ADR-012.
+
+**Implementación**: `apps/api/src/presentation/http/guards/global-throttler.guard.ts`, `apps/api/src/presentation/http/rate-limit.policy.ts`, `apps/api/src/presentation/http/guards/forgot-password-throttler.guard.ts`, `apps/api/src/presentation/http/controllers/auth.controller.ts`, `apps/api/src/presentation/http/controllers/tenants.controller.ts`
 
 ---
 
@@ -123,9 +129,25 @@ El webhook de WhatsApp deduplica por `waMessageId` antes de procesar un mensaje 
 
 ## Validación de entrada
 
-`main.ts` registra un `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })` global. Todos los `@Body()` de la API están tipados como clases DTO decoradas con `class-validator` (no interfaces TypeScript, que se borran en runtime y el pipe ignora) — cualquier campo no declarado en el DTO se descarta, y un tipo o formato incorrecto responde `400` antes de llegar al caso de uso. Los endpoints de autenticación (login, registro, recuperación de contraseña) además validan explícitamente contra un schema Zod estricto por delante del pipe global.
+`main.ts` registra un `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })` global. Los `@Body()` de la API se tipan como clases DTO decoradas con `class-validator` (no interfaces TypeScript, que se borran en runtime y el pipe ignora) — un tipo o formato incorrecto responde `400` antes de llegar al caso de uso, y `forbidNonWhitelisted` rechaza la petición completa si trae un campo que el DTO no declara. Los endpoints de autenticación (login, registro, recuperación de contraseña) además validan contra un schema Zod estricto por delante del pipe global.
 
-**Gotcha para el próximo DTO que se agregue**: NestJS solo valida parámetros tipados como clase; un `@Body() body: { foo: string }` inline o una `interface` no tiene metadata de clase en runtime y el pipe lo deja pasar sin validar. Todo DTO nuevo debe ser una `class` con decoradores, nunca una interfaz.
+**Cobertura actual** (medida sobre los `@Body()` de `presentation/http/controllers/`, 2026-07-16): **43 de 51 cuerpos validados** — 40 con DTO de clase vía el pipe global y 3 con schema Zod explícito (`login`, `forgot-password`, `reset-password`, tipados `unknown` a propósito para que el schema sea la única puerta).
+
+Los 8 restantes tienen el `@Body()` tipado con `interface` o tipo inline, así que no hay metadata de clase en runtime y **el pipe los deja pasar sin validar**: aceptan campos desconocidos y tipos incorrectos hasta que el dominio los rechaza, si lo hace.
+
+| Endpoint(s)                           | Tipo del `@Body()`              | Exposición                                                    |
+| ------------------------------------- | ------------------------------- | ------------------------------------------------------------- |
+| `POST /api/sale-orders`               | `Omit<CreateSaleOrderInput, …>` | Autenticado (`sales:CREATE`)                                  |
+| `POST /api/sale-orders/:id/payments`  | objeto inline                   | Autenticado (`sales:UPDATE`)                                  |
+| `POST /api/receptions`                | `interface CreateReceptionBody` | Autenticado — parte del alta de orden                         |
+| 5 endpoints de `agents.controller.ts` | `interface *Body`               | Service-to-service (`ServiceAuthGuard`, JWT `type:"service"`) |
+
+Los invariantes de negocio sí se aplican en el dominio (por ejemplo `SalePayment` rechaza montos ≤ 0 con `422`), y los de `agents` sólo son alcanzables con un token de servicio, no desde internet. Aun así no hay validación de esquema en ninguno de los ocho. Cerrar cada hueco es crear el DTO de clase equivalente; el patrón de test que lo verifica está en `update-tenant-config.dto.spec.ts`.
+
+**Dos reglas que se derivan de lo anterior**, ambas verificables:
+
+1. **Todo DTO nuevo debe ser una `class` con decoradores, nunca una interfaz ni un tipo inline** — si no, el pipe no valida nada y el endpoint queda abierto sin que ningún test lo note.
+2. **Un DTO debe declarar exactamente lo que su cliente envía.** Con `forbidNonWhitelisted`, un campo que el frontend manda y el DTO no declara no se ignora: tumba la petición entera con `400`, arrastrando consigo a los campos que sí eran válidos. La forma de verificarlo es pasarle al `ValidationPipe` real el payload literal del frontend; validar la clase por separado no ejercita esa regla. Patrón: `update-tenant-config.dto.spec.ts`.
 
 **Implementación**: `apps/api/src/main.ts`, `apps/api/src/presentation/http/dtos/*.dto.ts`
 
