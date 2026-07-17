@@ -92,6 +92,10 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<
     { module: 'roles', action: 'READ' },
     { module: 'roles', action: 'UPDATE' },
     { module: 'roles', action: 'DELETE' },
+    // Configuración del taller: datos que salen impresos en cotizaciones y
+    // contratos, el IVA y el canal de WhatsApp.
+    { module: 'settings', action: 'READ' },
+    { module: 'settings', action: 'UPDATE' },
   ],
   [SystemRole.ADMIN]: [
     { module: 'customers', action: 'CREATE' },
@@ -126,6 +130,10 @@ export const SYSTEM_ROLE_PERMISSIONS: Record<
     { module: 'roles', action: 'CREATE' },
     { module: 'roles', action: 'READ' },
     { module: 'roles', action: 'UPDATE' },
+    // Administra el taller: ya gestiona usuarios y roles, que son más sensibles
+    // que la dirección o el teléfono del negocio.
+    { module: 'settings', action: 'READ' },
+    { module: 'settings', action: 'UPDATE' },
   ],
   [SystemRole.RECEPTIONIST]: [
     { module: 'customers', action: 'CREATE' },

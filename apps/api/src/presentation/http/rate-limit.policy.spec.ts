@@ -10,12 +10,15 @@ import {
 /**
  * Keeps the API's ceilings and the web client's polling in agreement.
  *
- * These two numbers live in different packages and neither imports the other
- * (the API's runtime image does not ship `packages/`, and the web bundle has no
- * reason to know about throttlers). Nothing else connects them, so this test
- * reads the intervals out of the web sources and fails when the pair stops
- * making sense. It is deliberately noisy: a background refresh that gets
- * throttled produces no error anyone sees — a stale badge, and nothing more.
+ * The intervals are read out of the web sources on purpose, rather than shared
+ * through a constant both packages import. A shared constant only proves that
+ * the two files agree with *it*: a page that hardcodes its own interval drifts
+ * away silently and the test keeps passing. What has to be verified is the
+ * number the client actually ships.
+ *
+ * The check is deliberately noisy because the failure it guards against is not:
+ * a background refresh that gets throttled produces no error anyone sees — a
+ * stale badge, and nothing more.
  */
 const WEB_SRC = join(__dirname, '../../../../web/src');
 

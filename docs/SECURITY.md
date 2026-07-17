@@ -155,13 +155,26 @@ Los invariantes de negocio sí se aplican en el dominio (por ejemplo `SalePaymen
 
 ## Control de acceso por módulo (RBAC)
 
-Cada módulo de la API declara sus permisos en `SYSTEM_ROLE_PERMISSIONS` (`domain/entities/role.entity.ts`) y cada ruta los exige explícitamente con `@RequirePermission('modulo:ACCION')` + `PermissionGuard`. Un módulo sin entrada en `SYSTEM_ROLE_PERMISSIONS` queda, por diseño, sin protección real aunque el guard esté declarado en el controlador (`PermissionGuard` deja pasar si no hay un permiso requerido resuelto para ese rol).
+Cada módulo de la API declara sus permisos en `SYSTEM_ROLE_PERMISSIONS` (`domain/entities/role.entity.ts`), que el seed materializa como filas de `role_permissions`, y cada ruta exige el suyo con `@RequirePermission('modulo:ACCION')` + `PermissionGuard`.
 
-**Hallazgo corregido (jul 2026)**: `messages.controller.ts` (envío/lectura de mensajes de WhatsApp) no tenía ningún permiso registrado — cualquier usuario autenticado del tenant, sin importar su rol, podía leer y enviar mensajes a nombre del negocio. Se agregó `messages:CREATE`/`messages:READ` a OWNER/ADMIN/RECEPTIONIST y se protegieron las 4 rutas del controlador.
+**Las dos mitades tienen que existir, y fallan de forma opuesta**:
 
-**Gotcha de despliegue**: agregar un permiso nuevo a `SYSTEM_ROLE_PERMISSIONS` no lo aplica automáticamente a los roles de sistema ya sembrados en producción — `seed.ts` solo creaba `rolePermission` la primera vez que un rol se creaba. Se corrigió para que el `createMany({ skipDuplicates: true })` corra en cada seed (cada deploy de Render), backfillando cualquier permiso nuevo sin duplicar ni romper los existentes.
+- **Ruta sin `@RequirePermission`**: el guard no tiene nada que resolver y **deja pasar a cualquier usuario autenticado**, aunque el controlador declare `PermissionGuard`. El guard declarado sin el decorador no protege nada.
+- **`@RequirePermission` de un módulo que ningún rol tiene**: el guard resuelve los permisos del rol contra la BD, no encuentra el requerido y responde **`403` a todo el mundo**. La ruta no queda "protegida": queda muerta, incluso para el OWNER.
 
-**Implementación**: `apps/api/src/domain/entities/role.entity.ts`, `apps/api/src/presentation/http/guards/permission.guard.ts`, `apps/api/prisma/seed.ts`
+`rbac-policy.spec.ts` verifica el emparejamiento: recorre los `@RequirePermission` de los controladores y falla si alguno pide un permiso que ningún rol posee.
+
+**Permisos por módulo sensible**:
+
+| Módulo     | Quién lo tiene               | Por qué                                                                                                                                                                                               |
+| ---------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `settings` | OWNER, ADMIN (READ + UPDATE) | La config del taller lleva el IVA, el canal de WhatsApp y los datos que salen impresos en cotizaciones y contratos. ADMIN ya administra usuarios y roles, más sensibles que la dirección del negocio. |
+| `audit`    | OWNER (READ)                 | El rastro de acciones de todo el equipo.                                                                                                                                                              |
+| `messages` | OWNER, ADMIN, RECEPTIONIST   | Enviar WhatsApp a nombre del negocio.                                                                                                                                                                 |
+
+**Gotcha de despliegue**: agregar un permiso a `SYSTEM_ROLE_PERMISSIONS` no lo aplica solo a los roles ya sembrados. El seed corre en el arranque de cada contenedor (`CMD`: `migrate deploy → seed → start`) y su `rolePermission.createMany({ skipDuplicates: true })` backfillea los permisos nuevos **antes de que la app acepte tráfico**, sin duplicar los existentes. De ahí el orden obligatorio al proteger una ruta nueva: **primero el permiso en la matriz, y en el mismo despliegue el `@RequirePermission`** — al revés, el endpoint responde 403 a todos hasta que el permiso llegue. El seed es best-effort (`|| echo 'seed skipped'`): si fallara, la app arranca igual y una ruta con permiso recién añadido devolvería 403 hasta el siguiente seed correcto.
+
+**Implementación**: `apps/api/src/domain/entities/role.entity.ts`, `apps/api/src/presentation/http/guards/permission.guard.ts`, `apps/api/src/domain/entities/rbac-policy.spec.ts`, `apps/api/prisma/seed.ts`
 
 ---
 
