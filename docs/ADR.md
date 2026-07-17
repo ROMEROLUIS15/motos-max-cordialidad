@@ -282,3 +282,39 @@ constructor(
 
 - **Positivo**: todos los use-cases de la capa de aplicación son testeables con mocks puros, sin `PrismaClient` real ni contenedor de BD; consistente con el resto del código.
 - **Negativo**: la re-provisión local del mismo token en varios módulos es una duplicación menor (un `providers: [{ provide: TOKEN, useClass: Impl }]` repetido) que hay que mantener sincronizada si la clase de implementación cambia.
+
+---
+
+## ADR-012: Rate limiting por identidad del llamador y límites derivados del cliente
+
+**Fecha**: 2026-07-16
+
+**Contexto**: el throttler global protege toda la API. Su clave era la IP del llamador (más la ruta, ADR previo implícito en `GlobalThrottlerGuard`) y sus techos eran valores redondos (60/minuto, 100/hora). Dos propiedades del sistema real hacen que esa combinación no describa a un usuario legítimo:
+
+1. **Los usuarios de un taller comparten una IP pública** (salen por el mismo router). Una cuota por IP es, en la práctica, una cuota por taller: se estrecha a medida que crece el equipo, castigando al cliente por contratar gente. El proyecto ya había reconocido este efecto en `ForgotPasswordThrottlerGuard`, que usa `IP + email` precisamente para no bloquear a todos los usuarios detrás de un NAT.
+2. **El propio cliente web genera tráfico de fondo**: `usePolling` refresca la campana de notificaciones y tres pantallas cada 30 s. Son 120 peticiones/hora por pantalla con la pestaña simplemente abierta — por encima del techo horario de 100.
+
+El segundo punto es el más costoso de diagnosticar: un refresco en segundo plano que recibe `429` no produce ninguna señal visible. No hay pantalla de error; hay un contador que deja de moverse.
+
+**Decisión**:
+
+- **La clave del throttler es el sujeto, no la máquina**: en rutas autenticadas se acota por `sub` del JWT; en rutas anónimas (login, forgot-password, webhooks) se mantiene la IP, que es la única identidad disponible y la que importa frente a fuerza bruta. La ruta sigue formando parte de la clave.
+- **Los techos se derivan del comportamiento del cliente, no de números redondos**: `rate-limit.policy.ts` calcula el límite horario como `(3.600.000 / intervalo_de_polling) × margen`, y `rate-limit.policy.spec.ts` lee los intervalos reales de `apps/web` y falla si alguno se acerca al techo.
+
+**Alternativas consideradas**:
+
+| Alternativa                                            | Razón de descarte                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Subir solo el techo horario**                        | Arregla el síntoma de hoy y deja intacto el multiplicador del NAT: el número correcto pasaría a depender de cuántos empleados tenga el taller, y volvería a romperse al contratar al siguiente.                                                                                                                                        |
+| **Bajar la frecuencia del polling**                    | Degrada el producto (notificaciones más lentas) sin resolver la causa: con 4 usuarios tras una IP, cualquier intervalo razonable vuelve a cruzar un techo por IP.                                                                                                                                                                      |
+| **Sustituir el polling por el WebSocket ya existente** | Elimina la clase entera de problema y es el destino natural (ver «Evolución»), pero hoy los servicios corren en el plan free de Render, que **suspende el proceso por inactividad**: las conexiones se caerían y reconectarían constantemente. En ese entorno el polling es más robusto que el WebSocket.                              |
+| **Verificar el JWT dentro del guard**                  | El guard global corre antes que `JwtAuthGuard`, así que tendría que duplicar la verificación de firma en cada petición. Para una clave de contador no aporta: un `sub` falsificado falla la autenticación aguas abajo y devuelve 401 sin datos, así que lo único que podría alterar es en qué cubeta se cuenta una petición condenada. |
+
+**Trade-offs**:
+
+- **Positivo**: el límite deja de depender de la topología de red del cliente; el equipo puede crecer sin recalibrar nada. Los techos son auditables: se leen como una fórmula con su origen, no como una constante heredada.
+- **Positivo**: el acoplamiento entre el intervalo del cliente y el techo del servidor pasa de invisible a verificado en CI, con el nombre del archivo culpable en el mensaje de fallo.
+- **Negativo**: el guard decodifica el JWT (sin verificar firma) en cada petición autenticada — un `JSON.parse` sobre un segmento base64, despreciable frente a la consulta que viene después, pero es trabajo que antes no se hacía.
+- **Negativo**: el test de invariante lee las fuentes de `apps/web` con expresiones regulares. Es deliberado —ninguno de los dos paquetes puede importar al otro sin cargar `packages/` en la imagen de runtime de la API— y falla ruidosamente si un refactor cambia la forma de las llamadas, que es exactamente cuando conviene revisar el invariante a mano.
+
+**Evolución**: cuando los servicios pasen a un plan con proceso permanente, el cliente puede consumir el gateway de WebSocket que la API ya expone (`notifications.gateway.ts`) y retirar el polling. En ese momento el tráfico de fondo desaparece y estos techos dejan de tener relación con el uso normal.

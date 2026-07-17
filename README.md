@@ -15,7 +15,7 @@ SaaS multi-tenant para talleres de motocicletas, con asistencia de IA vía Whats
 - **CRM de clientes** — historial de vehículos y órdenes por cliente, servicio a domicilio.
 - **Asistente conversacional por WhatsApp** — atención automática a clientes (RouterAgent) y a la administración del taller (AgentAdmin), con reportes periódicos y alertas de stock generados por IA.
 - **Multi-tenant** — aislamiento estricto por taller a nivel de datos y de roles/permisos, con auditoría de acciones.
-- **PWA instalable**, tema claro/oscuro, notificaciones en tiempo real (WebSocket).
+- **PWA instalable**, tema claro/oscuro, notificaciones in-app (el cliente refresca por temporizador y pausa en pestaña oculta; la API expone además un gateway WebSocket, ver [ADR-012](docs/ADR.md)).
 
 ---
 
@@ -110,6 +110,7 @@ motos-max-cordialidad/              # Raíz del monorepo (pnpm workspaces)
 │   └── types/                      # @motoworkshop/types — tipos TypeScript compartidos
 │       └── src/
 ├── docs/                           # Documentación técnica (ARCHITECTURE, RUNBOOK, ADR, SECURITY)
+├── perf/                           # Gate de latencia con k6 + siembra de volumen (ver perf/README.md)
 ├── docker-compose.yml              # PostgreSQL + Redis para desarrollo local
 ├── render.yaml                     # Configuración de servicios en Render
 ├── pnpm-workspace.yaml             # Definición del monorepo pnpm
