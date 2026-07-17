@@ -1,6 +1,8 @@
 import { Body, Controller, Get, Inject, Post, Put, UseGuards } from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { PermissionGuard } from '../guards/permission.guard';
+import { RequirePermission } from '../decorators/require-permission.decorator';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { JWTPayload } from '../../../application/ports/jwt.port';
 import { CreateTenantUseCase } from '../../../application/use-cases/identity/create-tenant.use-case';
@@ -28,7 +30,8 @@ export class TenantsController {
   }
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission('settings:READ') // OWNER y ADMIN
   async getMe(@CurrentUser() user: JWTPayload) {
     const tenant = await this.tenantRepo.findById(user.tenantId);
     if (!tenant) return null;
@@ -38,7 +41,8 @@ export class TenantsController {
   }
 
   @Put('me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @RequirePermission('settings:UPDATE') // OWNER y ADMIN
   async updateMe(@CurrentUser() user: JWTPayload, @Body() body: UpdateTenantConfigDto) {
     await this.updateTenantConfigUseCase.execute({ ...body, tenantId: user.tenantId } as Parameters<
       UpdateTenantConfigUseCase['execute']
