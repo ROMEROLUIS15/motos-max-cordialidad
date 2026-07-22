@@ -14,7 +14,7 @@ flowchart LR
     end
 
     subgraph Render
-        API[NestJS 11 API<br/>Puerto 3001]
+        API[NestJS 10 API<br/>Puerto 3001]
         AGENTS[FastAPI Agents<br/>Puerto 8000]
     end
 
@@ -250,7 +250,7 @@ headers = {"Authorization": f"Bearer {self.token}"}
 ## Base de datos
 
 - **ORM**: Prisma 5 con PostgreSQL.
-- **Esquema**: `apps/api/prisma/schema.prisma` (834 líneas, 30 modelos).
+- **Esquema**: `apps/api/prisma/schema.prisma` (872 líneas, 37 modelos).
 - **Convenciones**: UUIDs como PK, snake_case en tablas, timestamptz, soft-delete en entidades principales (clientes, vehículos, órdenes).
 - **Migraciones**: `prisma migrate deploy` en producción (nunca `migrate dev`).
 

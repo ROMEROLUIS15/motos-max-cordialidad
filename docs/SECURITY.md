@@ -192,11 +192,11 @@ La comunicación entre NestJS (API) y Python (Agents) usa JWT firmado con la mis
 
 ---
 
-## Generación de número de orden atómica
+## Unicidad del número de orden
 
-Los números de orden de trabajo se generan mediante una consulta SQL atómica `MAX(number) + 1` dentro de una transacción, en lugar de contadores en Redis o secuencias PostgreSQL. Esto evita race conditions cuando dos solicitudes crean órdenes simultáneamente.
+Los números de orden legibles (`WO-AAAA-NNNNNN` para órdenes de trabajo, y su equivalente en órdenes de venta) se calculan por tenant y año con un `SELECT COALESCE(MAX(...)) + 1`, en lugar de contadores en Redis o secuencias PostgreSQL. La unicidad **no** descansa en esa consulta —que por sí sola no es a prueba de concurrencia: dos solicitudes simultáneas leerían el mismo `MAX`— sino en la restricción de base de datos `@@unique([tenantId, orderNumber])`: si dos peticiones calculan el mismo número a la vez, la primera inserta y la segunda es rechazada por el constraint, de modo que **nunca se commitea un duplicado** (la petición perdedora falla con violación de unicidad y se reintenta).
 
-**Implementación**: `apps/api/src/infrastructure/persistence/prisma/repositories/work-order.prisma-repository.ts`
+**Implementación**: `apps/api/src/infrastructure/persistence/prisma/repositories/work-order.prisma-repository.ts` y `sale-order.prisma-repository.ts` (cálculo); `@@unique([tenantId, orderNumber])` en `apps/api/prisma/schema.prisma` (garantía)
 
 ---
 
