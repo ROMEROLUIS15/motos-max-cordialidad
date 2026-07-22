@@ -222,7 +222,7 @@
   >    Correcciones aplicadas:
   >
   > - `MailService`: dev mode imprime URL en consola (no llama Resend en local)
-  > - `prisma/seed.ts`: añadido `motosmaxcordialidad@gmail.com` como OWNER local
+  > - `prisma/seed.ts`: añadido el OWNER local (email vía `OWNER_SEED_EMAIL`)
   > - `.env.local`: revertido a `http://localhost:3001` (el parche temporal eliminado)
 - [x] 8.2 Manual test: Rate limiting blocks after N requests
   > Verificado localmente: 3 OK → 4to bloqueado (429). Mensaje: "Espera ~15 minutos".

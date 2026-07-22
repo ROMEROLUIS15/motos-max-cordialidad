@@ -484,7 +484,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{
               \"from\": \"CI Motos Max <onboarding@resend.dev>\",
-              \"to\": [\"motosmaxcordialidad@gmail.com\"],
+              \"to\": [\"${{ secrets.NOTIFY_EMAIL }}\"],
               \"subject\": \"🔴 Deploy FALLIDO — ${{ github.repository }} (${GITHUB_SHA:0:7})\",
               \"html\": \"<p>Un deploy a producción falló.</p><p><b>Commit:</b> ${{ github.sha }}</p><p><b>Run:</b> <a href=\\\"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\\\">ver detalles en GitHub Actions</a></p><p>El sitio sigue sirviendo la última versión buena. Revisa el run para diagnosticar.</p>\"
             }"

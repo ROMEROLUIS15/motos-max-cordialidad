@@ -8,9 +8,11 @@ const prisma = new PrismaClient();
 const DEMO_TAX_ID = '900123456-7';
 const DEMO_PASSWORD = 'Demo1234!';
 // Owner real — seeded so the forgot-password happy path works in local dev.
-// Never hardcode the real password here (this file is committed): set
-// OWNER_SEED_PASSWORD in .env if you need the real one locally.
-const OWNER_EMAIL = 'motosmaxcordialidad@gmail.com';
+// Never hardcode the real email/password here (this file is committed): set
+// OWNER_SEED_EMAIL / OWNER_SEED_PASSWORD in the environment for the real owner.
+// In production these MUST be set (Render) so the seed upserts the same owner
+// on every deploy; otherwise it falls back to the demo owner.
+const OWNER_EMAIL = process.env['OWNER_SEED_EMAIL'] ?? 'owner@demo.com';
 const OWNER_PASSWORD = process.env['OWNER_SEED_PASSWORD'] ?? DEMO_PASSWORD;
 
 async function main() {

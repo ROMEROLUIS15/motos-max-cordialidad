@@ -19,7 +19,7 @@ import { test, expect } from '@playwright/test';
  *   pnpm --filter @motoworkshop/web test:e2e --project=chromium --grep "Real API"
  */
 
-const REAL_EMAIL = 'motosmaxcordialidad@gmail.com';
+const REAL_EMAIL = process.env['REAL_TEST_EMAIL'] ?? 'owner@demo.com';
 const API = 'http://localhost:3001';
 
 // ── A. API Contract Tests (HTTP only — no browser UI) ──────────────────────
