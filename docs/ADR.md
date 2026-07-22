@@ -318,3 +318,38 @@ El segundo punto es el más costoso de diagnosticar: un refresco en segundo plan
 - **Negativo**: el test de invariante lee las fuentes de `apps/web` con expresiones regulares, y falla si un refactor cambia la forma de las llamadas. Es deliberado: la alternativa —una constante compartida que ambos paquetes importen— sólo demostraría que los dos ficheros coinciden **con la constante**; una pantalla que fije su intervalo a mano se desviaría en silencio y el test seguiría en verde. Lo que hay que verificar es el número que el cliente realmente publica. Que el test se rompa ante un refactor es el precio, y avisa justo cuando conviene revisar el invariante a mano.
 
 **Evolución**: cuando los servicios pasen a un plan con proceso permanente, el cliente puede consumir el gateway de WebSocket que la API ya expone (`notifications.gateway.ts`) y retirar el polling. En ese momento el tráfico de fondo desaparece y estos techos dejan de tener relación con el uso normal.
+
+---
+
+## ADR-013: Boundaries transaccionales con bloqueo de fila en las mutaciones de inventario
+
+**Fecha**: 2026-07-21
+
+**Contexto**: el `InventoryAdapter` (implementación de `InventoryPort`) mutaba el stock con un patrón _read-modify-write_ sobre valores absolutos y sin transacción:
+
+1. `reserveStock` / `releaseReservation` leían la fila (`ensureExists`/`findByPartAndBranch`), aplicaban la regla en el modelo de dominio y guardaban `stockReservado` con `update`. Dos reservas concurrentes del mismo repuesto leen el mismo `stockDisponible`, ambas pasan la validación de `PartBranchStock.reserve()`, y el segundo `save` pisa al primero — _lost update_ que **sobrevende stock**.
+2. `confirmStockDiscount` / `releaseAllReservations` recorrían los repuestos de una orden en un bucle, cada iteración con escrituras independientes (`stock.save` + `stockEntry.create`), sin transacción. Un fallo a mitad del bucle deja el stock **descontado a medias** y el libro de movimientos (`StockEntry`) inconsistente con el físico.
+
+El propio repositorio ya tenía el patrón correcto en `transferAtomically` (`$transaction` + operadores atómicos), así que la carencia era de **consistencia**, no de desconocimiento: las operaciones igualmente críticas de reserva y descuento no lo seguían.
+
+**Decisión**: toda mutación de stock corre dentro de `prisma.$transaction` y bloquea la(s) fila(s) `part_branch_stock` afectada(s) con `SELECT … FOR UPDATE` antes del _read-modify-write_. El bloqueo de fila serializa a los llamadores concurrentes sobre el mismo repuesto, eliminando el _lost update_. Las operaciones multi-parte (`confirmStockDiscount`, `releaseAllReservations`) bloquean y escriben todos los repuestos —y sus asientos `StockEntry`— dentro de **una sola** transacción, de modo que un fallo revierte el cambio completo. Las invariantes de negocio siguen en `PartBranchStock` (que lanza `InsufficientStockException` / `INSUFFICIENT_PHYSICAL_STOCK`); el adaptador solo aporta el límite transaccional.
+
+**Alternativas consideradas**:
+
+| Alternativa                                                                                                                     | Razón de descarte                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`UPDATE` condicional atómico** (`SET reservado = reservado + q WHERE (fisico - reservado) >= q`, comprobando filas afectadas) | Es libre de carrera sin bloqueo explícito, pero traslada la invariante «no reservar más de lo disponible» a SQL, **abandonando el modelo de dominio rico** que el resto del proyecto sostiene (ADR-002). Se prefirió mantener la regla en `PartBranchStock` y darle atomicidad con el lock. |
+| **Isolation `Serializable` + reintento**                                                                                        | Conserva el modelo de dominio, pero aborta con error de serialización bajo contención y obliga a un bucle de reintentos en cada operación. `FOR UPDATE` (bloqueo pesimista sobre una fila muy acotada) da la misma garantía sin la complejidad del reintento.                               |
+| **Concurrencia optimista con columna `version`**                                                                                | Requiere migración de esquema y, de nuevo, lógica de reintento en el cliente para el mismo resultado. Más superficie de cambio para la misma garantía que ya da el lock de fila.                                                                                                            |
+| **Dejarlo como estaba y documentarlo como deuda**                                                                               | La sobreventa es un error de correctitud real en un flujo vivo (órdenes de trabajo + inventario), no un riesgo teórico; el coste de arreglarlo era bajo y el patrón de referencia ya existía en el mismo archivo.                                                                           |
+
+**Trade-off no trivial — desviación consciente de ADR-011**: estas operaciones atómicas usan el cliente de transacción de Prisma (`tx.partBranchStock.update`, `tx.stockEntry.create`, `tx.$queryRaw` para el `FOR UPDATE`) **directamente**, en vez de delegar en los repositorios de dominio (`PartStockRepository`/`StockEntryRepository`) como manda ADR-011. Es deliberado: una transacción no se puede componer a partir de llamadas a repositorios independientes sin propagar el `tx` a través de las firmas de los puertos, lo que filtraría el detalle de persistencia hacia el dominio. El adaptador de infraestructura es el lugar legítimo para el «script transaccional» —igual que `transferAtomically` ya vivía en el repositorio— y sigue depende solo de `PrismaService`, no de otro puerto.
+
+**Trade-offs**:
+
+- **Positivo**: desaparece la sobreventa por concurrencia y el descuento parcial; stock físico y libro de movimientos quedan siempre consistentes (todo-o-nada).
+- **Positivo**: consistencia interna — el patrón atómico de `transferAtomically` se aplica ya a todas las mutaciones de stock, no a una sola.
+- **Negativo**: el `FOR UPDATE` mantiene un bloqueo de fila durante la transacción (corta); reservas concurrentes del **mismo** repuesto se serializan. Es el comportamiento correcto, pero reduce el paralelismo en ese punto.
+- **Negativo**: el lock requiere `$queryRaw` porque Prisma no expone `FOR UPDATE` en su API fluida; es SQL crudo parametrizado, acotado a una lectura por PK.
+
+**Verificación**: `inventory.adapter.spec.ts` cubre la orquestación (se toma el lock antes de escribir, el dominio rechaza lo insuficiente sin persistir, el bucle multi-parte va en una transacción). La serialización real de `FOR UPDATE` y el rollback todo-o-nada son garantías de Postgres, ejercitadas contra base de datos real en `test/workshop-flow.e2e-spec.ts`.
