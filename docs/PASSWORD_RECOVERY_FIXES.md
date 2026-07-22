@@ -502,7 +502,7 @@ async forgotPassword(@Body() body: unknown) {
 async sendPasswordResetEmail(user: MailUser, token: string): Promise<void> {
   const url = `${this._baseUrl}/reset-password?token=${token}`;
   await sgMail.send({
-    from: process.env['SMTP_FROM'] ?? 'motosmaxcordialidad@gmail.com',
+    from: process.env['SMTP_FROM'] ?? 'noreply@example.com',
     to: user.email,
     subject: 'Recuperación de contraseña — Motos Max Cordialidad',
     html: `<p>Hola ${user.fullName},</p>
@@ -533,7 +533,7 @@ async sendPasswordResetEmail(user: MailUser, token: string): Promise<void> {
   const cancelUrl = `${this._baseUrl}/auth/cancel-reset?token=${cancelToken}`;
 
   await sgMail.send({
-    from: process.env['SMTP_FROM'] ?? 'motosmaxcordialidad@gmail.com',
+    from: process.env['SMTP_FROM'] ?? 'noreply@example.com',
     to: user.email,
     subject: 'Recuperación de contraseña — Motos Max Cordialidad',
     html: `
