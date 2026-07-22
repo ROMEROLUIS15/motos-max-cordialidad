@@ -1,5 +1,7 @@
 # Runbook — MotoWorkshop SaaS
 
+[English](./RUNBOOK.en.md) · **🌐 Español**
+
 ---
 
 ## Inventario de servicios (producción)
@@ -356,13 +358,13 @@ Usuario -> POST /api/auth/reset-password (desde link del email)
 
 ### Rate limiting - Configuracion
 
-| Tipo                               | Limite          | Archivo para ajustar                                                            |
-| ---------------------------------- | --------------- | ------------------------------------------------------------------------------- |
-| Por IP+email (forgot-password)     | 3 req / 15 min  | `forgot-password-throttler.guard.ts` (guard dedicado, no usa `@Throttle`)       |
-| Por IP (reset-password)            | 5 req / 15 min  | `auth.controller.ts` - decorador `@Throttle` en `resetPassword()`               |
-| Por IP (login)                     | 5 req / 5 min   | `auth.controller.ts` - decorador `@Throttle` en `login()`                       |
-| Por IP global - circuit breaker    | 100 req / hora  | `app.module.ts` - throttler nombrado `hourly` en `ThrottlerModule.forRoot()`    |
-| Por IP+ruta global - ventana corta | 60 req / minuto | `app.module.ts` - throttler nombrado `default`, clave en `GlobalThrottlerGuard` |
+| Tipo                                     | Limite          | Archivo para ajustar                                                                   |
+| ---------------------------------------- | --------------- | -------------------------------------------------------------------------------------- |
+| Por IP+email (forgot-password)           | 3 req / 15 min  | `forgot-password-throttler.guard.ts` (guard dedicado, no usa `@Throttle`)              |
+| Por IP (reset-password)                  | 5 req / 15 min  | `auth.controller.ts` - decorador `@Throttle` en `resetPassword()`                      |
+| Por IP (login)                           | 5 req / 5 min   | `auth.controller.ts` - decorador `@Throttle` en `login()`                              |
+| Por sujeto+ruta global - circuit breaker | 600 req / hora  | `app.module.ts` - throttler nombrado `hourly`; techo derivado del cliente, ver ADR-012 |
+| Por sujeto+ruta global - ventana corta   | 60 req / minuto | `app.module.ts` - throttler nombrado `default`, clave en `GlobalThrottlerGuard`        |
 
 ### Cleanup job de tokens
 
