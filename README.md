@@ -4,7 +4,7 @@
 
 **🌐 English** · [Español](#motoworkshop-saas-español)
 
-> 📝 **Note for reviewers:** the detailed technical docs (Architecture, ADRs, Security, Runbook under `docs/`) are kept in **Spanish at the client's request**, so the workshop owner can read them. This README is provided in both English and Spanish.
+> 📝 **Note for reviewers:** this README and every technical doc (Architecture, ADRs, Security, Runbook under `docs/`) are available in **both English and Spanish**. The English docs are the `*.en.md` files; the Spanish versions are kept for the client (the workshop owner). A language selector at the top of each doc switches between them.
 
 Multi-tenant SaaS for motorcycle workshops, with AI assistance over WhatsApp. Work orders, inventory, motorcycle sales, customer CRM and conversational support, all isolated per workshop (tenant).
 
@@ -279,12 +279,12 @@ The three services deploy only when the CI pipeline is green — there is no dir
 
 ## Documentation
 
-> The following documents are in **Spanish** (client's request).
+English versions (`*.en.md`); each links to its Spanish counterpart at the top.
 
-- [Architecture](docs/ARCHITECTURE.md) — layers, modules, multi-agent system, data model.
-- [Production runbook](docs/RUNBOOK.md) — service inventory, CI/CD pipeline, rollback, incident diagnosis.
-- [Technical decisions (ADR)](docs/ADR.md) — context, alternatives and trade-offs of each architecture decision.
-- [Security](docs/SECURITY.md) — authentication, rate limiting, multi-tenant isolation, encryption, accepted dependency risk.
+- [Architecture](docs/ARCHITECTURE.en.md) — layers, modules, multi-agent system, data model.
+- [Production runbook](docs/RUNBOOK.en.md) — service inventory, CI/CD pipeline, rollback, incident diagnosis.
+- [Technical decisions (ADR)](docs/ADR.en.md) — context, alternatives and trade-offs of each architecture decision.
+- [Security](docs/SECURITY.en.md) — authentication, rate limiting, multi-tenant isolation, encryption, accepted dependency risk.
 
 ---
 

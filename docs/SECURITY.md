@@ -1,5 +1,7 @@
 # Security Measures
 
+[English](./SECURITY.en.md) · **🌐 Español**
+
 ---
 
 ## CORS

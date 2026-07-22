@@ -1,5 +1,7 @@
 # Architecture Decision Records
 
+[English](./ADR.en.md) · **🌐 Español**
+
 ---
 
 ## ADR-001: pnpm Workspaces como estrategia de monorepo

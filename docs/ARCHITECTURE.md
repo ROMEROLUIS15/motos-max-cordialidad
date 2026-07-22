@@ -1,5 +1,7 @@
 # Architecture
 
+[English](./ARCHITECTURE.en.md) · **🌐 Español**
+
 ## System Diagram
 
 ```mermaid
